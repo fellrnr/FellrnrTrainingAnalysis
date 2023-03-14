@@ -7,3 +7,5 @@ The goal is to create a flexible platform that will support plugins and extensio
 Currently, the code will import a Strava data export. Unzip the export, then import the profile.csv file. This will then pull in the activites and parse the FIT files.
 
 You can also sync with Strava, though you'll have to create your own API keys. 
+
+(Note that this project includes a fork of ObjectListView, as I needed to get it working with .NET core.)
