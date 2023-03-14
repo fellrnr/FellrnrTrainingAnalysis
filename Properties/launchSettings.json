@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "FellrnrTrainingAnalysis": {
+      "commandName": "Project"
+    },
+    "Test batch mode": {
+      "commandName": "Project",
+      "commandLineArgs": "-sync -email -batch"
+    }
+  }
+}
