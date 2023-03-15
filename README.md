@@ -8,4 +8,6 @@ Currently, the code will import a Strava data export. Unzip the export, then imp
 
 You can also sync with Strava, though you'll have to create your own API keys. 
 
-(Note that this project includes a fork of ObjectListView, as I needed to get it working with .NET core.)
+# ObjectListView
+
+Note that this project includes a fork of ObjectListView, as I needed to get it working with .NET core. I took https://github.com/FizzcodeSoftware/ObjectListViewRepack and made some changes marked with "//#!JFS!#". I'm hoping the main trunk of OLV will soon support .NET core and I can delete this fork. 
