@@ -1,45 +1,48 @@
-Name,Title,DataType,DisplayUnits,PositionInTree,PositionInReport
-Calories,Calories,Float,None,-1,-1
-Country,Country,String,None,-1,-1
-Device Name,Device Name,String,None,-1,-1
-Elevation High,Elevation High,Float,Meters,-1,-1
-Elevation Loss,Elevation Loss,Float,Meters,-1,-1
-Elevation Low,Elevation Low,Float,Meters,-1,-1
-Filename,Filename,String,None,-1,-1
-Σ🏃⬆ 1M,Σ🏃⬆ 1M,Float,None,-1,-1
-Σ🏃⬆ 30D,Σ🏃⬆ 30D,Float,None,-1,-1
-Σ🏃📏 1M,Σ🏃📏 1M,Float,None,-1,-1
-Σ🏃📐 1M,Σ🏃📐 1M,Float,None,-1,-1
-Σ🏃📏 30D,Σ🏃📏 30D,Float,None,-1,-1
-Σ🏃📐 30D,Σ🏃📐 30D,Float,None,-1,-1
-Σ🏃🚶⬆ 1M,Σ🏃🚶⬆ 1M,Float,None,-1,-1
-Σ🏃🚶⬆ 1Y,Σ🏃🚶⬆ 1Y,Float,None,-1,-1
-Σ🏃🚶⬆ 30D,Σ🏃🚶⬆ 30D,Float,None,-1,-1
-Σ🏃🚶⬆ 7D,Σ🏃🚶⬆ 7D,Float,None,-1,-1
-Σ🏃🚶📏 1M,Σ🏃🚶📏 1M,Float,None,-1,-1
-Σ🏃🚶📏 1Y,Σ🏃🚶📏 1Y,Float,None,-1,-1
-Σ🏃🚶📏 30D,Σ🏃🚶📏 30D,Float,None,-1,-1
-Σ🏃🚶📏 7D,Σ🏃🚶📏 7D,Float,None,-1,-1
-Sport,Sport,String,None,-1,-1
-Sport Type,Sport Type,String,None,-1,-1
-Start Date Local,Start Date Local,DateTime,None,-1,-1
-Strava ID,Strava ID,String,None,-1,-1
-Timezone,Timezone,String,None,-1,-1
-UTC Offset,UTC Offset,String,None,-1,-1
-Workout Type,Workout Type,String,None,-1,-1
-Start DateTime,Start DateTime,DateTime,None,0,0
-Type,Type,String,None,1,1
-Name,Name,String,None,2,2
-Moving Time,Moving Time,TimeSpan,None,3,3
-Elapsed Time,Elapsed Time,TimeSpan,None,4,4
-Distance,Distance,Float,Kilometers,5,5
-Grade Adjusted Distance,GAD,Float,Kilometers,6,6
-Grade Adjusted Pace,GAP,Float,Pace,7,7
-Elevation Gain,Elevation Gain,Float,Meters,8,8
-Description,Description,String,None,9,9
-Σ🏃📏 7D,Σ🏃📏 7D,Float,None,10,10
-Σ🏃📏 1Y,Σ🏃📏 1Y,Float,None,11,11
-Σ🏃📐 7D,Σ🏃📐 7D,Float,None,12,12
-Σ🏃📐 1Y,Σ🏃📐 1Y,Float,None,13,13
-Σ🏃⬆ 7D,Σ🏃⬆ 7D,Float,None,15,14
-Σ🏃⬆ 1Y,Σ🏃⬆ 1Y,Float,None,15,15
+Name,Title,DisplayUnits,PositionInTree,PositionInReport,ColumnSize,DecimalPlaces,Invisible,Comment
+Strava ID,Strava ID,None,0,0,,,TRUE,Has to be in the tables so we can look up the record
+Start DateTime,Start DateTime,None,1,1,,,,
+Type,Type,None,2,2,,,,
+Name,Name,None,3,3,300,,,
+Moving Time,Moving Time,TimeSpan,4,4,,,,
+Elapsed Time,Elapsed Time,TimeSpan,5,5,,,,
+Distance,Distance,Kilometers,6,6,,1,,
+Grade Adjusted Distance,GAD,Kilometers,7,7,,1,,
+Grade Adjusted Pace,GAP,Pace,8,8,,,,
+Pace,Pace,Pace,9,9,,,,
+Elevation Gain,Elevation Gain,Meters,10,10,,,,
+Description,Description,None,11,11,300,,,
+Max Climb,Max Climb,Meters,12,12,,0,,
+Min Climb,Min Climb,Meters,13,13,,0,,
+Σ🏃📏 7D,Σ🏃📏 7D,Kilometers,14,14,,1,,
+Σ🏃📏 1Y,Σ🏃📏 1Y,Kilometers,15,15,,1,,
+Σ🏃📐 7D,Σ🏃📐 7D,Kilometers,16,16,,1,,
+Σ🏃📐 1Y,Σ🏃📐 1Y,Kilometers,17,17,,1,,
+Σ🏃⬆ 7D,Σ🏃⬆ 7D,Meters,18,18,,0,,
+Σ🏃⬆ 1Y,Σ🏃⬆ 1Y,Meters,19,19,,0,,
+Calories,Calories,None,,,,,,
+Country,Country,None,,,,,,
+Device Name,Device Name,None,,,,,,
+Elevation High,Elevation High,Meters,,,,,,
+Elevation Loss,Elevation Loss,Meters,,,,,,
+Elevation Low,Elevation Low,Meters,,,,,,
+Filename,Filename,None,,,,,,
+Σ🏃⬆ 1M,Σ🏃⬆ 1M,Kilometers,,,,,,
+Σ🏃⬆ 30D,Σ🏃⬆ 30D,Kilometers,,,,,,
+Σ🏃📏 1M,Σ🏃📏 1M,Kilometers,,,,,,
+Σ🏃📐 1M,Σ🏃📐 1M,Kilometers,,,,,,
+Σ🏃📏 30D,Σ🏃📏 30D,Kilometers,,,,,,
+Σ🏃📐 30D,Σ🏃📐 30D,Kilometers,,,,,,
+Σ🏃🚶⬆ 1M,Σ🏃🚶⬆ 1M,Kilometers,,,,,,
+Σ🏃🚶⬆ 1Y,Σ🏃🚶⬆ 1Y,Kilometers,,,,,,
+Σ🏃🚶⬆ 30D,Σ🏃🚶⬆ 30D,Kilometers,,,,,,
+Σ🏃🚶⬆ 7D,Σ🏃🚶⬆ 7D,Kilometers,,,,,,
+Σ🏃🚶📏 1M,Σ🏃🚶📏 1M,Kilometers,,,,,,
+Σ🏃🚶📏 1Y,Σ🏃🚶📏 1Y,Kilometers,,,,,,
+Σ🏃🚶📏 30D,Σ🏃🚶📏 30D,Kilometers,,,,,,
+Σ🏃🚶📏 7D,Σ🏃🚶📏 7D,Kilometers,,,,,,
+Sport,Sport,None,,,,,,
+Sport Type,Sport Type,None,,,,,,
+Start Date Local,Start Date Local,None,,,,,,
+Timezone,Timezone,None,,,,,,
+UTC Offset,UTC Offset,None,,,,,,
+Workout Type,Workout Type,None,,,,,,

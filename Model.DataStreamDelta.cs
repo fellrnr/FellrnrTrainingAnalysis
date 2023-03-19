@@ -7,7 +7,7 @@ namespace FellrnrTrainingAnalysis.Model
     //A simple class to calculate the delta of another data stream, such as speed as the delta of distance
     public class DataStreamDelta : DataStreamEphemeral
     {
-        public DataStreamDelta(string name, List<string> requiredFields, float scalingFactor, float? numerator = null) : base(name, requiredFields)
+        public DataStreamDelta(string name, List<string> requiredFields, float scalingFactor = 1, float? numerator = null) : base(name, requiredFields)
         {
             if (requiredFields.Count != 1) throw new ArgumentException("DataStreamDelta must have only one required field");
             ScalingFactor = scalingFactor;
@@ -16,8 +16,6 @@ namespace FellrnrTrainingAnalysis.Model
 
         float ScalingFactor { get; set; }
         float? Numerator { get; set; }
-
-        public const float MetersPerSecondToSecondsPerKilometer = 16.666666666667f * 60.0f;
 
         public override Tuple<uint[], float[]>? GetData(Activity parent)
         {

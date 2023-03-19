@@ -21,7 +21,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         IDataStream DataStream { get; set; }
 
-        public enum Mode { LastValue, Average }
+        public enum Mode { LastValue, Average, MinMax }
         Mode ExtractionMode { get; set; }
 
         public Tuple<uint[], float[]>? GetData(Activity parent)
@@ -53,12 +53,20 @@ namespace FellrnrTrainingAnalysis.Model
             if(ExtractionMode == Mode.LastValue)
             {
                 value = data.Item2.Last();
+                parent.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value));
             }
-            else
+            else if (ExtractionMode== Mode.Average) 
             {
-                value = data.Item2.Average();
+                value = data.Item2.Average(); //TODO: Add average ignoring zeros
+                parent.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value));
             }
-            parent.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value));
+            else if (ExtractionMode == Mode.MinMax)
+            {
+                value = data.Item2.Max();
+                parent.AddOrReplaceDatum(new TypedDatum<float>("Max " + ActivityFieldname, false, value));
+                value = data.Item2.Min();
+                parent.AddOrReplaceDatum(new TypedDatum<float>("Min " + ActivityFieldname, false, value));
+            }
         }
 
 

@@ -9,23 +9,29 @@ using System.Threading.Tasks;
 namespace FellrnrTrainingAnalysis.Model
 {
     //It also gives us critical metadata, such as should this field be used for filtering, what are the units, etc. 
-    internal class ActivityDatumMetadata
+    public class ActivityDatumMetadata
     {
         public ActivityDatumMetadata() { }
         //public string FellrnrName { get; set; } //our internal name
 
         public string Name { get; set; } = "";
         public string Title { get; set; } = "";
-        public enum DataTypeEnum { Float, String, DateTime, TimeSpan }
-        public DataTypeEnum DataType { get; set; }
-
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, None };
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, None };
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 
 
-        public int PositionInTree { get; set; }
-        public int PositionInReport { get; set;}
+        public int? PositionInTree { get; set; } //null for don't show
+        public int? PositionInReport { get; set; }  //null for don't show
+
+        public int? ColumnSize { get; set; } //null for resize dynamically
+
+
+        public int? DecimalPlaces { get; set; } //Only for floating point numbers, obviously
+
+        public bool? Invisible { get; set; } //for hidden columns like Strava ID
+
+        public string Comment { get; set; } = ""; //for commenting the CSV file
 
         private const string PathToCsv = "Config.ActivityDatumMetadata.csv";
         private static Dictionary<string, ActivityDatumMetadata>? map = null;
@@ -44,8 +50,8 @@ namespace FellrnrTrainingAnalysis.Model
                 ActivityDatumMetadata activityDatumMetadata = new ActivityDatumMetadata();
                 activityDatumMetadata.Name = name;
                 activityDatumMetadata.Title = name;
-                activityDatumMetadata.PositionInReport = -1;
-                activityDatumMetadata.PositionInTree = -1;
+                activityDatumMetadata.PositionInReport = null;
+                activityDatumMetadata.PositionInTree = null;
                 map.Add(name, activityDatumMetadata);
 
                 return activityDatumMetadata;
@@ -103,18 +109,22 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
 
-        public static int LastPositionInTree()
+        public static int LastPositionInReport()
         {
             if (map == null)
                 map = ReadFromCsv();
             if (map == null)
                 return 0;
-            int maxTreeColumn = 0;
+            int maxReportColumn = 0;
             foreach(KeyValuePair<string, ActivityDatumMetadata> kvp in map)
             {
-                maxTreeColumn = Math.Max(maxTreeColumn, kvp.Value.PositionInTree);
+                if (kvp.Value.PositionInReport != null)
+                {
+                    int positionInReport = (int)kvp.Value.PositionInReport;
+                    maxReportColumn = Math.Max(maxReportColumn, positionInReport);
+                }
             }
-            return maxTreeColumn+1; //positions are zero indexed
+            return maxReportColumn+1; //positions are zero indexed
         }
     }
 }

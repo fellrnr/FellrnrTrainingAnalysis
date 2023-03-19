@@ -163,6 +163,13 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Fit extra details debug is wildly expensive and gives a lot of details of the things we don't look at")]
         public bool DebugFitExtraDetails { get; set; } = false; //This is very expensive!
 
+        [Description("Add the raw data to the data grids (report) to debug formatting or underlying data issues")]
+        public bool DebugAddRawDataToGrids { get; set; } = false;
+
+        [Description("Disable time axis in graphs and display raw data")]
+        public bool DebugDisableTimeAxis { get; set; } = false;
+
+
 
 
         //    ______                 _ _ 

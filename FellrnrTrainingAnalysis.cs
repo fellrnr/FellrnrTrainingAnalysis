@@ -1,16 +1,10 @@
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
-using System.Text.Json;
 using System.Text;
 using FellrnrTrainingAnalysis.Model;
-using System.Linq;
-using System.Windows.Forms;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using ScottPlot;
 using ScottPlot.Renderable;
 using static FellrnrTrainingAnalysis.Utils.Utils;
 using FellrnrTrainingAnalysis.UI;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -86,7 +80,7 @@ namespace FellrnrTrainingAnalysis
             activityDataGridView.Rows.Clear();
             //Database.CurrentAthlete.
             IReadOnlyCollection<string> activityFieldNames = Database.CurrentAthlete.ActivityFieldNames;
-            activityDataGridView.ColumnCount = ActivityDatumMetadata.LastPositionInTree();
+            activityDataGridView.ColumnCount = ActivityDatumMetadata.LastPositionInReport();
             if (activityDataGridView.ColumnCount == 0)
                 return;
             activityDataGridView.ColumnHeadersVisible = true;
@@ -102,11 +96,27 @@ namespace FellrnrTrainingAnalysis
             foreach (string s in activityFieldNames)
             {
                 ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
-                if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport >= 0)
+                if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
                 {
-                    DataGridViewColumn dataGridViewColumn = activityDataGridView.Columns[activityDatumMetadata.PositionInReport];
+                    int positionInReport = (int)activityDatumMetadata.PositionInReport;
+                    DataGridViewColumn dataGridViewColumn = activityDataGridView.Columns[positionInReport];
                     dataGridViewColumn.Name = activityDatumMetadata.Title;
-                    dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                    
+                    if(UI.DatumFormatter.RightJustify(activityDatumMetadata))
+                        dataGridViewColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+
+                    if(activityDatumMetadata.Invisible.HasValue && activityDatumMetadata.Invisible.Value) //most readable way of checking nullable bool? 
+                        dataGridViewColumn.Visible= false;
+
+                    if (activityDatumMetadata.ColumnSize != null)
+                    {
+                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                        dataGridViewColumn.Width = (int)activityDatumMetadata.ColumnSize;
+                    }
+                    else
+                    {
+                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                    }
                 }
             }
 
@@ -117,15 +127,17 @@ namespace FellrnrTrainingAnalysis
                 foreach (string fieldname in activityFieldNames)
                 {
                     ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldname);
-                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport >= 0)
+                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
                     {
+                        int positionInReport = (int)activityDatumMetadata.PositionInReport;
                         if (activity.HasNamedDatum(fieldname))
                         {
-                            row[activityDatumMetadata.PositionInReport] = activity.GetNamedDatumForDisplay(fieldname);
+                            //row[activityDatumMetadata.PositionInReport] = activity.GetNamedDatumForDisplay(fieldname);
+                            row[positionInReport] = UI.DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldname), activityDatumMetadata);
                         }
                         else
                         {
-                            row[activityDatumMetadata.PositionInReport] = "";
+                            row[positionInReport] = "";
                         }
                     }
                 }
@@ -163,13 +175,15 @@ namespace FellrnrTrainingAnalysis
                     if (index != null && index != -1)
                     {
                         string primarykey = (string)row.Cells[index.Value].Value;
-
-                        Model.Activity activity = Database.CurrentAthlete.Activities[primarykey];
-                        if (activity != null)
+                        if (Database.CurrentAthlete.Activities.ContainsKey(primarykey)) //should never happen unless we've turned on debugging to add extra data to the primary key column of the table. 
                         {
-                            foreach (KeyValuePair<string, IDataStream> kvp in activity.TimeSeries)
+                            Model.Activity activity = Database.CurrentAthlete.Activities[primarykey];
+                            if (activity != null)
                             {
-                                DisplayTimeSeries(activity, kvp);
+                                foreach (KeyValuePair<string, IDataStream> kvp in activity.TimeSeries)
+                                {
+                                    DisplayTimeSeries(activity, kvp);
+                                }
                             }
                         }
                     }
@@ -178,6 +192,7 @@ namespace FellrnrTrainingAnalysis
             formsPlot1.Refresh();
         }
 
+        const double MINPACE = 0.3; //0.3 is 55:30 min/km. Anything slower can be considered not moving to make the graph work, otherwise min/km values tend towards infinity
         private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, IDataStream> kvp)
         {
             string timeSeriesName = kvp.Key;
@@ -216,10 +231,13 @@ namespace FellrnrTrainingAnalysis
                 }
             }
 
-            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace)
+            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
             {
-                //scale up to fractions of a day from whole minutes
-                yArraySmoothed = Array.ConvertAll(yArraySmoothed, x => x/(60.0*24.0));
+                //negate the pace then negate the tick marks so faster is higher than slower
+                //ignore paces below min to avoid tending towards infinity
+                //divide 16.6 by pace to get min/km from meters/second
+                //mulitply but 60*24 to go from minutes to fraction of a day, so it will display right
+                yArraySmoothed = Array.ConvertAll(yArraySmoothed, x => ( x < MINPACE ? 0 : (16.666666667f/x) /(60.0*24.0)));
             }
             var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArraySmoothed);
             scatterGraph.MarkerShape = MarkerShape.none;
@@ -240,10 +258,11 @@ namespace FellrnrTrainingAnalysis
                 scatterGraph.YAxisIndex = yAxis.AxisIndex;
                 CurrentAxis.Add(yAxis);
             }
-            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace)
+            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
             {
                 //yAxis.DateTimeFormat(true);
                 yAxis.TickLabelFormat("m:ss", dateTimeFormat: true);
+                //yAxis.TickLabelNotation(invertSign: true);
             }
             yAxis.Label(dataStreamDefinition.DisplayTitle);
             yAxis.Color(scatterGraph.Color);

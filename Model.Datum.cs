@@ -27,7 +27,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Data = data;
         }
-        /// Override ToString() for debugging
+        /// Override ToString() for display
         public override string ToString()
         {
             return Data == null ? "null" : Data.ToString()!;

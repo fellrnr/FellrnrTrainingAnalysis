@@ -27,11 +27,11 @@ namespace FellrnrTrainingAnalysis.Model
         {
             return new List<Goal>
             {
-                new Goal(new List<string> { "Run" }, "Run", "Distance", 1.0f / 1000f, "0,0.0", "Km", 6000, "Σ🏃📏"),
+                new Goal(new List<string> { "Run" }, "Run", "Distance", 1.0f / 1000f, "0,0.0", "Km", 6000 * 1000, "Σ🏃📏"),
                 new Goal(new List<string> { "Run" }, "Run", "Elevation Gain", 1.0f, "N0", "m", 150 * 1000, "Σ🏃⬆"),
-                new Goal(new List<string> { "Run", "Walk", "Hike" }, "On Foot", "Distance", 1.0f / 1000f, "0,0.0", "Km", 6000, "Σ🏃🚶📏"),
+                new Goal(new List<string> { "Run", "Walk", "Hike" }, "On Foot", "Distance", 1.0f / 1000f, "0,0.0", "Km", 6000 * 1000, "Σ🏃🚶📏"),
                 new Goal(new List<string> { "Run", "Walk", "Hike" }, "On Foot", "Elevation Gain", 1.0f, "0,0", "m", 150 * 1000, "Σ🏃🚶⬆"),
-                new Goal(new List<string> { "Run" }, "Run", "Grade Adjusted Distance", 1.0f / 1000f, "0,0", "Km", 6000, "Σ🏃📐"),
+                new Goal(new List<string> { "Run" }, "Run", "Grade Adjusted Distance", 1.0f / 1000f, "0,0", "Km", 6000 * 1000, "Σ🏃📐"),
             };
 
         }
@@ -106,7 +106,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string FormatResult(float result)
         {
-            return result.ToString(Format) + Units;
+            float scaled = result * ScalingFactor;
+            return scaled.ToString(Format) + Units;
         }
 
         public string AsPercentTarget(float actual, int period)
@@ -202,7 +203,7 @@ namespace FellrnrTrainingAnalysis.Model
                     {
                         if (period.IsWithinPeriod(activityDateTime, targetDateTime))
                         {
-                            rolling[period] += targetValue * ScalingFactor;
+                            rolling[period] += targetValue;
                         }
                     }
                 }

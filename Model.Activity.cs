@@ -110,6 +110,10 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 timeSeries.Add(dataStream.Name, dataStream);
             }
+            else
+            {
+                timeSeries[dataStream.Name] = dataStream;
+            }
         }
 
         //TODO: Add HRV data to activity data, not really a time series

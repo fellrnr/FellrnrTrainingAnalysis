@@ -259,8 +259,6 @@ namespace FellrnrTrainingAnalysis.Model
         {
             base.Recalculate(force);
 
-            List<IDataStream> dataStreams = DataStreamFactory.Instance.DataStreams;
-
             foreach(KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
             {
                 CalendarNode calendarNode = kvp1.Value;
