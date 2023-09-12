@@ -1,17 +1,5 @@
-﻿using CsvHelper;
-using System;
-using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using System.Text.Json.Serialization;
-using static System.Windows.Forms.AxHost;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
-using Newtonsoft.Json.Linq;
-using System.Windows.Forms;
-using de.schumacher_bw.Strava.Endpoint;
 using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
 
@@ -32,6 +20,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         private Dictionary<string, Activity> _activities { get; set; } = new Dictionary<string, Activity>(); //primary key (strava id) against activity
 
+        //Strava Id to activity
         public ReadOnlyDictionary<string, Activity> Activities { get { return _activities.AsReadOnly(); } }
 
         public override Utils.DateTimeTree Id { get { return new DateTimeTree(); } } //HACK: Hack to see if tree works
@@ -59,6 +48,29 @@ namespace FellrnrTrainingAnalysis.Model
                 return timeSeriesNames.AsReadOnly();
             }
         } 
+
+        public IReadOnlyCollection<Tuple<String, Type>> ActivityFieldMetaData
+        {
+            get
+            {
+                List<Tuple<String, Type>> activityFieldMetaData = new List<Tuple<string, Type>>();
+                foreach (KeyValuePair<string, Activity> kvp in _activities)
+                {
+                    Activity activity = kvp.Value;
+                    foreach (Datum datum in activity.DataValues)
+                    {
+                        Tuple<string, Type> metadata = new Tuple<string, Type>(datum.Name, datum.GetType());
+                        if (!activityFieldMetaData.Contains(metadata))
+                        {
+                            activityFieldMetaData.Add(metadata);
+                        }
+                    }
+                }
+                activityFieldMetaData.Sort();
+                return activityFieldMetaData.AsReadOnly();
+            }
+        }
+
         public IReadOnlyCollection<String> ActivityFieldNames
         {
             get
@@ -79,6 +91,7 @@ namespace FellrnrTrainingAnalysis.Model
                 return activityFieldNames.AsReadOnly();
             }
         }
+
 
 
         public Activity? AddOrUpdateActivity(Dictionary<string, Datum> activityData)
@@ -184,7 +197,7 @@ namespace FellrnrTrainingAnalysis.Model
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(string.Format("Current athlete is {0} {1}\r\n", GetNamedDatumForDisplay(Model.Athlete.FirstNameTag), GetNamedDatumForDisplay(Model.Athlete.LastNameTag)));
+            sb.Append(string.Format("Current athlete is {0} {1}\r\n", GetNamedDatumForDisplay(FirstNameTag), GetNamedDatumForDisplay(LastNameTag)));
             sb.Append(string.Format("Current athlete has {0} attributes\r\n", Data.Count));
             foreach (KeyValuePair<string, Datum> kvp in Data)
             {
@@ -264,9 +277,9 @@ namespace FellrnrTrainingAnalysis.Model
                 CalendarNode calendarNode = kvp1.Value;
                 calendarNode.Recalculate(force); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
             }
-
-
         }
+
+
 
 
         [JsonIgnore]

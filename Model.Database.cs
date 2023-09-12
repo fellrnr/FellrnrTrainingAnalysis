@@ -1,14 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
-using de.schumacher_bw.Strava.Endpoint;
-using FellrnrTrainingAnalysis.UI;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
     public class Database
     {
+        static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        static string AppDataSubFolder = "FellrnrTrainingData";
+        static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
 
         public Database()
         {
@@ -18,18 +20,48 @@ namespace FellrnrTrainingAnalysis.Model
 
         public Dictionary<string, Athlete> Athletes { get; private set; }
 
+        public List<Hill>? Hills { get; set; } = null;
+
+        static bool ForceHillsOnce = true;
         //reapply the dynamic components, currently dyanamic data streams and goals
-        public void Recalculate(bool force)
+        public void MasterRecalculate(bool force)
         {
+            bool forceHills = (ForceHillsOnce || force);
+            ForceHillsOnce = false;
+
+
+            if (Hills == null || Hills.Count == 0 || forceHills)
+            {
+                Hills = Hill.Reload();
+            }
+
+
             foreach (KeyValuePair<string,Athlete> kvp in Athletes)
             {
                 Athlete athlete = kvp.Value;
                 athlete.Recalculate(force);
+
+                Logging.Instance.StartTimer();
             }
 
 
-            //TODO: the order is unclear here; the goals rely on the data fields, but the calendar node accumulation relies on the goals. 
+            if (forceHills)
+            {
+                foreach (Hill hill in Hills)
+                {
+                    hill.Climbed = new List<Activity>();
+                }
+            }
+            foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
+            {
+                kvp.Value.RecalculateHills(Hills, forceHills, false);
+            }
 
+            if (Options.Instance.LogLevel == Options.Level.Debug)
+                Hill.Dump(Hills, Hill.WAINWRIGHT);
+
+
+            //TODO: the order is unclear here; the goals rely on the data fields, but the calendar node accumulation relies on the goals. 
             List<Goal> goals = Goal.GoalFactory();
             List<Goal.Period> periods = Goal.DefaultStorePeriods;
 
@@ -37,6 +69,8 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 goal.UpdateActivityGoals(this, periods, force);
             }
+
+
         }
 
         public Athlete CurrentAthlete { get { return Athletes.First().Value; } }
@@ -59,8 +93,7 @@ namespace FellrnrTrainingAnalysis.Model
         private const string DatabaseSerializedName = "Database.bin";
         public void SaveToFile()
         {
-            string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string path = Path.Combine(folder, DatabaseSerializedName);
+            string path = Path.Combine(AppDataPath, DatabaseSerializedName);
             SaveToFile(path);
         }
         public void SaveToFile(string path)
@@ -81,12 +114,33 @@ namespace FellrnrTrainingAnalysis.Model
             }
             serialize.Stop();
             Logging.Instance.Log(string.Format("Serialization took {0}", serialize.Elapsed));
+
+
+            //clean up old backup files (keep 5)
+            FileInfo fileInfo= new FileInfo(path);
+            if (fileInfo.DirectoryName != null)
+            {
+                DirectoryInfo directoryInfo = new DirectoryInfo(fileInfo.DirectoryName);
+                string searchPattern = fileInfo.Name + "_*";
+                var fileInfos = directoryInfo.GetFiles(searchPattern).OrderByDescending(p => p.CreationTime);
+                if (fileInfos.Count() > 5)
+                {
+                    foreach (var file in fileInfos.Skip(5))
+                    {
+                        file.Delete();
+                    }
+                }
+            }
         }
 
         public static Database LoadFromFile()
         {
-            string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string path = Path.Combine(folder, DatabaseSerializedName);
+            if (!Directory.Exists(AppDataPath))
+            {
+                Directory.CreateDirectory(AppDataPath);
+            }
+            string path = Path.Combine(AppDataPath, DatabaseSerializedName);
+
             if (!File.Exists(path))
             {
                 return new Database();
@@ -123,7 +177,7 @@ namespace FellrnrTrainingAnalysis.Model
                 }
                 catch (Exception e)
                 {
-                    Logging.Instance.Log(string.Format("Derialization failed with {0}", e));
+                    Logging.Instance.Error(string.Format("Derialization failed with {0}", e));
                     return new Database();
                 }
             }

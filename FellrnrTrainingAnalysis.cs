@@ -1,10 +1,8 @@
 using System.Text;
 using FellrnrTrainingAnalysis.Model;
-using ScottPlot;
-using ScottPlot.Renderable;
-using static FellrnrTrainingAnalysis.Utils.Utils;
 using FellrnrTrainingAnalysis.UI;
 using FellrnrTrainingAnalysis.Utils;
+using System.Collections.ObjectModel;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -18,21 +16,17 @@ namespace FellrnrTrainingAnalysis
         public FellrnrTrainingAnalysisForm(bool StravaSync, bool email, bool batch)
         {
             //TODO: consider using http://dockpanelsuite.com/
-            //Utils.Config.Instance.OnlyLoadAfter = DateTime.Now.Subtract(new TimeSpan(365, 0, 0, 0));
-            //Utils.Config.Instance.OnlyLoadAfter = new DateTime(2022, 12,28);
-            //Utils.Config.Instance.LogLevel = Utils.Config.Level.Debug;
             InitializeComponent();
-            Utils.Options.LoadConfig();
-            Logging.Instance.Log(string.Format("OnlyLoad After {0}", Utils.Options.Instance.OnlyLoadAfter));
+            Options.LoadConfig();
             showErrorsToolStripMenuItem.Enabled = false;
-            Database = Model.Database.LoadFromFile();
+            Database = Database.LoadFromFile();
             GoalsUI = new UI.Goals(Database, goalsDataGridView, goalsTextBox);
-            SetMenuAvailability();
-            UpdateViews(false);
 
-            if(StravaSync)
+            //moved some construction activities to load event to prevent errors with no room for display
+
+            if (StravaSync)
             {
-                StravaApi.Instance.SyncNewActivites(Database);
+                Action.StravaApi.Instance.SyncNewActivites(Database);
             }
             if(email)
             {
@@ -42,18 +36,71 @@ namespace FellrnrTrainingAnalysis
             {
                 ExitApp(true);
             }
+
+            activityReport1.UpdateViews += UpdateViewsEventHandler;
+
             //Model.Goal.test();
         }
 
+        private void AddDataQualityMenus()
+        {
+            DataQuality dataQuality = new DataQuality();
+            ReadOnlyCollection<DataQualityCheck> CheckList = dataQuality.CheckList;
+            foreach (DataQualityCheck check in CheckList)
+            {
+                ToolStripMenuItem toolStripMenuItem = new ToolStripMenuItem();
+                toolStripMenuItem.Tag = check;
+                toolStripMenuItem.Text = check.Description;
+                toolStripMenuItem.Click += checkQualityToolStripMenuItem_Click;
+                scanForDataQualityIssueToolStripMenuItem.DropDownItems.Add(toolStripMenuItem);
+            }
+            foreach (DataQualityCheck check in CheckList)
+            {
+                ToolStripMenuItem toolStripMenuItem = new ToolStripMenuItem();
+                toolStripMenuItem.Tag = check;
+                toolStripMenuItem.Text = check.Description;
+                toolStripMenuItem.Click += fixQualitToolStripMenuItem_Click;
+                fixDataQualityIssueToolStripMenuItem.DropDownItems.Add(toolStripMenuItem);
+            }
+        }
+
+        private void FellrnrTrainingAnalysisForm_Load(object sender, EventArgs e)
+        {
+            SetMenuAvailability();
+            
+            UpdateViews(false);
+            AddDataQualityMenus();
+        }
+
+
         UI.Goals GoalsUI { get; set; }
+
+        FilterActivities FilterActivities = new FilterActivities(); //the default filter
+
+
+        public void CallbackEventHandler(FilterActivities filterActivities)
+        {
+            FilterActivities = filterActivities;
+            UpdateViews(false);
+        }
 
         private void UpdateViews(bool force)
         {
-            Database.Recalculate(force);
+            Logging.Instance.StartTimer();
+            Database.MasterRecalculate(force);
+            Logging.Instance.Log(string.Format("Recalculate took {0}", Logging.Instance.GetAndResetTime()));
+
             UpdateSummary();
+            Logging.Instance.Log(string.Format("UpdateSummary took {0}", Logging.Instance.GetAndResetTime()));
             UpdateGoals();
-            UpdateReport();
-            activityList1.Display(Database);
+            Logging.Instance.Log(string.Format("UpdateGoals took {0}", Logging.Instance.GetAndResetTime()));
+            
+            activityReport1.UpdateReport(Database, FilterActivities);
+            Logging.Instance.Log(string.Format("UpdateReport took {0}", Logging.Instance.GetAndResetTime()));
+            activityTree1.Display(Database);
+            Logging.Instance.Log(string.Format("activityList1.Display took {0}", Logging.Instance.GetAndResetTime()));
+
+            progressGraph1.Display(Database, FilterActivities);
 
             if (Logging.Instance.HasErrors)
             {
@@ -73,215 +120,6 @@ namespace FellrnrTrainingAnalysis
             sb.Append(string.Format("A total of {0} athletes loaded\r\n", Database.Athletes.Count));
             sb.Append(Database.CurrentAthlete);
             summaryTextBox.Text = sb.ToString();
-        }
-
-        private void UpdateReport()
-        {
-            activityDataGridView.Rows.Clear();
-            //Database.CurrentAthlete.
-            IReadOnlyCollection<string> activityFieldNames = Database.CurrentAthlete.ActivityFieldNames;
-            activityDataGridView.ColumnCount = ActivityDatumMetadata.LastPositionInReport();
-            if (activityDataGridView.ColumnCount == 0)
-                return;
-            activityDataGridView.ColumnHeadersVisible = true;
-
-            // Set the column header style.
-            DataGridViewCellStyle columnHeaderStyle = new DataGridViewCellStyle();
-
-            columnHeaderStyle.BackColor = Color.Beige;
-            columnHeaderStyle.Font = new Font("Verdana", 8, FontStyle.Regular);
-            activityDataGridView.ColumnHeadersDefaultCellStyle = columnHeaderStyle;
-
-            // Set the column header names.
-            foreach (string s in activityFieldNames)
-            {
-                ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
-                if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
-                {
-                    int positionInReport = (int)activityDatumMetadata.PositionInReport;
-                    DataGridViewColumn dataGridViewColumn = activityDataGridView.Columns[positionInReport];
-                    dataGridViewColumn.Name = activityDatumMetadata.Title;
-                    
-                    if(UI.DatumFormatter.RightJustify(activityDatumMetadata))
-                        dataGridViewColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-
-                    if(activityDatumMetadata.Invisible.HasValue && activityDatumMetadata.Invisible.Value) //most readable way of checking nullable bool? 
-                        dataGridViewColumn.Visible= false;
-
-                    if (activityDatumMetadata.ColumnSize != null)
-                    {
-                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                        dataGridViewColumn.Width = (int)activityDatumMetadata.ColumnSize;
-                    }
-                    else
-                    {
-                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
-                    }
-                }
-            }
-
-            foreach (KeyValuePair<string, Model.Activity> kvp in Database.CurrentAthlete.Activities)
-            {
-                Activity activity = kvp.Value;
-                string[] row = new string[activityFieldNames.Count];
-                foreach (string fieldname in activityFieldNames)
-                {
-                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldname);
-                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
-                    {
-                        int positionInReport = (int)activityDatumMetadata.PositionInReport;
-                        if (activity.HasNamedDatum(fieldname))
-                        {
-                            //row[activityDatumMetadata.PositionInReport] = activity.GetNamedDatumForDisplay(fieldname);
-                            row[positionInReport] = UI.DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldname), activityDatumMetadata);
-                        }
-                        else
-                        {
-                            row[positionInReport] = "";
-                        }
-                    }
-                }
-                activityDataGridView.Rows.Add(row);
-            }
-            if (activityDataGridView.Rows.Count > 0)
-            {
-                activityDataGridView.FirstDisplayedScrollingRowIndex = activityDataGridView.RowCount - 1; //this changes the selected row to be zero
-                activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
-            }
-        }
-
-        private List<Axis> CurrentAxis { get; set; } = new List<Axis>();
-        private int axisIndex = 0;
-        private void dataGridView1_SelectionChanged(object sender, EventArgs e)
-        {
-            UpdateDataStreamGraph();
-        }
-
-        private void UpdateDataStreamGraph()
-        {
-            DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
-            formsPlot1.Plot.Clear();
-
-            foreach (Axis axis in CurrentAxis) { formsPlot1.Plot.RemoveAxis(axis); }
-            CurrentAxis.Clear();
-            axisIndex = 0;
-
-            if (dataGridViewSelectedRowCollection.Count > 0)
-            {
-                DataGridViewRow row = dataGridViewSelectedRowCollection[0];
-                if (row != null)
-                {
-                    var index = activityDataGridView.Columns[Model.Activity.PrimarykeyTag]?.Index;
-                    if (index != null && index != -1)
-                    {
-                        string primarykey = (string)row.Cells[index.Value].Value;
-                        if (Database.CurrentAthlete.Activities.ContainsKey(primarykey)) //should never happen unless we've turned on debugging to add extra data to the primary key column of the table. 
-                        {
-                            Model.Activity activity = Database.CurrentAthlete.Activities[primarykey];
-                            if (activity != null)
-                            {
-                                foreach (KeyValuePair<string, IDataStream> kvp in activity.TimeSeries)
-                                {
-                                    DisplayTimeSeries(activity, kvp);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            formsPlot1.Refresh();
-        }
-
-        const double MINPACE = 0.3; //0.3 is 55:30 min/km. Anything slower can be considered not moving to make the graph work, otherwise min/km values tend towards infinity
-        private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, IDataStream> kvp)
-        {
-            string timeSeriesName = kvp.Key;
-
-            DataStreamDefinition? dataStreamDefinition = DataStreamDefinition.FindDataStreamDefinition(timeSeriesName);
-            if (dataStreamDefinition == null || !dataStreamDefinition.Show)
-                return;
-            Model.IDataStream activityDataStreamdataStream = kvp.Value;
-            Tuple<uint[], float[]>? dataStream = activityDataStreamdataStream.GetData(activity);
-            if (dataStream == null)
-            {
-                return;
-            }
-            double[] xArray = Array.ConvertAll(dataStream.Item1, x => (double)x);
-            double[] yArrayRaw = Array.ConvertAll(dataStream.Item2, x => (double)x);
-
-            double[] yArraySmoothed = Smooth(yArrayRaw, dataStreamDefinition);
-
-            for (int i = 0; i < xArray.Length; i++)
-            {
-                double x = xArray[i];
-                bool norm = double.IsNormal(x);
-                if (x != 0 && !double.IsNormal(x))
-                {
-                    Logging.Instance.Log(string.Format("invalid X value {0} at offset {1} of {2}", xArray[i], i, timeSeriesName));
-                    return;
-                }
-            }
-            for (int i = 0; i < yArraySmoothed.Length; i++)
-            {
-                double y = yArraySmoothed[i];
-                if (y != 0 && !double.IsNormal(y))
-                {
-                    Logging.Instance.Log(string.Format("invalid Y value {0} at offset {1} of {2}", yArraySmoothed[i], i, timeSeriesName));
-                    return;
-                }
-            }
-
-            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
-            {
-                //negate the pace then negate the tick marks so faster is higher than slower
-                //ignore paces below min to avoid tending towards infinity
-                //divide 16.6 by pace to get min/km from meters/second
-                //mulitply but 60*24 to go from minutes to fraction of a day, so it will display right
-                yArraySmoothed = Array.ConvertAll(yArraySmoothed, x => ( x < MINPACE ? 0 : (16.666666667f/x) /(60.0*24.0)));
-            }
-            var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArraySmoothed);
-            scatterGraph.MarkerShape = MarkerShape.none;
-            scatterGraph.LineWidth = 2;
-
-            //formsPlot1.Plot.YAxis.TickLabelFormat
-            Axis yAxis;
-            if (axisIndex == 0)
-            {
-                yAxis = formsPlot1.Plot.YAxis;
-                scatterGraph.YAxisIndex = 0;
-
-            }
-            else
-            {
-                yAxis = formsPlot1.Plot.AddAxis(ScottPlot.Renderable.Edge.Left);
-                yAxis.AxisIndex = axisIndex;
-                scatterGraph.YAxisIndex = yAxis.AxisIndex;
-                CurrentAxis.Add(yAxis);
-            }
-            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
-            {
-                //yAxis.DateTimeFormat(true);
-                yAxis.TickLabelFormat("m:ss", dateTimeFormat: true);
-                //yAxis.TickLabelNotation(invertSign: true);
-            }
-            yAxis.Label(dataStreamDefinition.DisplayTitle);
-            yAxis.Color(scatterGraph.Color);
-            axisIndex++;
-            return;
-        }
-
-
-        private double[] Smooth(double[] input, DataStreamDefinition dataStreamDefinition)
-        {
-            double[] smoothedElevationChanges;
-            if (dataStreamDefinition.Smoothing == DataStreamDefinition.SmoothingType.AverageWindow)
-                smoothedElevationChanges = Smoothing.WindowSmoothed(input, dataStreamDefinition.SmoothingWindow);
-            else if (dataStreamDefinition.Smoothing == DataStreamDefinition.SmoothingType.SimpleExponential)
-                smoothedElevationChanges = Smoothing.SimpleExponentialSmoothed(input, dataStreamDefinition.SmoothingWindow);
-            else
-                smoothedElevationChanges = input;
-
-            return smoothedElevationChanges;
         }
 
         private void SetMenuAvailability()
@@ -324,7 +162,7 @@ namespace FellrnrTrainingAnalysis
         {
             System.Diagnostics.Stopwatch load = new System.Diagnostics.Stopwatch();
             load.Start();
-            StravaCsvImporter stravaCsvImporter = new StravaCsvImporter();
+            Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
             int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database);
             load.Stop();
             Logging.Instance.Log(string.Format("Load took {0}", load.Elapsed));
@@ -340,7 +178,7 @@ namespace FellrnrTrainingAnalysis
 
         private void connectToStravaToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            StravaApi.Instance.Connect();
+            Action.StravaApi.Instance.Connect();
             MessageBox.Show("Connected to Strava");
             SetMenuAvailability();
         }
@@ -348,10 +186,10 @@ namespace FellrnrTrainingAnalysis
         private void syncWithStravaToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Application.UseWaitCursor = true;
-            int count = StravaApi.Instance.SyncNewActivites(Database);
+            Tuple<int,int> count = Action.StravaApi.Instance.SyncNewActivites(Database);
             Application.UseWaitCursor = false;
 
-            MessageBox.Show($"Synced {count} activities");
+            MessageBox.Show($"Synced {count.Item1} activities, with at least {count.Item2} remaining");
             UpdateViews(false);
         }
 
@@ -376,7 +214,7 @@ namespace FellrnrTrainingAnalysis
         private void ExitApp(bool force)
         {
             Database.SaveToFile();
-            Utils.Options.SaveConfig();
+            Options.SaveConfig();
             ActivityDatumMetadata.WriteToCsv();
             DataStreamDefinition.WriteToCsv();
             if(force)
@@ -385,7 +223,9 @@ namespace FellrnrTrainingAnalysis
             }
             else
             {
-                Application.Exit();
+                //app exit doesn't work if there's a dialog open.
+                Environment.Exit(0);
+                //Application.Exit();
             }
         }
 
@@ -393,7 +233,7 @@ namespace FellrnrTrainingAnalysis
         {
             OptionsDialog configForm = new OptionsDialog();
             configForm.ShowDialog();
-            UpdateViews(false);
+            UpdateViews(false);//TODO: update this to be non-modal with a callback
 
         }
 
@@ -448,12 +288,16 @@ namespace FellrnrTrainingAnalysis
             string errorText = Logging.Instance.Error();
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(errorText);
             largeTextDialogForm.ShowDialog();
-            Logging.Instance.HasErrors = false;
-            Logging.Instance.Clear();
             showErrorsToolStripMenuItem.Enabled = false;
         }
 
-        private void normalLogToolStripMenuItem_Click(object sender, EventArgs e)
+        private void clearAllLogsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Logging.Instance.HasErrors = false;
+            Logging.Instance.Clear();
+        }
+
+        private void debugLogToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string logText = Logging.Instance.Debug();
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(logText);
@@ -474,15 +318,16 @@ namespace FellrnrTrainingAnalysis
             largeTextDialogForm.ShowDialog();
         }
 
-        private void dataStreamDefinitionsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void dataStreamGraphDefinitionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            List<Model.DataStreamDefinition>? definitions = Model.DataStreamDefinition.GetDefinitions();
+            List<Model.DataStreamDefinition>? definitions = DataStreamDefinition.GetDefinitions();
             if (definitions != null)
             {
                 UI.DataStreamDefinitionEditor dataStreamDefinitionEditor = new UI.DataStreamDefinitionEditor(definitions);
                 dataStreamDefinitionEditor.Edited += EditEventHandler;
 
-                dataStreamDefinitionEditor.Show();
+                dataStreamDefinitionEditor.ShowDialog(); //TODO: update this to be non-modal with a callback
+                UpdateViews(false);
             }
             else
             {
@@ -490,68 +335,100 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
-        public void EditEventHandler(DataStreamDefinitionEditor sender)
+
+
+
+        public void EditEventHandler(DataStreamDefinitionEditor sender) //a callback from clients
         {
             List<Model.DataStreamDefinition>? definitions = sender.Definitions;
-            Model.DataStreamDefinition.SetDefinitions(definitions);
-            UpdateDataStreamGraph(); //only update the grpah
+            DataStreamDefinition.SetDefinitions(definitions);
+            activityReport1.UpdateSelectedRow(); //only update the grpah
         }
+
+        public void UpdateViewsEventHandler() //a callback from clients
+        {
+            UpdateViews(false);
+        }
+
+
+
+        private void clearDataQualityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ClearDataQualityIssues();
+        }
+
+        private void ClearDataQualityIssues()
+        {
+            if (Database == null || Database.CurrentAthlete == null) { return; }
+
+            foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
+            {
+                Activity activity = kvp.Value;
+
+                if (activity.DataQualityIssues != null)
+                    activity.DataQualityIssues.Clear();
+            }
+        }
+
+        private void checkQualityToolStripMenuItem_Click(object? sender, EventArgs e)
+        {
+            if (sender == null) { return; }
+            ToolStripMenuItem toolStripMenuItem = (ToolStripMenuItem)sender;
+            if (toolStripMenuItem.Tag == null) { return; }
+            DataQualityCheck dataQualityCheck = (DataQualityCheck)toolStripMenuItem.Tag;
+            rescanForDataQualityIssues(dataQualityCheck);
+
+            FilterActivities.Filters.Clear();
+            FilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
+            UpdateViews(false);
+        }
+
+        private void fixQualitToolStripMenuItem_Click(object? sender, EventArgs e)
+        {
+            if (sender == null) { return; }
+            ToolStripMenuItem toolStripMenuItem = (ToolStripMenuItem)sender;
+            if (toolStripMenuItem.Tag == null) { return; }
+            DataQualityCheck dataQualityCheck = (DataQualityCheck)toolStripMenuItem.Tag;
+            rescanForDataQualityIssues(dataQualityCheck, true);
+
+            FilterActivities.Filters.Clear();
+            FilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
+            UpdateViews(false);
+        }
+
+        ActivityFilterDialog? activityFilterDialog;
+        private void filterToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if(activityFilterDialog == null) 
+                activityFilterDialog = new ActivityFilterDialog();
+            activityFilterDialog.UpdatedHandler += CallbackEventHandler;
+            activityFilterDialog.Display(Database);
+            activityFilterDialog.Show();
+        }
+
+        private void rescanForDataQualityIssuesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            rescanForDataQualityIssues();
+        }
+
+        private void rescanForDataQualityIssues(DataQualityCheck? dataQualityCheck = null, bool fix = false)
+        {
+            ClearDataQualityIssues();
+            Utils.DataQuality dataQuality = new DataQuality();
+            List<string> badStreams = dataQuality.FindBadDataStreams(Database, dataQualityCheck, fix);
+
+            UpdateViews(false);
+
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine(string.Format("Found {0} bad data streams\r\n", badStreams.Count));
+            foreach (string bad in badStreams)
+            {
+                stringBuilder.AppendLine(bad + "\n");
+            }
+            LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(stringBuilder.ToString());
+            largeTextDialogForm.ShowDialog();
+        }
+
     }
 
 }
-#region test
-/*
- *         private void Test()
-        {
-            bool reload = true;
-
-            if (reload)
-            {
-                //            Utils.Config.Instance.OnlyLoadAfter = DateTime.Now.Subtract(new TimeSpan(365, 0, 0, 0));
-                //            Logging.Instance.Log(string.Format("OnlyLoad After {0}", Utils.Config.Instance.OnlyLoadAfter));
-
-                Stopwatch load = new Stopwatch();
-                load.Start();
-                Database.LoadFromStravaArchive(@"C:\Users\jfsav\Downloads\A Strava 20221228 export_252540\profile.csv"); //HACK - force loading from csv
-                load.Stop();
-                Logging.Instance.Log(string.Format("Load took {0}", load.Elapsed));
-
-
-                Stopwatch serialize = new Stopwatch();
-                serialize.Start();
-                IFormatter formatter = new BinaryFormatter();
-                using (Stream stream = new FileStream("Database.bin", FileMode.Create, FileAccess.Write, FileShare.None)) //TODO: variable binary filename
-                {
-#pragma warning disable SYSLIB0011
-                    formatter.Serialize(stream, Database);
-#pragma warning restore SYSLIB0011
-                }
-                serialize.Stop();
-                Logging.Instance.Log(string.Format("Serialization took {0}", serialize.Elapsed));
-            }
-            else
-            {
-                Stopwatch deserialize = new Stopwatch();
-                deserialize.Start();
-                IFormatter formatter = new BinaryFormatter();
-                using (Stream stream = new FileStream("Database.bin", FileMode.Open, FileAccess.Read, FileShare.None))
-                {
-#pragma warning disable SYSLIB0011
-                    Object deserialized = formatter.Deserialize(stream);
-                    if (deserialized != null && deserialized is Model.Database)
-                    {
-                        Database = (Model.Database)deserialized;
-                    }
-                    else
-                    {
-                        Logging.Instance.Error(string.Format("Derialization failed on {0}", "Database.bin"));
-                    }
-#pragma warning restore SYSLIB0011
-                }
-                deserialize.Stop();
-                Logging.Instance.Log(string.Format("Derialization took {0}", deserialize.Elapsed));
-
-            }
-        }
-*/
-#endregion

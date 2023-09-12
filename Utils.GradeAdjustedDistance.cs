@@ -1,10 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static FellrnrTrainingAnalysis.Utils.Utils;
+﻿using static FellrnrTrainingAnalysis.Utils.Utils;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -30,10 +24,10 @@ namespace FellrnrTrainingAnalysis.Utils
 
             //smoothing the grade is effectively the same a weighted grading the altitude, but simpler
             //we have to smooth the grade, as the cost is a polynomial of the grade, so it's too late to smooth then; any errors will be magnified 
-            if (Options.Instance.SmoothingType == Smoothing.SmoothingOptions.AverageWindow)
-                _smoothedGrades = Smoothing.WindowSmoothed(_rawGrades, Options.Instance.SmoothingWindow);
-            else if (Options.Instance.SmoothingType == Smoothing.SmoothingOptions.SimpleExponential)
-                _smoothedGrades = Smoothing.SimpleExponentialSmoothed(_rawGrades, Options.Instance.SmoothingWindow);
+            if (Options.Instance.SmoothingType == TimeSeries.SmoothingOptions.AverageWindow)
+                _smoothedGrades = TimeSeries.WindowSmoothed(_rawGrades, Options.Instance.SmoothingWindow);
+            else if (Options.Instance.SmoothingType == TimeSeries.SmoothingOptions.SimpleExponential)
+                _smoothedGrades = TimeSeries.SimpleExponentialSmoothed(_rawGrades, Options.Instance.SmoothingWindow);
             else
                 _smoothedGrades = _rawGrades;
 

@@ -1,12 +1,4 @@
-﻿using de.schumacher_bw.Strava.Endpoint;
-using de.schumacher_bw.Strava.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static FellrnrTrainingAnalysis.Model.DataStreamToDataField;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+﻿using System.Text;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -100,7 +92,7 @@ namespace FellrnrTrainingAnalysis.Model
                     sb.Append($"{p.ShortName} ${dt} is ${result}\r\n");
                 }
             }
-            LargeTextDialogForm d = new LargeTextDialogForm(sb.ToString());
+            UI.LargeTextDialogForm d = new UI.LargeTextDialogForm(sb.ToString());
             d.ShowDialog();
         }
 

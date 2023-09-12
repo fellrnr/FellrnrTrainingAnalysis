@@ -1,18 +1,22 @@
 ﻿using Dynastream.Fit;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO.Compression;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
-using System.Xml.Linq;
+using FellrnrTrainingAnalysis.Utils;
+using FellrnrTrainingAnalysis.Model;
 
-namespace FellrnrTrainingAnalysis.Model
+namespace FellrnrTrainingAnalysis.Action
 {
     public class FitReader
     {
 
-        public FitReader(Activity activity, string path)
+        public FitReader(FellrnrTrainingAnalysis.Model.Activity activity, string path)
         {
             Calculation = new CalculationData(path);
+            Accumulation = new AccumulationData(activity);
+            Calculation.activityStart = activity.StartDateTime;
+        }
+
+        public FitReader(FellrnrTrainingAnalysis.Model.Activity activity)
+        {
+            Calculation = new CalculationData();
             Accumulation = new AccumulationData(activity);
             Calculation.activityStart = activity.StartDateTime;
         }
@@ -20,36 +24,37 @@ namespace FellrnrTrainingAnalysis.Model
         //The things we know about the activity
         private class AccumulationData
         {
-            public AccumulationData(Activity activity) { this.activity = activity; }
-            public Activity activity; 
+            public AccumulationData(FellrnrTrainingAnalysis.Model.Activity activity) { this.activity = activity; }
+            public FellrnrTrainingAnalysis.Model.Activity activity; 
 
             public Dictionary<string, KeyValuePair<List<uint>, List<float>>> dataStreams = new Dictionary<string, KeyValuePair<List<uint>, List<float>>>();
             public Dictionary<string, uint> lastElapsedTime = new Dictionary<string, uint>();
 
+            public List<uint> LocationTimes = new List<uint>();
+            public List<float> LocationLats = new List<float>();
+            public List<float> LocationLons = new List<float>();
 
-            public static int countNonFitFiles = 0;
-            public static int countActivitiesWithoutFilename = 0;
             public static SortedDictionary<string, int> fieldCounts = new SortedDictionary<string, int>();
-
         }
 
         //put all the variables for ongoing calculations that don't get emitted in a seperate class for clarity
         private class CalculationData
         {
-            public CalculationData(string path) { this.path = path; }
+            public CalculationData(string path) { this.Path = path; }
+            public CalculationData() { this.Path = ""; }
             public double totalStopped = 0;
             public System.DateTime lastStop;
             public System.DateTime? activityStart = null;
-            public bool isRunning = true; //We seem to get a start message a few seconds after the recording starts, so lets assume we're already running
-            public string path;
+            public bool IsRunning = true; //We seem to get a start message a few seconds after the recording starts, so lets assume we're already running
+            public string Path;
             public bool debugMode = false;
             //TODO: debug specific FIT file, using public string debugFile = "";  and then when that file is processed, output debug data
 
-            public Stopwatch Overall = new Stopwatch();
-            public Stopwatch Read = new Stopwatch();
-            public Stopwatch Other = new Stopwatch();
-            public Stopwatch InRecord = new Stopwatch();
-            public Stopwatch Decompress = new Stopwatch();
+            public System.Diagnostics.Stopwatch Overall = new System.Diagnostics.Stopwatch();
+            public System.Diagnostics.Stopwatch Read = new System.Diagnostics.Stopwatch();
+            public System.Diagnostics.Stopwatch Other = new System.Diagnostics.Stopwatch();
+            public System.Diagnostics.Stopwatch InRecord = new System.Diagnostics.Stopwatch();
+            public System.Diagnostics.Stopwatch Decompress = new System.Diagnostics.Stopwatch();
             public static int Processed = 0;
         }
         private CalculationData Calculation { get; }
@@ -57,61 +62,30 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static void ClearSummaryErrors()
         {
-            AccumulationData.countActivitiesWithoutFilename = 0;
-            AccumulationData.countNonFitFiles = 0;
             AccumulationData.fieldCounts.Clear();
         }
         public static void SummaryErrors() //For optimization, only output the summary of the errors or the log file becomes too verbose
         {
-            if (AccumulationData.countActivitiesWithoutFilename > 0 || AccumulationData.countNonFitFiles > 0)
-            {
-                Logging.Instance.Error(String.Format("A total of {0} activities without a filename", AccumulationData.countActivitiesWithoutFilename));
-                Logging.Instance.Error(String.Format("A total of {0} activities that are not FIT files", AccumulationData.countNonFitFiles));
-            }
             foreach(KeyValuePair<string, int> kvp in AccumulationData.fieldCounts)
                 Logging.Instance.Debug(string.Format("Found key {0}, count {1}", kvp.Key, kvp.Value));
         }
-
-
 
         public void ReadFitFromStravaArchive()
         {
             Calculation.Overall.Start();
             CalculationData.Processed++;
-            System.DateTime? activityDateTime = Accumulation.activity.StartDateTime;
-            if(activityDateTime != null && Utils.Options.Instance.OnlyLoadAfter != null && Utils.Options.Instance.OnlyLoadAfter >= activityDateTime)
-            {
-                Logging.Instance.Log(string.Format("Activity {2} is at {0} and OnlyLoadAfter is {1}", activityDateTime, Utils.Options.Instance.OnlyLoadAfter, CalculationData.Processed));
+
+            if (Accumulation.activity.FileFullPath == null)
                 return;
-            }
 
-
-            string? filenameFromDatum = Accumulation.activity.Filename;
-            if (filenameFromDatum == null)
-            {
-                if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
-                    Logging.Instance.Debug("Activity does not have a filename");
-                AccumulationData.countActivitiesWithoutFilename++;
-                return;
-            }
-            string filepart = (string)filenameFromDatum;
-            if(!filepart.ToLower().EndsWith(".fit") && !filepart.ToLower().EndsWith(".fit.gz"))
-            {
-                if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
-                    Logging.Instance.Debug("Activity file is not FIT " + filepart);
-                AccumulationData.countNonFitFiles++;
-                return;
-            }
-
-            string filepath = Calculation.path + '\\' + filepart;
-
+            string filepath = Accumulation.activity.FileFullPath;
             if (!System.IO.File.Exists(filepath))
             {
                 throw new Exception("File " + filepath + " not found");
             }
 
             //using (FileStream fitSource = new FileStream(filename, FileMode.Open, FileAccess.Read))
-            using (Stream fitSource = OpenFitFile(filepath))
+            using (Stream fitSource = Misc.DecompressAndOpenFile(filepath))
             {
                 Decode fitDecoder = CreateAndLinkDecoder();
 
@@ -131,7 +105,11 @@ namespace FellrnrTrainingAnalysis.Model
                 fitSource.Close();
 
             }
+
             Accumulation.activity.AddDataStreams(Accumulation.dataStreams);
+
+            if (Accumulation.LocationTimes.Count > 0)
+                Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
             Calculation.Overall.Stop();
 
 
@@ -139,7 +117,7 @@ namespace FellrnrTrainingAnalysis.Model
             FileInfo fi = new FileInfo(filepath);
             long size = fi.Length / 1024;
             double relativeTime = Calculation.Overall.Elapsed.TotalMicroseconds / fi.Length;
-            if (Utils.Options.Instance.DebugFitPerformance) 
+            if (Options.Instance.DebugFitPerformance) 
                 Logging.Instance.Log(String.Format("{4}: {5} Kb, {6:f1} us/Kb, {0} Finished in {3:f1}s, Read {7:f1}, Record {9:f1}, Other {8:f1}, reading {1} from {2} ", 
                     System.DateTime.Now, filepath, Accumulation.activity.StartDateTime, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
                     Calculation.Read.Elapsed.TotalSeconds, Calculation.Other.Elapsed.TotalSeconds, Calculation.InRecord.Elapsed.TotalSeconds));
@@ -151,25 +129,13 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-
-
-
-        //TODO:Convert Lat/Long 
-        //
-        //it seems Garmin stores its angular coordinates using a 32-bit integer, so that gives 2^32 possible values. We want to be
-        //able to represent values up to 360° (or -180 to 180), so each degree represents 2^32 / 360 = 11930465.
-        //
-        //For the latitudes and longitudes, you can divide the numbers by 11930465 (2^32 / 360) to get values in decimal degrees. The
-        //values seem to be stored in a signed 32-bit integer range, to represent the full range of geographic coordinate values possible.
-        //
-        //From https://gis.stackexchange.com/questions/371656/garmin-fit-coordinate-system
-        void OnRecordMesgEvent(object sender, MesgEventArgs e)
+        private void OnRecordMesgEvent(object sender, MesgEventArgs e)
         {
             Calculation.InRecord.Start();
             if (Calculation.activityStart == null)
                 throw new Exception("Activity without start time, can't process");
 
-            if(Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if(Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("RecordMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             RecordMesg myRecordMesg = (RecordMesg)e.mesg;
 
@@ -179,7 +145,7 @@ namespace FellrnrTrainingAnalysis.Model
             System.DateTime recordTime = dt.GetDateTime();
             System.DateTime activityStart = (System.DateTime)Calculation.activityStart!;
             uint elapsedTime = (uint)((recordTime - activityStart).TotalSeconds - Calculation.totalStopped);
-            if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("RecordMesgEvent: elapsedTime {0}, recordTime {1} activityStart {2}, totalStopped {3}", 
                     elapsedTime, recordTime, Calculation.activityStart, Calculation.totalStopped));
 
@@ -197,7 +163,46 @@ namespace FellrnrTrainingAnalysis.Model
                 ProcessFitRecordField(recordTime, elapsedTime, field);
             }
 
+            //handle lat long specially
+            ProcessFitPosition(myRecordMesg, elapsedTime);
+
+
             Calculation.InRecord.Stop();
+        }
+
+        //Convert Lat/Long 
+        //
+        //it seems Garmin stores its angular coordinates using a 32-bit integer, so that gives 2^32 possible values. We want to be
+        //able to represent values up to 360° (or -180 to 180), so each degree represents 2^32 / 360 = 11930465.
+        //
+        //For the latitudes and longitudes, you can divide the numbers by 11930465 (2^32 / 360) to get values in decimal degrees. The
+        //values seem to be stored in a signed 32-bit integer range, to represent the full range of geographic coordinate values possible.
+        //
+        //From https://gis.stackexchange.com/questions/371656/garmin-fit-coordinate-system
+
+        private void ProcessFitPosition(RecordMesg myRecordMesg, uint elapsedTime)
+        {
+            int? latSemicircles = null;
+            int? lonSemicircles = null;
+
+            //note: Lat Long are Sint32 with the units "semicircles"
+
+            foreach (var field in myRecordMesg.Fields)
+            {
+                if (field.Num == RecordMesg.FieldDefNum.PositionLat)
+                    latSemicircles = (int)field.GetValue();
+                if (field.Num == RecordMesg.FieldDefNum.PositionLong)
+                    lonSemicircles = (int)field.GetValue();
+            }
+            if (latSemicircles == null || lonSemicircles == null)
+                return;
+
+            float lat = (float)latSemicircles / 11930465.0f;
+            float lon = (float)lonSemicircles / 11930465.0f;
+
+            Accumulation.LocationTimes.Add(elapsedTime);
+            Accumulation.LocationLats.Add(lat);
+            Accumulation.LocationLons.Add(lon);
         }
 
         private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, Field? field)
@@ -220,7 +225,7 @@ namespace FellrnrTrainingAnalysis.Model
         private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, FieldBase? field, byte fieldNum)
         {
             string fieldName = field!.GetName().ToString();
-            if (Utils.Options.Instance.DebugFitFields)
+            if (Options.Instance.DebugFitFields)
             {
                 if (!AccumulationData.fieldCounts.ContainsKey(fieldName))
                     AccumulationData.fieldCounts.Add(fieldName, 0);
@@ -229,7 +234,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (fieldName.ToLower() == "unknown")
             {
-                if (Utils.Options.Instance.ImportUnknownFitFields)
+                if (Options.Instance.ImportUnknownFitFields)
                 {
                     fieldName = fieldName + "_" + fieldNum;
                 }
@@ -271,7 +276,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public void AddTimeSeriesDatum(string name, uint elapsedTime, float data)
+        private void AddTimeSeriesDatum(string name, uint elapsedTime, float data)
         {
             if (!Accumulation.dataStreams.ContainsKey(name))
             {
@@ -346,7 +351,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Calculation.Other.Start();
 
-            if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("OnFileIDMesg: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             FileIdMesg myFileIdMesg = (FileIdMesg)e.mesg;
             var timestampUint = myFileIdMesg.GetFieldValue(FileIdMesg.FieldDefNum.TimeCreated);
@@ -356,7 +361,7 @@ namespace FellrnrTrainingAnalysis.Model
             Calculation.lastStop = startTime;
             if (Calculation.activityStart != null)
             {
-                if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug(String.Format("Activity start time is {0} and FIT file is {1}",
                         Calculation.activityStart, startTime));
                 if (Calculation.activityStart.Value.Subtract(startTime).TotalSeconds < 5) //ignore differences of less than 5 seconds (arbitrary) as FIT and strava often differ by 1 second
@@ -367,7 +372,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug(String.Format("No activity start time, FIT file is {0}", startTime));
                 Accumulation.activity.StartDateTime = startTime;
             }
@@ -378,7 +383,7 @@ namespace FellrnrTrainingAnalysis.Model
         void OnSportMesgEvent(object sender, MesgEventArgs e)
         {
             Calculation.Other.Start();
-            if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("SportMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SportMesg mySportMesg = (SportMesg)e.mesg;
             Sport? aSport = mySportMesg.GetSport();
@@ -399,7 +404,7 @@ namespace FellrnrTrainingAnalysis.Model
             Calculation.Other.Start();
             EventMesg myEventMesg = (EventMesg)e.mesg;
 
-            if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("EventMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name,
                     myEventMesg.GetEvent() != null ? myEventMesg.GetEvent().ToString() : "No event",
                     myEventMesg.GetEventType() != null ? myEventMesg.GetEventType().ToString() : "No event type"));
@@ -412,7 +417,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (myEventMesg.GetEventType() != null )
             {
-                if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug(String.Format(">>GetEventType is {0}", myEventMesg.GetEventType().ToString()));
 
                 if (myEventMesg.GetEventType() == EventType.StopAll ||
@@ -420,30 +425,30 @@ namespace FellrnrTrainingAnalysis.Model
                     myEventMesg.GetEventType() == EventType.StopDisable ||
                     myEventMesg.GetEventType() == EventType.StopDisableAll)
                 {
-                    if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                    if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                         Logging.Instance.Debug("Stop Timer Event");
-                    if (Calculation.isRunning)
+                    if (Calculation.IsRunning)
                     {
                         Calculation.lastStop = myEventMesg.GetTimestamp().GetDateTime();
-                        if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                        if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                             Logging.Instance.Debug(String.Format("Stop Timer while running, last stop is now {0}", Calculation.lastStop));
                     }
-                    Calculation.isRunning = false;
+                    Calculation.IsRunning = false;
                 }
                 if (myEventMesg.GetEventType() == EventType.Start)
                 {
-                    if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                    if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                         Logging.Instance.Debug("Start Timer Event");
-                    if (!Calculation.isRunning)
+                    if (!Calculation.IsRunning)
                     {
                         System.DateTime restartTime = myEventMesg.GetTimestamp().GetDateTime();
                         double stoppage = (restartTime - Calculation.lastStop).TotalSeconds;
                         if(stoppage > 0) { stoppage--; } //otherwise we end up with the next even on the same second
                         Calculation.totalStopped += stoppage;
-                        if (Utils.Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                        if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                             Logging.Instance.Debug(String.Format("Stop Timer while stopped, ReStartTime {0}, stoppage {1}, totalStopped {2}", restartTime, stoppage, Calculation.totalStopped));
                     }
-                    Calculation.isRunning = true;
+                    Calculation.IsRunning = true;
                 }
             }
             Calculation.Other.Stop();
@@ -744,7 +749,7 @@ namespace FellrnrTrainingAnalysis.Model
             mesgBroadcaster.RecordMesgEvent += OnRecordMesgEvent;
             mesgBroadcaster.EventMesgEvent += OnEventMesgEvent;
             mesgBroadcaster.SportMesgEvent += OnSportMesgEvent;
-            if (Utils.Options.Instance.DebugFitLoading && Utils.Options.Instance.DebugFitExtraDetails) //this will produce massive details and be very slow
+            if (Options.Instance.DebugFitLoading && Options.Instance.DebugFitExtraDetails) //this will produce massive details and be very slow
             {
 
                 mesgBroadcaster.MesgEvent += new MesgEventHandler(OnMesg);
@@ -815,13 +820,16 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     else
                     {
+                        //if (field.GetName() == "PositionLat")
+                        //    MessageBox.Show("oops");
                         Logging.Instance.Debug(string.Format("\tField{0} Index{1} (\"{2}\" Field#{4}) Value: {3} (raw value {5})",
                         i,
                         j,
                         field.GetName(),
                         field.GetValue(j),
                         field.Num,
-                        field.GetRawValue(j)));
+                        field.GetRawValue(j),
+                        field.GetUnits()));
                     }
                 }
 
@@ -835,6 +843,7 @@ namespace FellrnrTrainingAnalysis.Model
                     String s = String.Format("DevField {0} Index {1} (\"{2}\" Field #{4}) Value: {3} (raw value {5})",
                         0, j, field.GetName(), field.GetValue(j), field.Num, field.GetRawValue(j));
                     string k = "Field:" + i + ", value:" + j + ", name:" + field.GetName() + field.Num;
+
                     Logging.Instance.Debug(string.Format("\tDeveloper{0} Field#{1} Index{2} (\"{3}\") Value: {4} (raw value {5})",
                         field.DeveloperDataIndex,
                         field.Num,
@@ -848,29 +857,5 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
 
-        private Stream OpenFitFile(string filename)
-        {
-            //we have to unzip the .gz files strava gives us to a temp file. Using the GZFileStream doesn't work as the FIT toolkit seeks around, which GZ doesn't support
-
-            string folder = Path.GetDirectoryName(filename)!; //we have high confidence this is not going to return a null
-            if(filename.ToLower().EndsWith(".fit.gz"))
-            {
-                string newfile = filename.Remove(filename.Length - 3);
-                if (!System.IO.File.Exists(newfile))
-                {
-                    Calculation.Decompress.Start(); 
-                    using FileStream compressedFileStream = System.IO.File.Open(filename, FileMode.Open);
-                    using FileStream outputFileStream = System.IO.File.Create(newfile);
-                    using var decompressor = new GZipStream(compressedFileStream, CompressionMode.Decompress);
-                    decompressor.CopyTo(outputFileStream);
-                    Calculation.Decompress.Stop();
-                }
-                filename = newfile;
-            }
-
-            FileStream fitSource = new FileStream(filename, FileMode.Open, FileAccess.Read);
-            return fitSource;
-
-        }
     }
 }

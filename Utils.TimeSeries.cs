@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using pi.science.smoothing;
+using pi.science.statistic;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
     public class Utils
     {
-        public class Smoothing
+        public class TimeSeries
         {
             public enum SmoothingOptions { AverageWindow, SimpleExponential, InterpolateOnly, None };
 
@@ -77,6 +74,37 @@ namespace FellrnrTrainingAnalysis.Utils
             }
 
             public static double[] WindowSmoothed(double[] rawData, int windowSize)
+            {
+                if (windowSize == 0)
+                    return rawData;
+
+
+                PIVariable smoothInput = new PIVariable();
+
+                smoothInput.AddValues(rawData);
+                PIMedianSmoothing medianSmoothing = new PIMedianSmoothing(smoothInput);
+                medianSmoothing.SetWindowLength(windowSize);
+                medianSmoothing.SetOuterValuesNull(false);
+                medianSmoothing.Calc();
+
+                PIVariable smoothOutput = medianSmoothing.GetOutputVariable();
+
+                double[] smoothed = new double[rawData.Length];
+
+
+                for (int i = 0; i < rawData.Length; i++)
+                {
+                    double? val = smoothOutput[i];
+                    if (val is null)
+                        val = 0;
+                    smoothed[i] = (double)val;
+                }
+
+                return smoothed;
+            }
+
+
+            public static double[] WindowSmoothedXXX(double[] rawData, int windowSize)
             {
                 if (windowSize == 0)
                     return rawData;
@@ -176,6 +204,96 @@ namespace FellrnrTrainingAnalysis.Utils
                 }
 
                 return smoothed;
+            }
+
+
+            public static Tuple<uint[], float[]>? SimpleDeltas(Tuple<uint[], float[]> data, float ScalingFactor, float? Numerator, float? Limit)
+            {
+                uint[] elapsedTime = data.Item1;
+                float[] values = data.Item2;
+                float[] deltas = new float[elapsedTime.Length];
+                float lastValue = values[0];
+                float lastTime = 0;
+
+
+                for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
+                {
+                    float deltaTime = elapsedTime[i] - lastTime;
+                    float deltasValue = (values[i] - lastValue) / deltaTime;
+                    deltas[i] = deltasValue;
+
+                    //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
+                    if (i == 1)
+                        deltas[0] = deltasValue;
+                    if (Numerator != null && deltas[i] != 0)
+                        deltas[i] = Numerator.Value / deltas[i];
+                    deltas[i] = deltas[i] * ScalingFactor;
+                    if (Limit != null && Math.Abs(deltas[i]) > Limit)
+                        return null;
+                    lastValue = values[i];
+                    lastTime = elapsedTime[i];
+                }
+                Tuple<uint[], float[]> newData = new Tuple<uint[], float[]>(elapsedTime, deltas);
+                return newData;
+            }
+
+            public static Tuple<uint[], float[]>? SpanDeltas(Tuple<uint[], float[]> data, float scalingFactor, float? numerator, float? limit, float period )
+            {
+                uint[] elapsedTime = data.Item1;
+                float[] values = data.Item2;
+                float[] deltas = new float[elapsedTime.Length];
+                float lastValue = values[0];
+                uint lastTime = 0;
+                deltas[0] = 0; //first value has no predecessor, so it has to be zero
+                               //List<uint> absoluteTimeStack = new List<uint>();
+                List<uint> incrementTimeStack = new List<uint>();
+                List<float> deltaStack = new List<float>();
+
+                float deltaSum = 0;
+                uint timeSum = 0;
+                for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
+                {
+                    uint currentTime = elapsedTime[i];
+                    uint timeIncrement = currentTime - lastTime;
+                    float currentValue = values[i];
+                    float valueIncrement = currentValue - lastValue;
+
+                    //absoluteTimeStack.Add(currentTime);
+                    incrementTimeStack.Add(timeIncrement);
+                    deltaStack.Add(valueIncrement);
+                    deltaSum += valueIncrement;
+                    timeSum += timeIncrement;
+
+
+                    //if the time sum is less than the period, all the delta applies. For instance, in the first 2 seconds we climb 2 meters, then our climb rate is 2 meters/minute, not 2/60 meters/minute
+                    float timeProRata = timeSum > period ? timeSum / period : 1.0f;
+                    float currentDelta = deltaSum / timeProRata;
+                    if (numerator != null && currentDelta != 0)
+                        currentDelta = numerator.Value / currentDelta;
+                    currentDelta = currentDelta * scalingFactor;
+                    deltas[i] = currentDelta;
+
+                    if (limit != null && Math.Abs(deltas[i]) > limit)
+                        return null;
+
+                    //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
+                    if (i == 1)
+                        deltas[0] = currentDelta;
+
+                    //mop up
+                    while (incrementTimeStack.Count > 0 && timeSum > period)
+                    {
+                        deltaSum -= deltaStack.First();
+                        timeSum -= incrementTimeStack.First();
+                        incrementTimeStack.RemoveAt(0);
+                        deltaStack.RemoveAt(0);
+                    }
+
+                    lastValue = currentValue;
+                    lastTime = currentTime;
+                }
+                Tuple<uint[], float[]> newData = new Tuple<uint[], float[]>(elapsedTime, deltas);
+                return newData;
             }
 
 

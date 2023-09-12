@@ -1,10 +1,4 @@
 ﻿using FellrnrTrainingAnalysis.Model;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -32,6 +26,11 @@ namespace FellrnrTrainingAnalysis.UI
             return retval;
         }
 
+        public static string FormatForTree(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
+        {
+            return FormatForGrid(datum, activityDatumMetadata);
+        }
+
         private static string Format(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
         {
             if (datum == null) { return "";  }
@@ -40,14 +39,16 @@ namespace FellrnrTrainingAnalysis.UI
             switch(activityDatumMetadata.DisplayUnits)
             {
                 case ActivityDatumMetadata.DisplayUnitsType.Meters:
-                    return FormatFloat(datum, "{0:0.0} m", 1.0f);
+                    return FormatFloat(datum, "{0:#,0} m", 1.0f);
                 case ActivityDatumMetadata.DisplayUnitsType.Kilometers:
-                    return FormatFloat(datum, "{0:0.0} Km", 1.0f / 1000.0f);
+                    return FormatFloat(datum, "{0:#,0.0} Km", 1.0f / 1000.0f);
                 case ActivityDatumMetadata.DisplayUnitsType.Pace:
                     return FormatPace(datum);
                 case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
                     return FormatTime(datum);
                 case ActivityDatumMetadata.DisplayUnitsType.None:
+                case ActivityDatumMetadata.DisplayUnitsType.Integer:
+                case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     return datum.ToString()!;
                 default:
                     return "";
@@ -116,6 +117,8 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.Kilometers:
                 case ActivityDatumMetadata.DisplayUnitsType.Pace:
                 case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
+                case ActivityDatumMetadata.DisplayUnitsType.Integer:
+                case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     return true;
                 case ActivityDatumMetadata.DisplayUnitsType.None:
                 default:

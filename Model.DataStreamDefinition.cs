@@ -1,12 +1,5 @@
 ﻿using CsvHelper;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static FellrnrTrainingAnalysis.Model.ActivityDatumMapping;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -16,7 +9,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string Name { get; set; } = "";
 
-        public bool Show { get; set; } = true;
+        public bool ShowReportGraph { get; set; } = true;
+
         public string Description { get; set; } = "";
 
         public string DisplayTitle { get; set; } = "";
@@ -50,7 +44,7 @@ namespace FellrnrTrainingAnalysis.Model
                 DataStreamDefinition dataStreamDefinition = new DataStreamDefinition();
                 dataStreamDefinition.Name = name;
                 dataStreamDefinition.DisplayTitle = name;
-                dataStreamDefinition.Show = false;
+                dataStreamDefinition.ShowReportGraph = false;
                 map.Add(name, dataStreamDefinition);
                 return dataStreamDefinition;
             }

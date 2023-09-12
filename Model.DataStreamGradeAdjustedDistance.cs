@@ -1,5 +1,5 @@
 ﻿using System.Collections.ObjectModel;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -25,16 +25,50 @@ namespace FellrnrTrainingAnalysis.Model
             string altitudeField = RequiredFields[1];
             IDataStream altitudeStream = timeSeries[altitudeField];
             Tuple<uint[], float[]>? altitudeData = altitudeStream.GetData(parent);
-            if (altitudeData == null) { return null; }
+            if (altitudeData == null) { return distanceData; }
 
             if (distanceData.Item1.Length != altitudeData.Item1.Length)
             {
-                Logging.Instance.Error(string.Format("GradeAdjustedDistance needs distance and altitude the same length for activity {0} from {1} for data stream {2} ", parent.PrimaryKey(), parent.StartDateTime, Name));
-                return distanceData; //default to returning the raw distance data, otherwise the data isn't counted at all. 
-            }
-            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(distanceData, altitudeData);
+                //it's fairly common to have altitude data miss the first one or two data points
+                bool matchable = true;
+                int difference = distanceData.Item1.Length - altitudeData.Item1.Length;
+                if (difference > 0 && difference <= 100 && difference * 10 < altitudeData.Item1.Length) //less than 50 points missing and we have 90+% of the data
+                {
+                    for (int i = difference; i < distanceData.Item1.Length && matchable; i++)
+                    {
+                        if (distanceData.Item1[i] != altitudeData.Item1[i - difference])
+                        {
+                            matchable = false;
+                        }
+                    }
+                }
+                else
+                {
+                    matchable = false;
+                }
 
-            return gradeAdjustedDistance.GetGradeAdjustedDistance();
+                if (matchable)
+                {
+                    Tuple<uint[], float[]>? distanceDataTrimmed = new Tuple<uint[], float[]>(distanceData.Item1.Skip(difference).ToArray(), distanceData.Item2.Skip(difference).ToArray());
+
+                    Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(distanceDataTrimmed, altitudeData);
+
+                    return gradeAdjustedDistance.GetGradeAdjustedDistance();
+                }
+                else
+                {
+                    Logging.Instance.Error($"GradeAdjustedDistance: distance {distanceData.Item1.Length} points and altitude {altitudeData.Item1.Length} points for activity {parent.PrimaryKey()} from {parent.StartDateTime} for data stream {Name} ");
+                    return distanceData; //default to returning the raw distance data, otherwise the data isn't counted at all. 
+                }
+            }
+            else
+            {
+                Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(distanceData, altitudeData);
+
+                return gradeAdjustedDistance.GetGradeAdjustedDistance();
+            }
+
+
 
         }
 

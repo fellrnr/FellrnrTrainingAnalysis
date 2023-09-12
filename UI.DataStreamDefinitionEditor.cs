@@ -1,14 +1,5 @@
 ﻿using BrightIdeasSoftware;
 using FellrnrTrainingAnalysis.Model;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -23,13 +14,14 @@ namespace FellrnrTrainingAnalysis.UI
 
             objectListView1.ShowGroups= false;
             objectListView1.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
-
             //Generator.GenerateColumns(objectListView1, definitions);
             Generator.GenerateColumns(this.objectListView1, typeof(DataStreamDefinition), true);
             objectListView1.SetObjects(definitions);
             objectListView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             objectListView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             objectListView1.ResumeLayout();
+
+
         }
 
         public List<DataStreamDefinition> Definitions { get; }
@@ -45,8 +37,13 @@ namespace FellrnrTrainingAnalysis.UI
 
         private void objectListView1_SubItemChecking(object sender, SubItemCheckingEventArgs e) //TODO: Check box changes don't update the model
         {
+            DataStreamDefinition row = (DataStreamDefinition)e.RowObject;
+            row.ShowReportGraph = (e.NewValue == CheckState.Checked);
+            //objectListView1.RefreshObject(e.RowObject);
             Edited?.Invoke(this);
         }
+
+
 
     }
 }

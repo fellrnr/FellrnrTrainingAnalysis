@@ -1,12 +1,4 @@
-﻿using CsvHelper;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FellrnrTrainingAnalysis.Model
+﻿namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
     public abstract class Extensible
@@ -29,10 +21,13 @@ namespace FellrnrTrainingAnalysis.Model
         public Datum? GetNamedDatum(string name) { if (Data.ContainsKey(name)) return Data[name]; else return null;  }
 
         public bool HasNamedDatum(string name) { return Data.ContainsKey(name); }
+
+        public void RemoveNamedDatum(string name) { Data.Remove(name); }
+
         public string GetNamedDatumForDisplay(string name) { if (Data.ContainsKey(name)) return Data[name].ToString()!; else return ""; }
 
         public string? GetNamedStringDatum(string name) { return HasNamedDatum(name) ? ((TypedDatum<string>)Data[name]).Data : null; }
-        public DateTime? GetNamedDateTimeDatum(string name) 
+        public DateTime? GetNamedDateTimeDatum(string name)
         {
             //return HasNamedDatum(name) ? ((TypedDatum<DateTime>)Data[name]).Data : null; 
             if (HasNamedDatum(name))
@@ -42,6 +37,21 @@ namespace FellrnrTrainingAnalysis.Model
                 TypedDatum<DateTime> typedDatum = (TypedDatum<DateTime>)datum;
                 DateTime dateTime = typedDatum.Data;
                 return dateTime;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public float? GetNamedFloatDatum(string name)
+        {
+            if (HasNamedDatum(name))
+            {
+                Datum datum = Data[name];
+                if (datum == null) return null;
+                TypedDatum<float> typedDatum = (TypedDatum<float>)datum;
+                float value = typedDatum.Data;
+                return value;
             }
             else
             {

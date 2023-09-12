@@ -1,10 +1,5 @@
 ﻿using CsvHelper;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -16,7 +11,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string Name { get; set; } = "";
         public string Title { get; set; } = "";
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, None };
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, None }; //Integer is misc value
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 

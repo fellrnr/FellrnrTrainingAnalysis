@@ -1,15 +1,5 @@
-﻿using de.schumacher_bw.Strava.Endpoint;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Xml.Linq;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+﻿using System.Collections.ObjectModel;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -20,6 +10,10 @@ namespace FellrnrTrainingAnalysis.Model
         {
         }
 
+        public override string ToString()
+        {
+            return string.Format("Start {0} key {1} filename {2}", StartDateTime, PrimaryKey(), Filename);
+        }
 
 
         //KnownFields
@@ -41,24 +35,26 @@ namespace FellrnrTrainingAnalysis.Model
         }
         public DateTime? StartDateNoTime { get { return StartDateTime == null ? null : ((DateTime)StartDateTime).Date; } }
 
+        public LocationStream? LocationStream { get; set; } = null;
 
-        public override Utils.DateTimeTree Id { get { return new Utils.DateTimeTree(StartDateTime!.Value, Utils.DateTimeTree.DateTreeType.Time); } } //HACK: to see if tree works
+        public override Utils.DateTimeTree Id { get { return new Utils.DateTimeTree(StartDateTime!.Value, DateTimeTree.DateTreeType.Time); } } //HACK: to see if tree works
 
 
         public string? Filename { get { return GetNamedStringDatum(FilenameTag); } }
+        public string? FileFullPath { get { return GetNamedStringDatum(FileFullPathTag); } set { if(value != null) AddOrReplaceDatum(new TypedDatum<string>(FileFullPathTag, true, value)); } }
         public string? ActivityType { get { return GetNamedStringDatum(ActivityTypeTag); } }
 
         //This needs to be static so callers can validate and find an activity given a dictionary of string/Datum by primary keys
-        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(Activity.StravaActivityIDTag) && activityData.ContainsKey(Activity.StartDateAndTimeTag); }
+        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(StravaActivityIDTag) && activityData.ContainsKey(StartDateAndTimeTag); }
 
         //This needs to be static so callers can find an activity given a dictionary of string/Datum by primary keys
-        public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[Activity.StravaActivityIDTag]).Data; }
+        public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[StravaActivityIDTag]).Data; }
 
-        public string PrimaryKey() { return ((TypedDatum<string>)Data[Activity.StravaActivityIDTag]).Data; }
+        public string PrimaryKey() { return ((TypedDatum<string>)Data[StravaActivityIDTag]).Data; }
 
 
         //This needs to be static so callers can find the date to create the Day so they can create the Activity
-        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[Activity.StartDateAndTimeTag]).Data; }
+        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[StartDateAndTimeTag]).Data; }
 
         //TimeSeries
         //    _______ _                   _____           _           
@@ -73,6 +69,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         //set of time series, one for HR, speed, etc. 
         private Dictionary<string, IDataStream> timeSeries = new Dictionary<string, IDataStream>();
+        private Dictionary<string, IDataStream>? removedTimeSeries;
 
         public ReadOnlyDictionary<string, IDataStream> TimeSeries { get { return timeSeries.AsReadOnly(); } }
 
@@ -88,12 +85,18 @@ namespace FellrnrTrainingAnalysis.Model
                     KeyValuePair<List<uint>, List<float>> timesAndValues = kvp.Value;
                     List<uint> times = timesAndValues.Key;
                     List<float> values = timesAndValues.Value;
-                    AddDataStream(name, times.ToArray(), values.ToArray());
+                    if (values.Min() == 0 && values.Max() == 0)
+                    {
+                        Logging.Instance.Log($"Not adding data stream {name} as it is all zeros {this.ToString()}");
+                    }
+                    else
+                    {
+                        AddDataStream(name, times.ToArray(), values.ToArray());
+                    }
                 }
 
             }
         }
-
 
         public void AddDataStream(string name, uint[] times, float[] values)
         {
@@ -116,6 +119,17 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
+        public void RemoveDataStream(string name)
+        {
+            if (timeSeries.ContainsKey(name))
+            {
+                if(removedTimeSeries == null)
+                    removedTimeSeries = new Dictionary<string, IDataStream>();
+                removedTimeSeries.Add(name, timeSeries[name]);
+                timeSeries.Remove(name);
+            }
+        }
+
         //TODO: Add HRV data to activity data, not really a time series
 
         //TODO: Add Lap data, not a time series
@@ -127,6 +141,16 @@ namespace FellrnrTrainingAnalysis.Model
         public override void Recalculate(bool force)
         {
             base.Recalculate(force);
+
+            //clear all existing virtual data streams - only an issue of they change names, but keeps things tidy
+            List<string> toDelete = new List<string>();  
+            foreach(KeyValuePair<string, IDataStream> kvp in TimeSeries)
+            {
+                if(kvp.Value.IsVirtual())
+                    toDelete.Add(kvp.Key);
+            }
+            foreach(string s in toDelete) { timeSeries.Remove(s); }
+
             List<IDataStream> dataStreams = DataStreamFactory.Instance.DataStreams;
 
             foreach (IDataStream dataStream in dataStreams)
@@ -146,14 +170,81 @@ namespace FellrnrTrainingAnalysis.Model
                 }
             }
 
+            foreach(ICalculate calculate in CaclulateFactory.Instance.Calulators)
+            {
+                calculate.Recalculate(this, force);
+            }
+
         }
 
+        public void RecalculateHills(List<Hill> hills, bool force, bool fullDebug)
+        {
+            if (LocationStream == null || LocationStream.Latitudes.Length == 0)
+                return;
+            if (Climbed != null && !force)
+                return;
+            if (Climbed == null || force)
+                Climbed = new List<Hill>();
+
+            int nochecked = 0;
+            int nomatched = 0;
+
+            //if (Options.Instance.LogLevel == Options.Level.Debug && force)
+            //    Logging.Instance.StartTimer("hills");
+
+            foreach (Hill hill in hills)
+            {
+                float minDistance = float.MaxValue;
+                float nearestLat = 0;
+                float nearestLon = 0;
+
+
+                //first optimization; is the hill within the bounds of the route?
+                if (LocationStream.WithinBounds(hill.Latitude, hill.Longitude))
+                {
+                    if (fullDebug && Options.Instance.LogLevel == Options.Level.Debug)
+                        Logging.Instance.Debug($"Hill {hill.ExtendedName} ({hill.Number}) within bounds");
+                    nochecked++;
+
+                    for (int i = 0; i < LocationStream.Latitudes.Length; i++)
+                    {
+                        float distance = hill.DistanceTo(LocationStream.Latitudes[i], LocationStream.Longitudes[i]);
+                        if (distance < minDistance)
+                        {
+                            minDistance = distance;
+                            nearestLat = LocationStream.Latitudes[i];
+                            nearestLon = LocationStream.Longitudes[i];
+                        }
+                    }
+                }
+                else
+                {
+                    if (fullDebug && Options.Instance.LogLevel == Options.Level.Debug)
+                        Logging.Instance.Debug($"Hill {hill.ExtendedName} ({hill.Number}) not within bounds");
+                }
+                if (fullDebug && Options.Instance.LogLevel == Options.Level.Debug && minDistance != float.MaxValue)
+                    Logging.Instance.Debug($"Hill {hill.ExtendedName} ({hill.Number}) minDistance {minDistance}, hill {hill.Latitude}/{hill.Longitude}, nearest {nearestLat}/{nearestLon}");
+
+                if (minDistance < Hill.CLOSE_ENOUGH)
+                {
+                    nomatched++;
+
+                    if(!Climbed.Contains(hill))
+                        Climbed.Add(hill);
+                    if(!hill.Climbed.Contains(this))
+                        hill.Climbed.Add(this);
+                }
+            }
+            //if (Options.Instance.LogLevel == Options.Level.Debug && force)
+            //    Logging.Instance.Debug($"Hill matching took {Logging.Instance.GetAndResetTime("hills")}, {nochecked} checked, {nomatched} matched");
+        }
 
         private const string StravaActivityIDTag = "Strava ID";
         public const string PrimarykeyTag = StravaActivityIDTag;
         private const string StartDateAndTimeTag = "Start DateTime"; //be explicit about the time part, as sometimes we only want the date component
         private const string ActivityTypeTag = "Type";
         private const string FilenameTag = "Filename";
+        private const string FileFullPathTag = "Filepath";
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";
@@ -230,5 +321,13 @@ namespace FellrnrTrainingAnalysis.Model
         public const string NewlyExploredDistanceTag = "Newly Explored Distance";
         public const string NewlyExploredDirtDistanceTag = "Newly Explored Dirt Distance"; 
         */
+
+        //transient data
+
+        //let's hold on to these rather than querying every time
+        //[NonSerialized] 
+        public List<string>? DataQualityIssues = null; //we don't persist data quality issues as it depends on the criteria applied, and it's quick to check each time
+
+        public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches
     }
 }

@@ -1,21 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-/*
+﻿/*
  * Had to 
  * Tools > NuGet Package Manager > Package Manager Console to open the Package Manager Console window
  * NuGet\Install-Package Microsoft.Web.WebView2 -Version 1.0.1462.37
  */
 
-
-namespace FellrnrTrainingAnalysis
+namespace FellrnrTrainingAnalysis.UI
 {
     public partial class StravaAuthorizeForm : Form
     {

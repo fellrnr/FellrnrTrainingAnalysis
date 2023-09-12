@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 
 //From https://stackoverflow.com/questions/36475679/dynamically-create-html-table-in-c-sharp

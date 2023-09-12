@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-
-namespace FellrnrTrainingAnalysis.Model
+﻿namespace FellrnrTrainingAnalysis.Model
 {
 
     //this represents the expandable tree of dates for activities
@@ -51,6 +42,8 @@ namespace FellrnrTrainingAnalysis.Model
         {
 
             base.Recalculate(force);
+
+            //recalculate each field of the calendar node to reflect the underlying children
 
             Dictionary<string, float> floatAccumulators = new Dictionary<string, float>();
             Dictionary<string, string> stringAccumulators = new Dictionary<string, string>();

@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.ComponentModel;
-using static FellrnrTrainingAnalysis.Utils.Utils;
-using static FellrnrTrainingAnalysis.Utils.Utils.Smoothing;
+using static FellrnrTrainingAnalysis.Utils.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -19,11 +13,13 @@ namespace FellrnrTrainingAnalysis.Utils
         public static Options Instance { get; set; } = new Options();
 
         private const string fileName = @"FellrnrTrainingAnalysisConfig.json";
+        static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        static string AppDataSubFolder = "FellrnrTrainingData";
+        static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
 
         public static void LoadConfig()
         {
-            string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string path = Path.Combine(folder, fileName);
+            string path = Path.Combine(AppDataPath, fileName);
             if (File.Exists(path))
             {
                 string jsonFromFile = File.ReadAllText(path);
@@ -47,8 +43,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public static void SaveConfig()
         {
             string json = JsonSerializer.Serialize(Instance);
-            string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string path = Path.Combine(folder, fileName);
+            string path = Path.Combine(AppDataPath, fileName);
             File.WriteAllText(path, json);
         }
 

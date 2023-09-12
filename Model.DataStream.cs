@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
-namespace FellrnrTrainingAnalysis.Model
+﻿namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
     public class DataStream : IDataStream
@@ -20,6 +12,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         //A "real" data stream is always valid. It's only the data streams computed on the fly that need other data streams to be valid.
         public bool IsValid(Activity Parent) { return true; }
+        public bool IsVirtual() { return false; }
 
 
         //time offset to Datum
@@ -37,6 +30,12 @@ namespace FellrnrTrainingAnalysis.Model
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity
         public void Recalculate(Activity parent, bool force) { return; }
+
+        public override string ToString()
+        {
+            return string.Format("Data Stream Name {0}", Name);
+        }
+
 
         /*
          * Time Series Name[PositionLat]

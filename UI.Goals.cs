@@ -1,16 +1,12 @@
 ﻿using FellrnrTrainingAnalysis.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mail;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.UI
 {
-    public class Goals
+    public class Goals //TODO make UI.Goals a user control
     {
         public Goals(Database database, DataGridView goalsDataGridView, TextBox goalsTextBox)
         {

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FellrnrTrainingAnalysis.Utils
+﻿namespace FellrnrTrainingAnalysis.Utils
 {
     [Serializable]
+
+    //This is a class that represents a date as just the year, the year and month, or year + month + day. This allows for using instances in a tree structure representing the dates. 
     public class DateTimeTree
     {
         public enum DateTreeType { Root, Year, Month, Day, Time };
@@ -56,7 +52,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 return false;
             }
 
-            if (Object.ReferenceEquals(this, obj))
+            if (ReferenceEquals(this, obj))
             {
                 return true;
             }

@@ -1,13 +1,5 @@
 ﻿using CsvHelper;
-using Microsoft.VisualBasic.ApplicationServices;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -29,7 +21,7 @@ namespace FellrnrTrainingAnalysis.Model
         //TODO: support time zones; the Strava CSV is UTC time, Strava API gives both, FIT give UTC plus offset
         //Note, we could use Int for identifiers, such as strava activity id, but string is easier and fast enough
         //TimeSpan time series are converted to float number of seconds 
-        public enum DataTypeEnum { Float, String, DateTime, TimeSpan }
+        public enum DataTypeEnum { Float, String, DateTime, TimeSpan, WorkoutFlags }
         public DataTypeEnum DataType { get; set; }
 
         public bool Import { get; set; } //if there's no entry, then the default is to not import. 

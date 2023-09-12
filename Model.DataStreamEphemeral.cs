@@ -1,12 +1,4 @@
-﻿using FellrnrTrainingAnalysis.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json.Serialization;
-
-namespace FellrnrTrainingAnalysis.Model
+﻿namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
     public abstract class DataStreamEphemeral : IDataStream
@@ -26,6 +18,8 @@ namespace FellrnrTrainingAnalysis.Model
             }
             return true;
         }
+
+        public bool IsVirtual() { return true; }
 
         public abstract Tuple<uint[], float[]>? GetData(Activity parent);
 

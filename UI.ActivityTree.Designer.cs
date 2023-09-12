@@ -1,6 +1,6 @@
 ﻿namespace FellrnrTrainingAnalysis.UI
 {
-    partial class ActivityList
+    partial class ActivityTree
     {
         /// <summary> 
         /// Required designer variable.

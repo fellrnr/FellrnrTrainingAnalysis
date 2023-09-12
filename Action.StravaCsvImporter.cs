@@ -1,22 +1,21 @@
 ﻿using CsvHelper;
-using de.schumacher_bw.Strava.Endpoint;
-using Microsoft.AspNetCore.Razor.TagHelpers;
-using Microsoft.Extensions.Primitives;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FellrnrTrainingAnalysis.Utils;
 using static FellrnrTrainingAnalysis.Model.ActivityDatumMapping;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using FellrnrTrainingAnalysis.Model;
 
-namespace FellrnrTrainingAnalysis.Model
+namespace FellrnrTrainingAnalysis.Action
 {
     public class StravaCsvImporter
     {
         public StravaCsvImporter() { }
+
+
+        int CountFitFiles = 0;
+        int CountGpxFiles = 0;
+        int CountBadFiles = 0;
+        int CountActivitiesWithoutFilename = 0;
 
         public int LoadFromStravaArchive(string profileCsvPath, Database database)
         {
@@ -30,7 +29,7 @@ namespace FellrnrTrainingAnalysis.Model
         //TODO make the load async with a progress bar
         private void LoadAthletesFromStravaArchive(string profileCsvPath, Database database)
         {
-            List<Dictionary<string, Datum>> spreadsheetOfAthletes = ImportFromCSV(profileCsvPath, ActivityDatumMapping.LevelType.Athlete);
+            List<Dictionary<string, Datum>> spreadsheetOfAthletes = ImportFromCSV(profileCsvPath, LevelType.Athlete);
             foreach (Dictionary<string, Datum> athleteRow in spreadsheetOfAthletes)
             {
                 if (athleteRow.ContainsKey(Athlete.AthleteIdTag)) //TODO: Give error on missing primary kay
@@ -50,14 +49,14 @@ namespace FellrnrTrainingAnalysis.Model
 
 
             //load the activities from the CSV
-            List<Dictionary<string, Datum>> spreadsheetOfActivites = ImportFromCSV(activitiesCsvPath, ActivityDatumMapping.LevelType.Activity);
+            List<Dictionary<string, Datum>> spreadsheetOfActivites = ImportFromCSV(activitiesCsvPath, LevelType.Activity);
             List<Activity> activities = new List<Activity>();  
             foreach (Dictionary<string, Datum> activityRow in spreadsheetOfActivites)
             {
                 DateTime expectedStartDateTime = Activity.ExpectedStartDateTime(activityRow);
-                if (Utils.Options.Instance.OnlyLoadAfter != null && Utils.Options.Instance.OnlyLoadAfter >= expectedStartDateTime)
+                if (Options.Instance.OnlyLoadAfter != null && Options.Instance.OnlyLoadAfter >= expectedStartDateTime)
                 {
-                    Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", expectedStartDateTime, Utils.Options.Instance.OnlyLoadAfter));
+                    Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", expectedStartDateTime, Options.Instance.OnlyLoadAfter));
                 }
                 else
                 {
@@ -71,21 +70,82 @@ namespace FellrnrTrainingAnalysis.Model
 
             //load the detailed activity data (from FIT, etc.)
             Logging.Instance.Log(string.Format("Total of {0} activities to process", activities.Count));
-            Model.FitReader.ClearSummaryErrors(); //HACK diagnostics using static variables
+            FitReader.ClearSummaryErrors(); //HACK diagnostics using static variables
             foreach (Activity activity in activities)
             {
-                FitReader fitReader = new FitReader(activity, Path.GetDirectoryName(profileCsvPath)!); //high confidence this will not return null
-
-                fitReader.ReadFitFromStravaArchive();
+                LoadFromFile(activity, profileCsvPath);
             }
 
 
-            Model.FitReader.SummaryErrors();//HACK diagnostics using static variables
+            if (CountActivitiesWithoutFilename > 0 || CountBadFiles > 0)
+            {
+                Logging.Instance.Error($"A total of {CountActivitiesWithoutFilename} activities without a filename");
+                Logging.Instance.Error($"A total of {CountFitFiles} activities that are FIT files");
+                Logging.Instance.Error($"A total of {CountGpxFiles} activities that are GPX files");
+                Logging.Instance.Error($"A total of {CountBadFiles} activities that are not known file types");
+            }
+
+            FitReader.SummaryErrors();//HACK diagnostics using static variables
             Logging.Instance.Log(string.Format("\r\nCurrent athlete has {0} field names\r\n", database.CurrentAthlete.TimeSeriesNames.Count));
             foreach (string s in database.CurrentAthlete.TimeSeriesNames)
                 Logging.Instance.Log(string.Format("Time Series Name[{0}]", s));
             Logging.Instance.Log("Load complete");
             return activities.Count;
+        }
+
+        private void LoadFromFile(Activity activity, string profileCsvPath)
+        {
+            System.DateTime? activityDateTime = activity.StartDateTime;
+            if (activityDateTime != null && Options.Instance.OnlyLoadAfter != null && Options.Instance.OnlyLoadAfter >= activityDateTime)
+            {
+                Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", activityDateTime, Options.Instance.OnlyLoadAfter));
+                return;
+            }
+
+
+            string? filenameFromDatum = activity.Filename;
+            if (filenameFromDatum == null)
+            {
+                Logging.Instance.Debug("Activity does not have a filename");
+                CountActivitiesWithoutFilename++;
+                return;
+            }
+
+            string filepath;
+            if (activity.FileFullPath == null)
+            {
+                string profilePath = Path.GetDirectoryName(profileCsvPath)!;
+                string filepart = (string)filenameFromDatum;
+                filepath = profilePath + '\\' + filepart;
+                activity.FileFullPath = filepath;
+            }
+            else
+            {
+                filepath = activity.FileFullPath;
+            }
+
+            if (filepath.ToLower().EndsWith(".fit") || filepath.ToLower().EndsWith(".fit.gz"))
+            {
+                FitReader fitReader = new FitReader(activity);
+
+                fitReader.ReadFitFromStravaArchive();
+                CountFitFiles++;
+            }
+            else if (filepath.ToLower().EndsWith(".gpx") || filepath.ToLower().EndsWith(".gpx.gz"))
+            {
+                GpxProcessor gpxProcessor = new GpxProcessor(activity);
+
+                gpxProcessor.ProcessGpx();
+                CountGpxFiles++;
+            }
+            else
+            { 
+                if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                    Logging.Instance.Debug("Activity file is not FIT " + filepath);
+                CountBadFiles++;
+                return;
+            }
+
         }
 
 
@@ -111,12 +171,12 @@ namespace FellrnrTrainingAnalysis.Model
                     {
                         if (!string.IsNullOrEmpty(csv[s]))
                         {
-                            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(DataSourceEnum.StravaCSV, levelType, s);
+                            ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaCSV, levelType, s);
                             if (activityDatumMapping != null && activityDatumMapping.Import && !row.ContainsKey(s))//Strava CSV has duplicate columns
                             {
                                 if (activityDatumMapping.DataType == DataTypeEnum.String)
                                 {
-                                    ImportDatum(activityDatumMapping.InternalName, ActivityDatumMapping.DataSourceEnum.StravaCSV, levelType, csv[s]!, row);
+                                    ImportDatum(activityDatumMapping.InternalName, DataSourceEnum.StravaCSV, levelType, csv[s]!, row);
                                 }
                                 if (activityDatumMapping.DataType == DataTypeEnum.Float)
                                 {
@@ -124,7 +184,7 @@ namespace FellrnrTrainingAnalysis.Model
                                     if (float.TryParse(csv[s], out floatValue))
                                     {
                                         floatValue *= activityDatumMapping.ScalingFactor;
-                                        ImportDatum(activityDatumMapping.InternalName, ActivityDatumMapping.DataSourceEnum.StravaCSV, levelType, floatValue, row);
+                                        ImportDatum(activityDatumMapping.InternalName, DataSourceEnum.StravaCSV, levelType, floatValue, row);
                                     }
                                 }
                                 //if (activityDatumMapping.DataType == DataTypeEnum.LongInteger)
@@ -140,7 +200,7 @@ namespace FellrnrTrainingAnalysis.Model
                                     DateTime DateTimeValue;
                                     if (DateTime.TryParse(csv[s], out DateTimeValue))
                                     {
-                                        ImportDatum(activityDatumMapping.InternalName, ActivityDatumMapping.DataSourceEnum.StravaCSV, levelType, DateTimeValue, row);
+                                        ImportDatum(activityDatumMapping.InternalName, DataSourceEnum.StravaCSV, levelType, DateTimeValue, row);
                                     }
                                 }
                             }

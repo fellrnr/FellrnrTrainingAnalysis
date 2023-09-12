@@ -2,18 +2,10 @@
 using de.schumacher_bw.Strava.Model;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
-using System;
-using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using static FellrnrTrainingAnalysis.Model.ActivityDatumMapping;
-using static System.Formats.Asn1.AsnWriter;
 
-namespace FellrnrTrainingAnalysis.Model
+namespace FellrnrTrainingAnalysis.Action
 {
 
     //test with curl on cmd.exe (powershell curl is different)
@@ -27,17 +19,17 @@ namespace FellrnrTrainingAnalysis.Model
         private StravaApiV3Sharp StravaApiV3Sharp { get; set; }
 
         //private Scopes DesiredScope { get; } = Scopes.Read | Scopes.ReadAll | Scopes.ActivityWrite;
-        private Scopes DesiredScope { get; } = Scopes.ActivityReadAll;
+        private Scopes DesiredScope { get; } = Scopes.ActivityReadAll | Scopes.ActivityWrite;
 
         private StravaApi()
         {
-            string? serializedApi = System.IO.File.Exists(stravaAuthFilename) ? System.IO.File.ReadAllText(stravaAuthFilename) : null;
+            string? serializedApi = File.Exists(stravaAuthFilename) ? File.ReadAllText(stravaAuthFilename) : null;
 
             // create an instance of the api and reload the local stored auth info
-            StravaApiV3Sharp = new StravaApiV3Sharp(Utils.Options.Instance.ClientId, Utils.Options.Instance.ClientSecret, serializedApi);
+            StravaApiV3Sharp = new StravaApiV3Sharp(Options.Instance.ClientId, Options.Instance.ClientSecret, serializedApi);
 
             // add a delegate to the event of the refreshToken or authToken been updated
-            StravaApiV3Sharp.SerializedObjectChanged += (s, e) => System.IO.File.WriteAllText(stravaAuthFilename, StravaApiV3Sharp.Serialize());
+            StravaApiV3Sharp.SerializedObjectChanged += (s, e) => File.WriteAllText(stravaAuthFilename, StravaApiV3Sharp.Serialize());
         }
 
         static StravaApi()
@@ -57,7 +49,7 @@ namespace FellrnrTrainingAnalysis.Model
         public void Connect()
         {
             string callbackUrl = "http://localhost/doesNotExist/";
-            StravaAuthorizeForm stravaAuthorizeForm = new StravaAuthorizeForm(callbackUrl);
+            UI.StravaAuthorizeForm stravaAuthorizeForm = new UI.StravaAuthorizeForm(callbackUrl);
             stravaAuthorizeForm.Navigate(StravaApiV3Sharp.Authentication.GetAuthUrl(new Uri(callbackUrl), DesiredScope).ToString());
             stravaAuthorizeForm.ShowDialog();
             if (!string.IsNullOrEmpty(stravaAuthorizeForm.FinalUrl))
@@ -68,12 +60,13 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public int SyncNewActivites(Database database)
+        //returns count processed and count left
+        public Tuple<int, int> SyncNewActivites(Database database)
         {
             if (database == null || database.CurrentAthlete == null)
             {
                 Logging.Instance.Debug(string.Format("Database or CurrentAthlete is null"));
-                return 0;
+                return new Tuple<int,int>(0,0);
             }
             DateTime? onlyAfter = null;
             if(database !=null && database.CurrentAthlete != null && database.CurrentAthlete.CalendarTree != null && database.CurrentAthlete.CalendarTree.Count > 0) 
@@ -87,6 +80,10 @@ namespace FellrnrTrainingAnalysis.Model
                 onlyAfter = Options.Instance.OnlyLoadAfter;
 
             SummaryActivity[] newActivities = StravaApiV3Sharp.Activities.GetLoggedInAthleteActivities(null, onlyAfter);
+            if(newActivities == null)
+            {
+                return new Tuple<int, int>(-1, -1);
+            }
             int counter = 0;
             foreach (SummaryActivity stravaActivity in newActivities)
             {
@@ -104,7 +101,14 @@ namespace FellrnrTrainingAnalysis.Model
 
                     if(activity != null)
                     {
-                        StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams((long)stravaActivity.Id, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve);
+                        //we had a null error on this call that went away the next morning. The activity had zeros in power, and seemed to be related to the power stream
+                        //https://www.strava.com/activities/9398565924
+                        //also see "Testing Strava API.docx" in OneDrive 
+                        StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams((long)stravaActivity.Id, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
+                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.Temp);
+                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
+                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
+                        //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
                         AddDataStreams(activity, streamSet);
 
                         List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
@@ -113,11 +117,56 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     counter++;
                     if (counter >= 10)
-                        return counter;
+                        return new Tuple<int, int>(counter, newActivities.Length - counter);
 
                 }
             }
-            return counter;
+            return new Tuple<int, int>(counter, 0);
+        }
+
+        public bool UpdateActivity(Activity activity, string? name = null, string? description = null)
+        {
+
+            //public DetailedActivity UpdateActivityById(long id, UpdatableActivity data = null)
+
+            UpdatableActivity updatableActivity = new UpdatableActivity();
+            //if these are null, then they won't update the Strava record
+            if (description != null)
+            {
+                updatableActivity.Description = description;
+            }
+            if (name != null)
+            {
+                updatableActivity.Name = name;
+            }
+            long stravaId;
+            if(long.TryParse(activity.PrimaryKey(), out stravaId))
+            {
+                try
+                {
+                    DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.UpdateActivityById(stravaId, updatableActivity);
+
+
+                    if (name != null)
+                    {
+                        if (detailedActivity.Name != updatableActivity.Name)
+                            return false;
+                        TypedDatum<string> typedDatum = new TypedDatum<string>("Name", true, name);
+                        activity.AddOrReplaceDatum(typedDatum);
+                    }
+                    if (description != null)
+                    {
+                        if (detailedActivity.Description != updatableActivity.Description)
+                            return false;
+                        TypedDatum<string> typedDatum = new TypedDatum<string>("Description", true, description);
+                        activity.AddOrReplaceDatum(typedDatum);
+                    }
+                    return true;
+                }
+                catch (Exception) { return false; }
+
+            }
+            return false;
         }
 
         //Easier to add streams directly rather than trying reflection 
@@ -171,8 +220,8 @@ namespace FellrnrTrainingAnalysis.Model
                 AddDataStream(activity, "Heartrate", time, streamSet.Heartrate.Data);
             if (streamSet.Distance != null)
                 AddDataStream(activity, "Distance", time, streamSet.Distance.Data);
-            //if (streamSet.Latlng != null)
-            //  AddDataStream(activity, "Latlng", time, streamSet.Latlng.Data); //TODO: handle LatLong from stravaAPI
+            if (streamSet.Latlng != null)
+                AddDataStream(activity, time, streamSet.Latlng.Data); 
             if (streamSet.Altitude != null)
                 AddDataStream(activity, "Altitude", time, streamSet.Altitude.Data);
             if (streamSet.VelocitySmooth != null)
@@ -195,11 +244,18 @@ namespace FellrnrTrainingAnalysis.Model
             if (data == null)
                 return; 
             float[] values = Array.ConvertAll(data, x => (float)x);
-            AddDataStream(activity, name, time, values);
+            if (values.Min() == 0 && values.Max() == 0)
+            {
+                Logging.Instance.Log($"Not adding data stream {name} as it is all zeros {activity.ToString()}");
+            }
+            else
+            {
+                AddDataStream(activity, name, time, values);
+            }
         }
         private void AddDataStream(Activity activity, string name, uint[] time, float[] data)
         {
-            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(DataSourceEnum.StravaAPI, LevelType.DataStream, name);
+            ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaAPI, LevelType.DataStream, name);
             if (activityDatumMapping != null && activityDatumMapping.Import)
             {
                 if (!activity.TimeSeries.ContainsKey(activityDatumMapping.InternalName) || Options.Instance.StravaApiOveridesData)
@@ -207,9 +263,28 @@ namespace FellrnrTrainingAnalysis.Model
                     activity.AddDataStream(activityDatumMapping.InternalName, time, data);
                 }
             }
-
-
         }
+
+        private void AddDataStream(Activity activity, uint[] time, LatLng[] data)
+        {
+            List<uint> LocationTimes = new List<uint>();
+            List<float> LocationLats = new List<float>();
+            List<float> LocationLons = new List<float>();
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i].Lat != null && data[i].Lng != null)
+                {
+                    LocationTimes.Add(time[i]);
+                    LocationLats.Add((float)data[i].Lat!);
+                    LocationLons.Add((float)data[i].Lng!);
+                }
+            }
+
+            LocationStream locationStream = new LocationStream(LocationTimes.ToArray(), LocationLats.ToArray(), LocationLons.ToArray());
+            activity.LocationStream = locationStream;
+        }
+
         private Dictionary<string, Datum> ActivityDataFromProperties(object stravaActivity)
         {
             Dictionary<string, Datum> activityData = new Dictionary<string, Datum>();
@@ -232,7 +307,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                     string fieldName = prop.Name;
                     object propertyValue = prop.GetValue(stravaActivity)!;
-                    ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(DataSourceEnum.StravaAPI, LevelType.Activity, fieldName);
+                    ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaAPI, LevelType.Activity, fieldName);
                     if (propertyValue == null)
                     {
                         Logging.Instance.Debug(string.Format("       propertyValue is null"));
@@ -291,6 +366,30 @@ namespace FellrnrTrainingAnalysis.Model
                                     TimeSpan timeSpan= (TimeSpan)propertyValue;
                                     float timeInSeconds = (float)timeSpan.TotalSeconds;
                                     activityData.Add(activityDatumMapping.InternalName, new TypedDatum<float>(activityDatumMapping.InternalName, true, timeInSeconds));
+                                }
+                                break;
+                            case DataTypeEnum.WorkoutFlags:
+                                //RunRace = 1,
+                                //RunLongRun = 2,
+                                //RunTraining = 3,
+                                //RideRace = 11,
+                                //RideTraining = 12
+                                if (underlyingPropertyType == typeof(WorkoutType))
+                                {
+                                    WorkoutType workoutType = (WorkoutType)propertyValue;
+                                    string flags = "";
+                                    if (workoutType == WorkoutType.RunLongRun)
+                                        flags = "Long Run";
+                                    else if (workoutType == WorkoutType.RunRace)
+                                        flags = "Race";
+                                    else if (workoutType == WorkoutType.RunTraining)
+                                        flags = "Training";
+                                    else if (workoutType == WorkoutType.RideRace)
+                                        flags = "Race";
+                                    else if (workoutType == WorkoutType.RideTraining)
+                                        flags = "Training";
+
+                                    activityData.Add(activityDatumMapping.InternalName, new TypedDatum<string>(activityDatumMapping.InternalName, true, flags));
                                 }
                                 break;
                         }

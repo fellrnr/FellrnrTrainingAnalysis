@@ -1,29 +1,17 @@
 ﻿using BrightIdeasSoftware;
 using FellrnrTrainingAnalysis.Model;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 namespace FellrnrTrainingAnalysis.UI
 {
-    public partial class ActivityList : UserControl
+    public partial class ActivityTree : UserControl
     {
         private const string DateTreeColumn = "Start Time";
         private const string ParentId = "par";
         private const string Id = "Id";
         private List<DataRow> lastRows = new List<DataRow>();
 
-        public ActivityList()
+        public ActivityTree()
         {
             InitializeComponent();
             dataTreeListView.KeyAspectName = Id;
@@ -66,10 +54,23 @@ namespace FellrnrTrainingAnalysis.UI
                             masterDataNames.Add(s);
                     }
                 }
+
+                SortedDictionary<int, DataColumn> keyValuePairs = new SortedDictionary<int, DataColumn>();
                 foreach (string s in masterDataNames)
                 {
-                    myTable.Columns.Add(Create(s, typeof(string))); //For now, just create as string
+                    DataColumn dataColumn = Create(s, typeof(string)); //For now, just create as string
+                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
+                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInTree != null && !activityDatumMetadata.Invisible.GetValueOrDefault(false))
+                    {
+                        int positionInTree = (int)activityDatumMetadata.PositionInTree;
+                        keyValuePairs.Add(positionInTree, dataColumn);
+                        //myTable.Columns[column.Name].SetOrdinal(positionInTree);
+                    }
                 }
+
+                foreach (KeyValuePair<int, DataColumn> keyValuePair in keyValuePairs)
+                    myTable.Columns.Add(keyValuePair.Value);
+
                 foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
                 {
                     CalendarNode calendarNode = kvp.Value;
@@ -90,8 +91,31 @@ namespace FellrnrTrainingAnalysis.UI
                     dataTreeListView.Reset();  //we have to do a reset if things change, like number of columns
                 }
 
-                dataTreeListView.DataSource = myTable;
 
+                dataTreeListView.DataSource = myTable;
+                foreach (OLVColumn column in dataTreeListView.AllColumns)
+                {
+                    if (column.Name != null && column.Name != DateTreeColumn)
+                    {
+                        ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(column.Name);
+                        if (activityDatumMetadata != null)
+                        {
+                            if (activityDatumMetadata.PositionInTree == null || activityDatumMetadata.Invisible.GetValueOrDefault(false))
+                            {
+                                column.IsVisible = false;
+                            }
+                            else
+                            {
+                                if(activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                                    column.TextAlign = HorizontalAlignment.Right;
+                                column.IsVisible = true;
+                                int positionInTree = (int)activityDatumMetadata.PositionInTree;
+                                //myTable.Columns[column.Name].SetOrdinal(positionInTree);
+                            }
+                        }
+                    }
+                }
+                dataTreeListView.RebuildColumns();
                 foreach (DataRow dataRow in lastRows)
                 {
                     DataRowView drv = myTable.DefaultView[myTable.Rows.IndexOf(dataRow)];
@@ -130,7 +154,11 @@ namespace FellrnrTrainingAnalysis.UI
             {
                 if (masterDataNames.Contains(d.Name))
                 {
-                    dataRow[d.Name] = d.ToString();
+                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(d.Name);
+                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInTree != null && !activityDatumMetadata.Invisible.GetValueOrDefault(false))
+                        dataRow[d.Name] = DatumFormatter.FormatForGrid(d, activityDatumMetadata);
+
+                        //dataRow[d.Name] = d.ToString();
                 }
             }
 
