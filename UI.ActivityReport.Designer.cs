@@ -28,280 +28,260 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.splitContainerReportToTabs = new System.Windows.Forms.SplitContainer();
-            this.splitContainerTopButtonsToReport = new System.Windows.Forms.SplitContainer();
-            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.pageSizeComboBox1 = new System.Windows.Forms.ComboBox();
-            this.labelTotalRows = new System.Windows.Forms.Label();
-            this.activityDataGridView = new System.Windows.Forms.DataGridView();
-            this.splitContainerTabsToList = new System.Windows.Forms.SplitContainer();
-            this.tabControl2 = new System.Windows.Forms.TabControl();
-            this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.formsPlot1 = new ScottPlot.FormsPlot();
-            this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.activityData1 = new FellrnrTrainingAnalysis.UI.ActivityData();
-            this.tabPage3 = new System.Windows.Forms.TabPage();
-            this.activityMap1 = new FellrnrTrainingAnalysis.UI.ActivityMap();
-            this.listViewGraphOptions = new System.Windows.Forms.ListView();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerReportToTabs)).BeginInit();
-            this.splitContainerReportToTabs.Panel1.SuspendLayout();
-            this.splitContainerReportToTabs.Panel2.SuspendLayout();
-            this.splitContainerReportToTabs.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerTopButtonsToReport)).BeginInit();
-            this.splitContainerTopButtonsToReport.Panel1.SuspendLayout();
-            this.splitContainerTopButtonsToReport.Panel2.SuspendLayout();
-            this.splitContainerTopButtonsToReport.SuspendLayout();
-            this.flowLayoutPanel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.activityDataGridView)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerTabsToList)).BeginInit();
-            this.splitContainerTabsToList.Panel1.SuspendLayout();
-            this.splitContainerTabsToList.Panel2.SuspendLayout();
-            this.splitContainerTabsToList.SuspendLayout();
-            this.tabControl2.SuspendLayout();
-            this.tabPage1.SuspendLayout();
-            this.tabPage2.SuspendLayout();
-            this.tabPage3.SuspendLayout();
-            this.SuspendLayout();
+            splitContainerReportToTabs = new SplitContainer();
+            splitContainerTopButtonsToReport = new SplitContainer();
+            flowLayoutPanel1 = new FlowLayoutPanel();
+            label1 = new Label();
+            pageSizeComboBox1 = new ComboBox();
+            labelTotalRows = new Label();
+            activityDataGridView = new DataGridView();
+            splitContainerTabsToList = new SplitContainer();
+            tabControl2 = new TabControl();
+            tabPage1 = new TabPage();
+            formsPlot1 = new ScottPlot.FormsPlot();
+            tabPage2 = new TabPage();
+            activityData1 = new UI.ActivityData();
+            tabPage3 = new TabPage();
+            activityMap1 = new UI.ActivityMap();
+            listViewGraphOptions = new ListView();
+            ((System.ComponentModel.ISupportInitialize)splitContainerReportToTabs).BeginInit();
+            splitContainerReportToTabs.Panel1.SuspendLayout();
+            splitContainerReportToTabs.Panel2.SuspendLayout();
+            splitContainerReportToTabs.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainerTopButtonsToReport).BeginInit();
+            splitContainerTopButtonsToReport.Panel1.SuspendLayout();
+            splitContainerTopButtonsToReport.Panel2.SuspendLayout();
+            splitContainerTopButtonsToReport.SuspendLayout();
+            flowLayoutPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)activityDataGridView).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)splitContainerTabsToList).BeginInit();
+            splitContainerTabsToList.Panel1.SuspendLayout();
+            splitContainerTabsToList.Panel2.SuspendLayout();
+            splitContainerTabsToList.SuspendLayout();
+            tabControl2.SuspendLayout();
+            tabPage1.SuspendLayout();
+            tabPage2.SuspendLayout();
+            tabPage3.SuspendLayout();
+            SuspendLayout();
             // 
             // splitContainerReportToTabs
             // 
-            this.splitContainerReportToTabs.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainerReportToTabs.Location = new System.Drawing.Point(0, 0);
-            this.splitContainerReportToTabs.Name = "splitContainerReportToTabs";
-            this.splitContainerReportToTabs.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            splitContainerReportToTabs.Dock = DockStyle.Fill;
+            splitContainerReportToTabs.Location = new Point(0, 0);
+            splitContainerReportToTabs.Name = "splitContainerReportToTabs";
+            splitContainerReportToTabs.Orientation = Orientation.Horizontal;
             // 
             // splitContainerReportToTabs.Panel1
             // 
-            this.splitContainerReportToTabs.Panel1.Controls.Add(this.splitContainerTopButtonsToReport);
+            splitContainerReportToTabs.Panel1.Controls.Add(splitContainerTopButtonsToReport);
             // 
             // splitContainerReportToTabs.Panel2
             // 
-            this.splitContainerReportToTabs.Panel2.Controls.Add(this.splitContainerTabsToList);
-            this.splitContainerReportToTabs.Size = new System.Drawing.Size(1902, 1308);
-            this.splitContainerReportToTabs.SplitterDistance = 724;
-            this.splitContainerReportToTabs.TabIndex = 0;
+            splitContainerReportToTabs.Panel2.Controls.Add(splitContainerTabsToList);
+            splitContainerReportToTabs.Size = new Size(1902, 1308);
+            splitContainerReportToTabs.SplitterDistance = 618;
+            splitContainerReportToTabs.TabIndex = 0;
             // 
             // splitContainerTopButtonsToReport
             // 
-            this.splitContainerTopButtonsToReport.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainerTopButtonsToReport.Location = new System.Drawing.Point(0, 0);
-            this.splitContainerTopButtonsToReport.Name = "splitContainerTopButtonsToReport";
-            this.splitContainerTopButtonsToReport.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            splitContainerTopButtonsToReport.Dock = DockStyle.Fill;
+            splitContainerTopButtonsToReport.Location = new Point(0, 0);
+            splitContainerTopButtonsToReport.Name = "splitContainerTopButtonsToReport";
+            splitContainerTopButtonsToReport.Orientation = Orientation.Horizontal;
             // 
             // splitContainerTopButtonsToReport.Panel1
             // 
-            this.splitContainerTopButtonsToReport.Panel1.Controls.Add(this.flowLayoutPanel1);
+            splitContainerTopButtonsToReport.Panel1.Controls.Add(flowLayoutPanel1);
             // 
             // splitContainerTopButtonsToReport.Panel2
             // 
-            this.splitContainerTopButtonsToReport.Panel2.Controls.Add(this.activityDataGridView);
-            this.splitContainerTopButtonsToReport.Size = new System.Drawing.Size(1902, 724);
-            this.splitContainerTopButtonsToReport.SplitterDistance = 60;
-            this.splitContainerTopButtonsToReport.TabIndex = 0;
+            splitContainerTopButtonsToReport.Panel2.Controls.Add(activityDataGridView);
+            splitContainerTopButtonsToReport.Size = new Size(1902, 618);
+            splitContainerTopButtonsToReport.SplitterDistance = 51;
+            splitContainerTopButtonsToReport.TabIndex = 0;
             // 
             // flowLayoutPanel1
             // 
-            this.flowLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.flowLayoutPanel1.Controls.Add(this.label1);
-            this.flowLayoutPanel1.Controls.Add(this.pageSizeComboBox1);
-            this.flowLayoutPanel1.Controls.Add(this.labelTotalRows);
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(3, 3);
-            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(1896, 54);
-            this.flowLayoutPanel1.TabIndex = 0;
+            flowLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            flowLayoutPanel1.Controls.Add(label1);
+            flowLayoutPanel1.Controls.Add(pageSizeComboBox1);
+            flowLayoutPanel1.Controls.Add(labelTotalRows);
+            flowLayoutPanel1.Location = new Point(3, 3);
+            flowLayoutPanel1.Name = "flowLayoutPanel1";
+            flowLayoutPanel1.Size = new Size(1896, 45);
+            flowLayoutPanel1.TabIndex = 0;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(86, 25);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Page Size";
+            label1.AutoSize = true;
+            label1.Location = new Point(3, 0);
+            label1.Name = "label1";
+            label1.Size = new Size(86, 25);
+            label1.TabIndex = 0;
+            label1.Text = "Page Size";
             // 
             // pageSizeComboBox1
             // 
-            this.pageSizeComboBox1.FormattingEnabled = true;
-            this.pageSizeComboBox1.Items.AddRange(new object[] {
-            "25",
-            "50",
-            "100",
-            "500",
-            "All"});
-            this.pageSizeComboBox1.Location = new System.Drawing.Point(95, 3);
-            this.pageSizeComboBox1.Name = "pageSizeComboBox1";
-            this.pageSizeComboBox1.Size = new System.Drawing.Size(182, 33);
-            this.pageSizeComboBox1.TabIndex = 1;
-            this.pageSizeComboBox1.Text = "25";
-            this.pageSizeComboBox1.SelectedIndexChanged += new System.EventHandler(this.pageSizeComboBox1_SelectedIndexChanged);
+            pageSizeComboBox1.FormattingEnabled = true;
+            pageSizeComboBox1.Items.AddRange(new object[] { "25", "50", "100", "500", "All" });
+            pageSizeComboBox1.Location = new Point(95, 3);
+            pageSizeComboBox1.Name = "pageSizeComboBox1";
+            pageSizeComboBox1.Size = new Size(182, 33);
+            pageSizeComboBox1.TabIndex = 1;
+            pageSizeComboBox1.Text = "25";
+            pageSizeComboBox1.SelectedIndexChanged += pageSizeComboBox1_SelectedIndexChanged;
             // 
             // labelTotalRows
             // 
-            this.labelTotalRows.AutoSize = true;
-            this.labelTotalRows.Location = new System.Drawing.Point(283, 0);
-            this.labelTotalRows.Name = "labelTotalRows";
-            this.labelTotalRows.Size = new System.Drawing.Size(59, 25);
-            this.labelTotalRows.TabIndex = 2;
-            this.labelTotalRows.Text = "label2";
+            labelTotalRows.AutoSize = true;
+            labelTotalRows.Location = new Point(283, 0);
+            labelTotalRows.Name = "labelTotalRows";
+            labelTotalRows.Size = new Size(59, 25);
+            labelTotalRows.TabIndex = 2;
+            labelTotalRows.Text = "label2";
             // 
             // activityDataGridView
             // 
-            this.activityDataGridView.AllowUserToAddRows = false;
-            this.activityDataGridView.AllowUserToDeleteRows = false;
-            this.activityDataGridView.AllowUserToOrderColumns = true;
-            this.activityDataGridView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.activityDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.activityDataGridView.Location = new System.Drawing.Point(3, 3);
-            this.activityDataGridView.MultiSelect = false;
-            this.activityDataGridView.Name = "activityDataGridView";
-            this.activityDataGridView.ReadOnly = true;
-            this.activityDataGridView.RowHeadersWidth = 62;
-            this.activityDataGridView.RowTemplate.Height = 33;
-            this.activityDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.activityDataGridView.Size = new System.Drawing.Size(1883, 650);
-            this.activityDataGridView.TabIndex = 2;
-            this.activityDataGridView.CellMouseEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.activityDataGridView_CellMouseEnter);
-            this.activityDataGridView.SelectionChanged += new System.EventHandler(this.dataGridView1_SelectionChanged);
+            activityDataGridView.AllowUserToAddRows = false;
+            activityDataGridView.AllowUserToDeleteRows = false;
+            activityDataGridView.AllowUserToOrderColumns = true;
+            activityDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            activityDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            activityDataGridView.Location = new Point(3, 3);
+            activityDataGridView.MultiSelect = false;
+            activityDataGridView.Name = "activityDataGridView";
+            activityDataGridView.ReadOnly = true;
+            activityDataGridView.RowHeadersWidth = 62;
+            activityDataGridView.RowTemplate.Height = 33;
+            activityDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            activityDataGridView.Size = new Size(1883, 553);
+            activityDataGridView.TabIndex = 2;
+            activityDataGridView.CellMouseEnter += activityDataGridView_CellMouseEnter;
+            activityDataGridView.SelectionChanged += dataGridView1_SelectionChanged;
             // 
             // splitContainerTabsToList
             // 
-            this.splitContainerTabsToList.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainerTabsToList.Location = new System.Drawing.Point(0, 0);
-            this.splitContainerTabsToList.Name = "splitContainerTabsToList";
+            splitContainerTabsToList.Dock = DockStyle.Fill;
+            splitContainerTabsToList.Location = new Point(0, 0);
+            splitContainerTabsToList.Name = "splitContainerTabsToList";
             // 
             // splitContainerTabsToList.Panel1
             // 
-            this.splitContainerTabsToList.Panel1.Controls.Add(this.tabControl2);
+            splitContainerTabsToList.Panel1.Controls.Add(tabControl2);
             // 
             // splitContainerTabsToList.Panel2
             // 
-            this.splitContainerTabsToList.Panel2.Controls.Add(this.listViewGraphOptions);
-            this.splitContainerTabsToList.Size = new System.Drawing.Size(1902, 580);
-            this.splitContainerTabsToList.SplitterDistance = 1700;
-            this.splitContainerTabsToList.TabIndex = 0;
+            splitContainerTabsToList.Panel2.Controls.Add(listViewGraphOptions);
+            splitContainerTabsToList.Size = new Size(1902, 686);
+            splitContainerTabsToList.SplitterDistance = 1700;
+            splitContainerTabsToList.TabIndex = 0;
             // 
             // tabControl2
             // 
-            this.tabControl2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tabControl2.Controls.Add(this.tabPage1);
-            this.tabControl2.Controls.Add(this.tabPage2);
-            this.tabControl2.Controls.Add(this.tabPage3);
-            this.tabControl2.Location = new System.Drawing.Point(6, -5);
-            this.tabControl2.Name = "tabControl2";
-            this.tabControl2.SelectedIndex = 0;
-            this.tabControl2.Size = new System.Drawing.Size(1691, 582);
-            this.tabControl2.TabIndex = 1;
+            tabControl2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tabControl2.Controls.Add(tabPage1);
+            tabControl2.Controls.Add(tabPage2);
+            tabControl2.Controls.Add(tabPage3);
+            tabControl2.Location = new Point(6, -5);
+            tabControl2.Name = "tabControl2";
+            tabControl2.SelectedIndex = 0;
+            tabControl2.Size = new Size(1691, 688);
+            tabControl2.TabIndex = 1;
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.formsPlot1);
-            this.tabPage1.Location = new System.Drawing.Point(4, 34);
-            this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(1683, 544);
-            this.tabPage1.TabIndex = 0;
-            this.tabPage1.Text = "Time Graph";
-            this.tabPage1.UseVisualStyleBackColor = true;
+            tabPage1.Controls.Add(formsPlot1);
+            tabPage1.Location = new Point(4, 34);
+            tabPage1.Name = "tabPage1";
+            tabPage1.Padding = new Padding(3);
+            tabPage1.Size = new Size(1683, 650);
+            tabPage1.TabIndex = 0;
+            tabPage1.Text = "Time Graph";
+            tabPage1.UseVisualStyleBackColor = true;
             // 
             // formsPlot1
             // 
-            this.formsPlot1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.formsPlot1.Location = new System.Drawing.Point(0, 0);
-            this.formsPlot1.Margin = new System.Windows.Forms.Padding(6, 5, 6, 5);
-            this.formsPlot1.Name = "formsPlot1";
-            this.formsPlot1.Size = new System.Drawing.Size(1677, 539);
-            this.formsPlot1.TabIndex = 0;
+            formsPlot1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            formsPlot1.Location = new Point(0, 0);
+            formsPlot1.Margin = new Padding(6, 5, 6, 5);
+            formsPlot1.Name = "formsPlot1";
+            formsPlot1.Size = new Size(1677, 645);
+            formsPlot1.TabIndex = 0;
             // 
             // tabPage2
             // 
-            this.tabPage2.Controls.Add(this.activityData1);
-            this.tabPage2.Location = new System.Drawing.Point(4, 34);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(192, 62);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "Activity Data";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            tabPage2.Controls.Add(activityData1);
+            tabPage2.Location = new Point(4, 34);
+            tabPage2.Name = "tabPage2";
+            tabPage2.Padding = new Padding(3);
+            tabPage2.Size = new Size(192, 62);
+            tabPage2.TabIndex = 1;
+            tabPage2.Text = "Activity Data";
+            tabPage2.UseVisualStyleBackColor = true;
             // 
             // activityData1
             // 
-            this.activityData1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.activityData1.Location = new System.Drawing.Point(3, 3);
-            this.activityData1.Name = "activityData1";
-            this.activityData1.Size = new System.Drawing.Size(183, 53);
-            this.activityData1.TabIndex = 0;
+            activityData1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            activityData1.Location = new Point(3, 3);
+            activityData1.Name = "activityData1";
+            activityData1.Size = new Size(183, 53);
+            activityData1.TabIndex = 0;
             // 
             // tabPage3
             // 
-            this.tabPage3.Controls.Add(this.activityMap1);
-            this.tabPage3.Location = new System.Drawing.Point(4, 34);
-            this.tabPage3.Name = "tabPage3";
-            this.tabPage3.Size = new System.Drawing.Size(1683, 544);
-            this.tabPage3.TabIndex = 2;
-            this.tabPage3.Text = "Activty Map";
-            this.tabPage3.UseVisualStyleBackColor = true;
+            tabPage3.Controls.Add(activityMap1);
+            tabPage3.Location = new Point(4, 34);
+            tabPage3.Name = "tabPage3";
+            tabPage3.Size = new Size(192, 62);
+            tabPage3.TabIndex = 2;
+            tabPage3.Text = "Activty Map";
+            tabPage3.UseVisualStyleBackColor = true;
             // 
             // activityMap1
             // 
-            this.activityMap1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.activityMap1.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.activityMap1.Location = new System.Drawing.Point(3, 3);
-            this.activityMap1.Name = "activityMap1";
-            this.activityMap1.Size = new System.Drawing.Size(1677, 541);
-            this.activityMap1.TabIndex = 0;
+            activityMap1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            activityMap1.BackColor = SystemColors.ActiveCaption;
+            activityMap1.Location = new Point(3, 3);
+            activityMap1.Name = "activityMap1";
+            activityMap1.Size = new Size(186, 59);
+            activityMap1.TabIndex = 0;
             // 
             // listViewGraphOptions
             // 
-            this.listViewGraphOptions.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.listViewGraphOptions.Location = new System.Drawing.Point(3, 3);
-            this.listViewGraphOptions.Name = "listViewGraphOptions";
-            this.listViewGraphOptions.Size = new System.Drawing.Size(195, 574);
-            this.listViewGraphOptions.TabIndex = 0;
-            this.listViewGraphOptions.UseCompatibleStateImageBehavior = false;
+            listViewGraphOptions.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            listViewGraphOptions.Location = new Point(3, 3);
+            listViewGraphOptions.Name = "listViewGraphOptions";
+            listViewGraphOptions.Size = new Size(195, 680);
+            listViewGraphOptions.TabIndex = 0;
+            listViewGraphOptions.UseCompatibleStateImageBehavior = false;
             // 
             // ActivityReport
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.splitContainerReportToTabs);
-            this.Name = "ActivityReport";
-            this.Size = new System.Drawing.Size(1902, 1308);
-            this.splitContainerReportToTabs.Panel1.ResumeLayout(false);
-            this.splitContainerReportToTabs.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerReportToTabs)).EndInit();
-            this.splitContainerReportToTabs.ResumeLayout(false);
-            this.splitContainerTopButtonsToReport.Panel1.ResumeLayout(false);
-            this.splitContainerTopButtonsToReport.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerTopButtonsToReport)).EndInit();
-            this.splitContainerTopButtonsToReport.ResumeLayout(false);
-            this.flowLayoutPanel1.ResumeLayout(false);
-            this.flowLayoutPanel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.activityDataGridView)).EndInit();
-            this.splitContainerTabsToList.Panel1.ResumeLayout(false);
-            this.splitContainerTabsToList.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerTabsToList)).EndInit();
-            this.splitContainerTabsToList.ResumeLayout(false);
-            this.tabControl2.ResumeLayout(false);
-            this.tabPage1.ResumeLayout(false);
-            this.tabPage2.ResumeLayout(false);
-            this.tabPage3.ResumeLayout(false);
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(splitContainerReportToTabs);
+            Name = "ActivityReport";
+            Size = new Size(1902, 1308);
+            splitContainerReportToTabs.Panel1.ResumeLayout(false);
+            splitContainerReportToTabs.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainerReportToTabs).EndInit();
+            splitContainerReportToTabs.ResumeLayout(false);
+            splitContainerTopButtonsToReport.Panel1.ResumeLayout(false);
+            splitContainerTopButtonsToReport.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainerTopButtonsToReport).EndInit();
+            splitContainerTopButtonsToReport.ResumeLayout(false);
+            flowLayoutPanel1.ResumeLayout(false);
+            flowLayoutPanel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)activityDataGridView).EndInit();
+            splitContainerTabsToList.Panel1.ResumeLayout(false);
+            splitContainerTabsToList.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainerTabsToList).EndInit();
+            splitContainerTabsToList.ResumeLayout(false);
+            tabControl2.ResumeLayout(false);
+            tabPage1.ResumeLayout(false);
+            tabPage2.ResumeLayout(false);
+            tabPage3.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion

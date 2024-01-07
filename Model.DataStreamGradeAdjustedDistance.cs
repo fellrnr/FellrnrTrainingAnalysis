@@ -1,30 +1,36 @@
-﻿using System.Collections.ObjectModel;
+﻿using MemoryPack;
+using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
+    [MemoryPackable]
     [Serializable]
 
     //A class that calculates grade adjusted distance from horizontal distance and elevation changes
-    public class DataStreamGradeAdjustedDistance : DataStreamEphemeral
+    public partial class DataStreamGradeAdjustedDistance : DataStreamEphemeral
     {
-        public DataStreamGradeAdjustedDistance(string name, List<string> requiredFields) : base(name, requiredFields)
+        [MemoryPackConstructor]
+        protected DataStreamGradeAdjustedDistance()  //for use by memory pack deserialization only
+        {
+        }
+        public DataStreamGradeAdjustedDistance(string name, List<string> requiredFields, Activity activity) : base(name, requiredFields, activity)
         {
             if (requiredFields.Count != 2) throw new ArgumentException("DataStreamDelta must have two required fields");
         }
 
 
-        public override Tuple<uint[], float[]>? GetData(Activity parent)
+        public override Tuple<uint[], float[]>? GetData()
         {
-            ReadOnlyDictionary<string, IDataStream> timeSeries = parent.TimeSeries;
+            ReadOnlyDictionary<string, DataStreamBase> timeSeries = Parent.TimeSeries;
             string distanceField = RequiredFields[0];
-            IDataStream distanceStream = timeSeries[distanceField];
-            Tuple<uint[], float[]>? distanceData = distanceStream.GetData(parent);
+            DataStreamBase distanceStream = timeSeries[distanceField];
+            Tuple<uint[], float[]>? distanceData = distanceStream.GetData();
             if (distanceData == null) { return null; }
 
             string altitudeField = RequiredFields[1];
-            IDataStream altitudeStream = timeSeries[altitudeField];
-            Tuple<uint[], float[]>? altitudeData = altitudeStream.GetData(parent);
+            DataStreamBase altitudeStream = timeSeries[altitudeField];
+            Tuple<uint[], float[]>? altitudeData = altitudeStream.GetData();
             if (altitudeData == null) { return distanceData; }
 
             if (distanceData.Item1.Length != altitudeData.Item1.Length)
@@ -57,7 +63,7 @@ namespace FellrnrTrainingAnalysis.Model
                 }
                 else
                 {
-                    Logging.Instance.Error($"GradeAdjustedDistance: distance {distanceData.Item1.Length} points and altitude {altitudeData.Item1.Length} points for activity {parent.PrimaryKey()} from {parent.StartDateTime} for data stream {Name} ");
+                    Logging.Instance.Error($"GradeAdjustedDistance: distance {distanceData.Item1.Length} points and altitude {altitudeData.Item1.Length} points for activity {Parent.PrimaryKey()} from {Parent.StartDateTime} for data stream {Name} ");
                     return distanceData; //default to returning the raw distance data, otherwise the data isn't counted at all. 
                 }
             }
@@ -72,7 +78,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public override void Recalculate(Activity parent, bool force) { return; }
+        public override void Recalculate(bool force) { return; }
 
     }
 }

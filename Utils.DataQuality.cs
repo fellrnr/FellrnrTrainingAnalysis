@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Model;
+﻿using MemoryPack;
+using FellrnrTrainingAnalysis.Model;
 using System.Collections.ObjectModel;
 
 namespace FellrnrTrainingAnalysis.Utils
@@ -31,6 +32,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
             dataQualityCheckList.Add(new DataQualityCheckLimits("Heart Rate too high", "Heart Rate", new DataRemediationRemoveStream("Heart Rate"), max: 200f, andLimits: false));
 
+            dataQualityCheckList.Add(new DataQualityCheckLimits("Heart Rate test", "Heart Rate", new DataRemediationRemoveStream("Heart Rate"), max: 100f, andLimits: false));
 
             //TODO: Problem - recovery is confused it the timer is paused
             //60 beats in 60 seconds in 95th percentile of athletes
@@ -107,7 +109,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected abstract List<string> FindBadData(Activity activity);
 
-        public abstract string Reason(Activity activity, IDataStream dataStream, string reason);
+        public abstract string Reason(Activity activity, DataStreamBase dataStream, string reason);
     }
 
 
@@ -122,14 +124,14 @@ namespace FellrnrTrainingAnalysis.Utils
         private string TargetDataStream;
         private string? xAxisName;
 
-        protected float XValueAtTimeT(IDataStream? dataStreamX, int offsetEstimate, uint timeT, Activity activity)
+        protected float XValueAtTimeT(DataStreamBase? dataStreamX, int offsetEstimate, uint timeT, Activity activity)
         {
             if (dataStreamX == null)
             {
                 return timeT;
             }
 
-            Tuple<uint[], float[]>? data = dataStreamX.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStreamX.GetData();
             if (data == null || data.Item1.Length < 2)
                 return timeT;
 
@@ -160,13 +162,13 @@ namespace FellrnrTrainingAnalysis.Utils
             {
                 return badStreams;
             }
-            IDataStream dataStream = activity.TimeSeries[TargetDataStream];
+            DataStreamBase dataStream = activity.TimeSeries[TargetDataStream];
 
             if (xAxisName != null && !activity.TimeSeries.ContainsKey(xAxisName))
             {
                 return badStreams;
             }
-            IDataStream? dataStreamX = xAxisName == null ? null : activity.TimeSeries[xAxisName];
+            DataStreamBase? dataStreamX = xAxisName == null ? null : activity.TimeSeries[xAxisName];
 
             string? error = CheckDataStream(dataStream, dataStreamX, activity);
             if (error != null)
@@ -183,10 +185,10 @@ namespace FellrnrTrainingAnalysis.Utils
             return badStreams;
         }
 
-        protected abstract string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity);
+        protected abstract string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity);
 
         //TODO the Reason method is a bit redundant, or at least, ugly
-        public override string Reason(Activity activity, IDataStream dataStream, string reason)
+        public override string Reason(Activity activity, DataStreamBase dataStream, string reason)
         {
             return string.Format("Activity {0}, stream {1}, reason {2}", activity.ToString(), dataStream.ToString(), reason);
         }
@@ -200,9 +202,9 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         private float? MaxAllowedXSpanWithNoYChange;
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -272,9 +274,9 @@ namespace FellrnrTrainingAnalysis.Utils
         private float MaxAbsChangePerSecondAllowed;
         private int? OnlyScanFirstN;
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -322,9 +324,9 @@ namespace FellrnrTrainingAnalysis.Utils
         private float? MaxDecreaseAllowed;
         private float? Period;
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -368,9 +370,9 @@ namespace FellrnrTrainingAnalysis.Utils
         {
         }
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -399,9 +401,9 @@ namespace FellrnrTrainingAnalysis.Utils
         float? Max;
         bool AndLimits; //and them together
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -435,9 +437,9 @@ namespace FellrnrTrainingAnalysis.Utils
         {
         }
 
-        protected override string? CheckDataStream(IDataStream dataStream, IDataStream? dataStreamX, Activity activity)
+        protected override string? CheckDataStream(DataStreamBase dataStream, DataStreamBase? dataStreamX, Activity activity)
         {
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < 2)
                 return null;
 
@@ -473,7 +475,7 @@ namespace FellrnrTrainingAnalysis.Utils
             return badStreams;
         }
 
-        public override string Reason(Activity activity, IDataStream dataStream, string reason)
+        public override string Reason(Activity activity, DataStreamBase dataStream, string reason)
         {
             return string.Format("Activity {0}, reason {2}", activity.ToString(), dataStream.ToString(), reason);
         }
@@ -501,7 +503,7 @@ namespace FellrnrTrainingAnalysis.Utils
             return badStreams;
         }
 
-        public override string Reason(Activity activity, IDataStream dataStream, string reason)
+        public override string Reason(Activity activity, DataStreamBase dataStream, string reason)
         {
             return string.Format("Activity {0}, reason {2}", activity.ToString(), dataStream.ToString(), reason);
         }
@@ -539,8 +541,8 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             if (!activity.TimeSeries.ContainsKey(Target))
                 return;
-            IDataStream dataStream = activity.TimeSeries[Target];
-            Tuple<uint[], float[]>? data = dataStream.GetData(activity);
+            DataStreamBase dataStream = activity.TimeSeries[Target];
+            Tuple<uint[], float[]>? data = dataStream.GetData();
             if (data == null || data.Item1.Length < Position)
                 return;
 

@@ -106,7 +106,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             }
 
-            Accumulation.activity.AddDataStreams(Accumulation.dataStreams);
+            Accumulation.activity.AddDataStreams(Accumulation.dataStreams, Accumulation.activity);
 
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
@@ -387,11 +387,21 @@ namespace FellrnrTrainingAnalysis.Action
                 Logging.Instance.Debug(String.Format("SportMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SportMesg mySportMesg = (SportMesg)e.mesg;
             Sport? aSport = mySportMesg.GetSport();
+
+            string fieldName = e.mesg.Name; //normally "Sport"
+
+            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, 
+                ActivityDatumMapping.LevelType.Activity, fieldName);
+            if (activityDatumMapping == null || !activityDatumMapping.Import)
+            {
+                return;
+            }
+
             if (aSport != null)
             {
                 string activitySportType = ((Sport)aSport).ToString();
                 //mesg.name is "Sport", value it "Running" rather than "Run"
-                Accumulation.activity.ImportDatum(e.mesg.Name, ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.Activity, activitySportType);
+                Accumulation.activity.ImportDatum(activityDatumMapping.InternalName, ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.Activity, activitySportType);
             }
             Calculation.Other.Stop();
         }

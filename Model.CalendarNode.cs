@@ -1,9 +1,12 @@
-﻿namespace FellrnrTrainingAnalysis.Model
+﻿using MemoryPack;
+
+namespace FellrnrTrainingAnalysis.Model
 {
 
     //this represents the expandable tree of dates for activities
+    [MemoryPackable]
     [Serializable]
-    public class CalendarNode : Extensible
+    public partial class CalendarNode : Extensible
     {
         public CalendarNode(Utils.DateTimeTree dateTimeTree) 
         {
@@ -17,14 +20,17 @@
         //public const string FormatAsMonth = "MMM yyyy";
         //public const string FormatAsDay = "ddd dd MMM yyyy";
 
-        public override Utils.DateTimeTree Id { get { return DateTimeTree; } } //Hack to see if tree works
+        public override Utils.DateTimeTree Id() { return DateTimeTree; } //Hack to see if tree works
 
+        [MemoryPackInclude]
         public Utils.DateTimeTree DateTimeTree { get; }
 
         //public string DisplayString { get { return string.Format(DateFormat, DateTime); } }
 
+        [MemoryPackInclude]
         private SortedDictionary<DateTime, Extensible> _children = new SortedDictionary<DateTime, Extensible>();
 
+        [MemoryPackIgnore]
         public IReadOnlyDictionary<DateTime, Extensible> Children { get { return _children; } }
 
         public void AddChild(DateTime date, Extensible child)

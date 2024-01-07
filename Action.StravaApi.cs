@@ -260,7 +260,7 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 if (!activity.TimeSeries.ContainsKey(activityDatumMapping.InternalName) || Options.Instance.StravaApiOveridesData)
                 {
-                    activity.AddDataStream(activityDatumMapping.InternalName, time, data);
+                    activity.AddDataStream(activityDatumMapping.InternalName, time, data, activity);
                 }
             }
         }

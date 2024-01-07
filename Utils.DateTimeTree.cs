@@ -1,12 +1,19 @@
-﻿namespace FellrnrTrainingAnalysis.Utils
+﻿using MemoryPack;
+
+namespace FellrnrTrainingAnalysis.Utils
 {
+    [MemoryPackable]
     [Serializable]
 
     //This is a class that represents a date as just the year, the year and month, or year + month + day. This allows for using instances in a tree structure representing the dates. 
-    public class DateTimeTree
+    public partial class DateTimeTree
     {
         public enum DateTreeType { Root, Year, Month, Day, Time };
+
+        [MemoryPackInclude]
         public DateTreeType Type { get; set;} = DateTreeType.Time;
+
+        [MemoryPackInclude]
         public DateTime DateTime { get; set;}
         
         public DateTimeTree(DateTime dateTime, DateTreeType type) 
@@ -15,6 +22,7 @@
             Type = type;
         }
 
+        [MemoryPackConstructor]
         public DateTimeTree()
         {
             DateTime = DateTime.Now;

@@ -47,9 +47,10 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
                     return FormatTime(datum);
                 case ActivityDatumMetadata.DisplayUnitsType.None:
-                case ActivityDatumMetadata.DisplayUnitsType.Integer:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     return datum.ToString()!;
+                case ActivityDatumMetadata.DisplayUnitsType.Integer:
+                    return FormatFloat(datum, "{0:#,0}", 1.0f);
                 default:
                     return "";
             }

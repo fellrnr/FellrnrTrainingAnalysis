@@ -1,0 +1,88 @@
+﻿Notes 
+
+
+
+//                 _   _       _ _            _____                  _     _______               
+//       /\       | | (_)     (_) |          / ____|                | |   |__   __|              
+//      /  \   ___| |_ ___   ___| |_ _   _  | (___  _ __   ___  _ __| |_     | |_   _ _ __   ___ 
+//     / /\ \ / __| __| \ \ / / | __| | | |  \___ \| '_ \ / _ \| '__| __|    | | | | | '_ \ / _ \
+//    / ____ \ (__| |_| |\ V /| | |_| |_| |  ____) | |_) | (_) | |  | |_     | | |_| | |_) |  __/
+//   /_/    \_\___|\__|_| \_/ |_|\__|\__, | |_____/| .__/ \___/|_|   \__|    |_|\__, | .__/ \___|
+//                                    __/ |        | |                           __/ | |         
+//                                   |___/         |_|                          |___/|_|         
+
+There are several fields that cover this data. 
+
+Sport Type from Activity Type in Strava CSV, Values 
+	CSV file - Activity Type
+	Run
+	Ride
+	Hike
+	Walk
+	Workout
+	Weight Training
+	Virtual Run
+
+FIT Sport, from FIT file imported from the OnSportMesgEvent message
+
+FIT ActivityType field, ignored at the moment
+
+Sport Type - Run, From SportType StravaAPI, 
+
+Type - API, ignored as it's deprecated
+
+
+Strava API has workout_type as an INT, which is a flavor of activity (race, long, training, etc.), mapped to Workout Flags
+                                //RunRace = 1,
+                                //RunLongRun = 2,
+                                //RunTraining = 3,
+                                //RideRace = 11,
+                                //RideTraining = 12
+
+
+SportType in Strava API
+An enumeration of the sport types an activity may have. Distinct from ActivityType in that it has new types (e.g. MountainBikeRide)
+
+May be one of the following values: AlpineSki, BackcountrySki, Badminton, Canoeing, Crossfit, EBikeRide, Elliptical, EMountainBikeRide, Golf, 
+GravelRide, Handcycle, HighIntensityIntervalTraining, Hike, IceSkate, InlineSkate, Kayaking, Kitesurf, MountainBikeRide, NordicSki, Pickleball, 
+Pilates, Racquetball, Ride, RockClimbing, RollerSki, Rowing, Run, Sail, Skateboard, Snowboard, Snowshoe, Soccer, Squash, StairStepper, StandUpPaddling, 
+Surfing, Swim, TableTennis, Tennis, TrailRun, Velomobile, VirtualRide, VirtualRow, VirtualRun, Walk, WeightTraining, Wheelchair, Windsurf, Workout, Yoga
+
+
+//    _____                _            _       _       
+//   |  __ \              | |          | |     | |      
+//   | |__) |___  ___ __ _| | ___ _   _| | __ _| |_ ___ 
+//   |  _  // _ \/ __/ _` | |/ __| | | | |/ _` | __/ _ \
+//   | | \ \  __/ (_| (_| | | (__| |_| | | (_| | ||  __/
+//   |_|  \_\___|\___\__,_|_|\___|\__,_|_|\__,_|\__\___|
+//                                                      
+//                                                      
+
+Database.MasterRecalculate
+	Hill.Reload
+	Athlete.Recalculate
+		CalendarNode.Recalculate (recursive)
+			Activity.Recalculate
+				DataStreamBase.Recalculate
+				ICalculateField.Recalculate
+	Activity.RecalculateHills
+	Goal.UpdateActivityGoals
+
+
+	
+
+//    ______      _                 _ _     _         _____ _                         
+//   |  ____|    | |               (_) |   | |       / ____| |                        
+//   | |__  __  _| |_ ___ _ __  ___ _| |__ | | ___  | |    | | __ _ ___ ___  ___  ___ 
+//   |  __| \ \/ / __/ _ \ '_ \/ __| | '_ \| |/ _ \ | |    | |/ _` / __/ __|/ _ \/ __|
+//   | |____ >  <| ||  __/ | | \__ \ | |_) | |  __/ | |____| | (_| \__ \__ \  __/\__ \
+//   |______/_/\_\\__\___|_| |_|___/_|_.__/|_|\___|  \_____|_|\__,_|___/___/\___||___/
+//                                                                                    
+//                                                                                    
+
+Extensible
+	Athlete [Day, DateTime->Day, DateTime->CalendarNode, String->Activity, DateTime->Activity]
+	Activity [DataStreams]
+	CalendarNode [DateTime->Extensible (CalendarNode or Activity)
+	Day (Activity)
+	

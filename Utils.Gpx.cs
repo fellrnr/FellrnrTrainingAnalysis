@@ -2201,7 +2201,8 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
 
         private string ReadContentAsString()
         {
-            if (Reader_.IsEmptyElement) throw new FormatException(Reader_.Name);
+            //if (Reader_.IsEmptyElement) throw new FormatException(Reader_.Name);
+            if (Reader_.IsEmptyElement) return string.Empty; //#!JFS!# hitting problems with some GPX not having a desc field
 
             string elementName = Reader_.Name;
             string result = string.Empty;

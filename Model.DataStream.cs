@@ -1,40 +1,38 @@
-﻿namespace FellrnrTrainingAnalysis.Model
+﻿using MemoryPack;
+
+namespace FellrnrTrainingAnalysis.Model
 {
+    [MemoryPackable]
     [Serializable]
-    public class DataStream : IDataStream
+    public partial class DataStream : DataStreamBase
     {
-        public DataStream(string name, Tuple<uint[], float[]> data)
+        [MemoryPackConstructor]
+        private DataStream()
         {
-            _data = data;
-            Name = name;
+        }
+        public DataStream(string name, Tuple<uint[], float[]> data, Activity parent) : base(name, parent)
+        {
+            Data = data;
         }
 
 
         //A "real" data stream is always valid. It's only the data streams computed on the fly that need other data streams to be valid.
-        public bool IsValid(Activity Parent) { return true; }
-        public bool IsVirtual() { return false; }
+        public override bool IsValid() { return true; }
+        public override bool IsVirtual() { return false; }
 
 
         //time offset to Datum
         //TODO: we need the absolute time for a datum as well. If the timer is stopped, the elapsed time stops, but it might be useful to know the actual time. Solution: This will be a data stream of DateTime. 
-
-        private Tuple<uint[], float[]> _data;
+        [MemoryPackInclude]
+        private Tuple<uint[], float[]> Data;
 
         //TODO: Potential optimisation - Share time between data streams 
-        public Tuple<uint[], float[]> GetData(Activity Parent) { return _data; }
-        //public uint[] ElapsedTimes { get; private set; } = new uint[0];
-        //public float[] Values { get; private set; } = new float[0];
-
-        public string Name { get; }
+        public override Tuple<uint[], float[]> GetData() { return Data; }
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity
-        public void Recalculate(Activity parent, bool force) { return; }
+        public override void Recalculate(bool force) { return; }
 
-        public override string ToString()
-        {
-            return string.Format("Data Stream Name {0}", Name);
-        }
 
 
         /*
@@ -63,8 +61,5 @@
          * Time Series Name[Resistance]
          */
 
-        //TODO: Maybe cache some calculated values, min, max, avg, std
-
-        //Note, data have sources and origins, but a time series can be made of a mixture
     }
 }

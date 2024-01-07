@@ -1,4 +1,4 @@
-﻿using static FellrnrTrainingAnalysis.Utils.Utils;
+﻿using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Utils
 {

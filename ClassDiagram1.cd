@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamDelta" Collapsed="true">
+    <Position X="3.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAEAAAAAAAAAAAQQgAAAAAAAEAIAAAAAAAAAI=</HashCode>
+      <FileName>Model.DataStreamDelta.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamEphemeral" Collapsed="true">
+    <Position X="3.25" Y="2.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAIgAAAAAAAAAAAAAAAIAAAAAAAA=</HashCode>
+      <FileName>Model.DataStreamEphemeral.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamCalculated" Collapsed="true">
+    <Position X="5.75" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAEAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAA=</HashCode>
+      <FileName>Model.DataStreamCalculated.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.DataStream" Collapsed="true">
+    <Position X="0.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAFAAAAAAAAAgAAAAAAAAAAAEAAAIAAAAAAAA=</HashCode>
+      <FileName>Model.DataStream.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamBase" Collapsed="true">
+    <Position X="1.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAGAAAAAAEAAgAQAQAAAAAAAEACAIAAAAAAAA=</HashCode>
+      <FileName>Model.DataStreamBase.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.Extensible">
+    <Position X="10" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QAACAAAgAAAEAAAABCAAAAAAEAEBABEAAAAAFIAAAAQ=</HashCode>
+      <FileName>Model.Extensible.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.Activity">
+    <Position X="8.5" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAEIBACAgUAEECAAQABiAQAIAAAEAABAABAgA0EA=</HashCode>
+      <FileName>Model.Activity.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalendarNode">
+    <Position X="12" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgSAAAAAAAAEAAAAAAEAAAAAAAAAAEAAAQAAAAAAAA=</HashCode>
+      <FileName>Model.CalendarNode.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

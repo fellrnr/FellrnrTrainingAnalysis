@@ -2,33 +2,58 @@
 using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 
 namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
-    public class Athlete : Extensible
+    [MemoryPackable]
+    public partial class Athlete : Extensible
     {
-        public Athlete(Database parent)
+        public Athlete()
         {
+            _days = new SortedDictionary<DateTime, Day>();
             _calendarTree = new SortedList<DateTime, CalendarNode>();
-            Parent= parent;
         }
 
+        [MemoryPackInclude]
+        private SortedDictionary<DateTime, Day> _days { get; set; }
+
+        [MemoryPackIgnore]
+        public ReadOnlyDictionary<DateTime, Day> Days { get { return _days.AsReadOnly(); } }
+
+        private Day GetOrAddDay(DateTime date)
+        {
+            DateTime dateNoTime = date.Date; //just in case
+            if(!_days.ContainsKey(dateNoTime))
+                _days.Add(dateNoTime, new Day(dateNoTime));
+            return _days[dateNoTime];
+        }
+
+
+        [MemoryPackInclude]
         private SortedList<DateTime, CalendarNode> _calendarTree { get; set; }
-        
+
+        [MemoryPackIgnore]
         public ReadOnlyDictionary<DateTime, CalendarNode> CalendarTree { get { return _calendarTree.AsReadOnly(); } }
 
+        [MemoryPackInclude]
         private Dictionary<string, Activity> _activities { get; set; } = new Dictionary<string, Activity>(); //primary key (strava id) against activity
 
         //Strava Id to activity
+        [MemoryPackIgnore]
         public ReadOnlyDictionary<string, Activity> Activities { get { return _activities.AsReadOnly(); } }
 
-        public override Utils.DateTimeTree Id { get { return new DateTimeTree(); } } //HACK: Hack to see if tree works
+        public override Utils.DateTimeTree Id() { return new DateTimeTree(); } //HACK: Hack to see if tree works
 
+        [MemoryPackInclude]
         private SortedDictionary<DateTime, Activity> _activitiesByDateTime { get; set; } = new SortedDictionary<DateTime, Activity>(); //we sometimes need to access activities in date order
+
+        [MemoryPackIgnore]
         public ReadOnlyDictionary<DateTime, Activity> ActivitiesByDateTime { get { return _activitiesByDateTime.AsReadOnly(); } }
 
-        public IReadOnlyCollection<String> TimeSeriesNames //generate dynamically, don't cache = new List<string>();
+        [MemoryPackIgnore]
+        public IReadOnlyCollection<String> AllTimeSeriesNames //generate dynamically, don't cache = new List<string>();
         { 
             get
             {
@@ -47,8 +72,31 @@ namespace FellrnrTrainingAnalysis.Model
                 timeSeriesNames.Sort();
                 return timeSeriesNames.AsReadOnly();
             }
-        } 
+        }
 
+        [MemoryPackIgnore]
+        public IReadOnlyCollection<String> AllActivityTypes //generate dynamically, don't cache = new List<string>();
+        {
+            get
+            {
+                List<string> activityTypes = new List<string>();
+                foreach (KeyValuePair<string, Activity> kvp in _activities)
+                {
+                    Activity activity = kvp.Value;
+                    string? s = activity.ActivityType;
+                    if (s != null && !activityTypes.Contains(s))
+                    {
+                        activityTypes.Add(s);
+                    }
+                }
+                activityTypes.Sort();
+                return activityTypes.AsReadOnly();
+            }
+        }
+
+
+
+        [MemoryPackIgnore]
         public IReadOnlyCollection<Tuple<String, Type>> ActivityFieldMetaData
         {
             get
@@ -71,6 +119,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
+        [MemoryPackIgnore]
         public IReadOnlyCollection<String> ActivityFieldNames
         {
             get
@@ -91,7 +140,6 @@ namespace FellrnrTrainingAnalysis.Model
                 return activityFieldNames.AsReadOnly();
             }
         }
-
 
 
         public Activity? AddOrUpdateActivity(Dictionary<string, Datum> activityData)
@@ -127,6 +175,8 @@ namespace FellrnrTrainingAnalysis.Model
                 if(startDateTime.HasValue)
                 {
                     _activitiesByDateTime.Add(startDateTime.Value, activity);
+                    Day day = GetOrAddDay(startDateTime.Value.Date);
+                    day.AddActivity(activity);
                 }
 
                 return activity;
@@ -197,22 +247,22 @@ namespace FellrnrTrainingAnalysis.Model
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(string.Format("Current athlete is {0} {1}\r\n", GetNamedDatumForDisplay(FirstNameTag), GetNamedDatumForDisplay(LastNameTag)));
-            sb.Append(string.Format("Current athlete has {0} attributes\r\n", Data.Count));
+            sb.Append(string.Format("Athlete is {0} {1}\r\n", GetNamedDatumForDisplay(FirstNameTag), GetNamedDatumForDisplay(LastNameTag)));
+            sb.Append(string.Format("Athlete has {0} attributes\r\n", Data.Count));
             foreach (KeyValuePair<string, Datum> kvp in Data)
             {
                 sb.Append(string.Format("{0} is {1}\r\n", kvp.Key, kvp.Value));
             }
             IReadOnlyCollection<string> activityFieldNames = ActivityFieldNames;
-            sb.Append(string.Format("Current athlete has activities with {0} attributes\r\n", activityFieldNames.Count));
+            sb.Append(string.Format("athlete has activities with {0} attributes\r\n", activityFieldNames.Count));
             foreach (string s in activityFieldNames)
             {
                 sb.Append(string.Format("{0}\r\n", s));
             }
-            sb.Append(string.Format("Current athlete has {0} days with activities\r\n", _calendarTree.Count));
-            sb.Append(string.Format("Current athlete has {0} activities\r\n", _activities.Count));
-            sb.Append(string.Format("\r\nCurrent athlete has {0} field names\r\n", TimeSeriesNames.Count));
-            foreach (string s in TimeSeriesNames)
+            sb.Append(string.Format("athlete has {0} days with activities\r\n", _calendarTree.Count));
+            sb.Append(string.Format("athlete has {0} activities\r\n", _activities.Count));
+            sb.Append(string.Format("\r\athlete has {0} field names\r\n", AllTimeSeriesNames.Count));
+            foreach (string s in AllTimeSeriesNames)
             {
                 sb.Append(string.Format(">> {0}\r\n", s));
             }
@@ -225,7 +275,7 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string, Model.Activity> kvp in _activities)
             {
                 Model.Activity activity = kvp.Value;
-                sb.Append(activity);
+                sb.Append($"Activity {activity}\r\n");
 
                 string? activityType = activity.ActivityType;
                 if (activityType != null)
@@ -281,10 +331,13 @@ namespace FellrnrTrainingAnalysis.Model
 
 
 
-
-        [JsonIgnore]
-        public Database Parent { get; set; } 
-
+        public void PostDeserialize()
+        {
+            foreach (KeyValuePair<string, Activity> kvp in _activities)
+            {
+                kvp.Value.PostDeserialize();
+            }
+        }
         public const string AthleteIdTag = "AthleteId";
         public const string EmailAddressTag = "Email Address";
         public const string FirstNameTag = "First Name";

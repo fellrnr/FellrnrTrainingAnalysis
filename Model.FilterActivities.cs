@@ -253,8 +253,8 @@
                 }
                 else
                 {
-                    IDataStream datastream = activity.TimeSeries[FieldName];
-                    Tuple<uint[], float[]>? dataTuple = datastream.GetData(activity);
+                    DataStreamBase datastream = activity.TimeSeries[FieldName];
+                    Tuple<uint[], float[]>? dataTuple = datastream.GetData();
                     if(dataTuple == null)
                     {
                         value = null;

@@ -1,7 +1,15 @@
-﻿namespace FellrnrTrainingAnalysis.Model
+﻿using MemoryPack;
+using System.Formats.Asn1;
+
+namespace FellrnrTrainingAnalysis.Model
 {
+    [MemoryPackable]
     [Serializable]
-    public abstract class Extensible
+    [MemoryPackUnion(0, typeof(Activity))]
+    [MemoryPackUnion(1, typeof(Athlete))]
+    [MemoryPackUnion(2, typeof(CalendarNode))]
+    [MemoryPackUnion(3, typeof(Day))]
+    public abstract partial class Extensible
     {
 
         //change so that the factory returns just the core dictionary of string/datum, then convert that to the actual types.
@@ -11,11 +19,15 @@
             Data = new Dictionary<string, Datum>();
         }
 
+        [MemoryPackInclude]
+        [MemoryPackOrder(20)] //start at 20 to avoid conflict with Activity
         protected Dictionary<string, Datum> Data { get; }
 
-        public abstract Utils.DateTimeTree Id { get; } //Hack to see if tree works
+        public abstract Utils.DateTimeTree Id(); //Hack to see if tree works
 
+        [MemoryPackIgnore]
         public IReadOnlyCollection<string> DataNames { get { return Data.Keys.ToList().AsReadOnly(); } }
+        [MemoryPackIgnore]
         public IReadOnlyCollection<Datum> DataValues { get { return Data.Values.ToList().AsReadOnly(); } }
 
         public Datum? GetNamedDatum(string name) { if (Data.ContainsKey(name)) return Data[name]; else return null;  }

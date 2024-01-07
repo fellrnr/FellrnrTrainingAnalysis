@@ -2,7 +2,7 @@
 {
     public class CalculateDataStreamToDataField : ICalculate
     {
-        public CalculateDataStreamToDataField(string activityFieldname, Mode extractionMode, IDataStream ds) 
+        public CalculateDataStreamToDataField(string activityFieldname, Mode extractionMode, DataStreamBase ds) 
         {
             dataStream = ds;
             SourceStreamName = ds.Name;
@@ -19,10 +19,10 @@
         }
 
         private string SourceStreamName;
-        private IDataStream? dataStream = null;
+        private DataStreamBase? dataStream = null;
 
 
-        private IDataStream? DataStream(Activity parent)
+        private DataStreamBase? DataStream(Activity parent)
         {
             if (dataStream != null)
                 return dataStream;
@@ -38,7 +38,7 @@
 
         private Tuple<uint[], float[]>? GetUnderlyingDataStream(Activity parent)
         {
-            return DataStream(parent) == null ? null : DataStream(parent)!.GetData(parent);
+            return DataStream(parent) == null ? null : DataStream(parent)!.GetData();
         }
 
 
@@ -50,7 +50,7 @@
             if (DataStream(parent) == null)
                 return;
 
-            DataStream(parent)!.Recalculate(parent, force);
+            DataStream(parent)!.Recalculate(force);
 
 
             if (parent.HasNamedDatum(ActivityFieldname) && !force)

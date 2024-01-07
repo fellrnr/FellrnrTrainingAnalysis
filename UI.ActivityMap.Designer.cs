@@ -28,134 +28,134 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.showComboBox = new System.Windows.Forms.ComboBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.widthNumericUpDown = new System.Windows.Forms.NumericUpDown();
-            this.label3 = new System.Windows.Forms.Label();
-            this.alphaNumericUpDown = new System.Windows.Forms.NumericUpDown();
-            this.flowLayoutPanel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.widthNumericUpDown)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.alphaNumericUpDown)).BeginInit();
-            this.SuspendLayout();
+            flowLayoutPanel1 = new FlowLayoutPanel();
+            label1 = new Label();
+            showComboBox = new ComboBox();
+            label2 = new Label();
+            widthNumericUpDown = new NumericUpDown();
+            label3 = new Label();
+            alphaNumericUpDown = new NumericUpDown();
+            gmap = new GMap.NET.WindowsForms.GMapControl();
+            flowLayoutPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)widthNumericUpDown).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)alphaNumericUpDown).BeginInit();
+            SuspendLayout();
             // 
             // flowLayoutPanel1
             // 
-            this.flowLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.flowLayoutPanel1.Controls.Add(this.label1);
-            this.flowLayoutPanel1.Controls.Add(this.showComboBox);
-            this.flowLayoutPanel1.Controls.Add(this.label2);
-            this.flowLayoutPanel1.Controls.Add(this.widthNumericUpDown);
-            this.flowLayoutPanel1.Controls.Add(this.label3);
-            this.flowLayoutPanel1.Controls.Add(this.alphaNumericUpDown);
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(3, 3);
-            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(645, 52);
-            this.flowLayoutPanel1.TabIndex = 0;
+            flowLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            flowLayoutPanel1.Controls.Add(label1);
+            flowLayoutPanel1.Controls.Add(showComboBox);
+            flowLayoutPanel1.Controls.Add(label2);
+            flowLayoutPanel1.Controls.Add(widthNumericUpDown);
+            flowLayoutPanel1.Controls.Add(label3);
+            flowLayoutPanel1.Controls.Add(alphaNumericUpDown);
+            flowLayoutPanel1.Location = new Point(3, 3);
+            flowLayoutPanel1.Name = "flowLayoutPanel1";
+            flowLayoutPanel1.Size = new Size(1094, 52);
+            flowLayoutPanel1.TabIndex = 0;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(56, 25);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Show";
+            label1.AutoSize = true;
+            label1.Location = new Point(3, 0);
+            label1.Name = "label1";
+            label1.Size = new Size(56, 25);
+            label1.TabIndex = 0;
+            label1.Text = "Show";
             // 
             // showComboBox
             // 
-            this.showComboBox.FormattingEnabled = true;
-            this.showComboBox.Location = new System.Drawing.Point(65, 3);
-            this.showComboBox.Name = "showComboBox";
-            this.showComboBox.Size = new System.Drawing.Size(182, 33);
-            this.showComboBox.TabIndex = 1;
-            this.showComboBox.SelectedIndexChanged += new System.EventHandler(this.showComboBox_SelectedIndexChanged);
+            showComboBox.FormattingEnabled = true;
+            showComboBox.Location = new Point(65, 3);
+            showComboBox.Name = "showComboBox";
+            showComboBox.Size = new Size(182, 33);
+            showComboBox.TabIndex = 1;
+            showComboBox.Text = "None";
+            showComboBox.SelectedIndexChanged += showComboBox_SelectedIndexChanged;
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(253, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(60, 25);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "Width";
+            label2.AutoSize = true;
+            label2.Location = new Point(253, 0);
+            label2.Name = "label2";
+            label2.Size = new Size(60, 25);
+            label2.TabIndex = 2;
+            label2.Text = "Width";
             // 
             // widthNumericUpDown
             // 
-            this.widthNumericUpDown.Location = new System.Drawing.Point(319, 3);
-            this.widthNumericUpDown.Maximum = new decimal(new int[] {
-            25,
-            0,
-            0,
-            0});
-            this.widthNumericUpDown.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.widthNumericUpDown.Name = "widthNumericUpDown";
-            this.widthNumericUpDown.Size = new System.Drawing.Size(63, 31);
-            this.widthNumericUpDown.TabIndex = 3;
-            this.widthNumericUpDown.Value = new decimal(new int[] {
-            5,
-            0,
-            0,
-            0});
-            this.widthNumericUpDown.ValueChanged += new System.EventHandler(this.widthNumericUpDown_ValueChanged);
+            widthNumericUpDown.Location = new Point(319, 3);
+            widthNumericUpDown.Maximum = new decimal(new int[] { 25, 0, 0, 0 });
+            widthNumericUpDown.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            widthNumericUpDown.Name = "widthNumericUpDown";
+            widthNumericUpDown.Size = new Size(63, 31);
+            widthNumericUpDown.TabIndex = 3;
+            widthNumericUpDown.Value = new decimal(new int[] { 5, 0, 0, 0 });
+            widthNumericUpDown.ValueChanged += widthNumericUpDown_ValueChanged;
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(388, 0);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(114, 25);
-            this.label3.TabIndex = 4;
-            this.label3.Text = "Transparency";
+            label3.AutoSize = true;
+            label3.Location = new Point(388, 0);
+            label3.Name = "label3";
+            label3.Size = new Size(114, 25);
+            label3.TabIndex = 4;
+            label3.Text = "Transparency";
             // 
             // alphaNumericUpDown
             // 
-            this.alphaNumericUpDown.Increment = new decimal(new int[] {
-            5,
-            0,
-            0,
-            0});
-            this.alphaNumericUpDown.Location = new System.Drawing.Point(508, 3);
-            this.alphaNumericUpDown.Maximum = new decimal(new int[] {
-            255,
-            0,
-            0,
-            0});
-            this.alphaNumericUpDown.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.alphaNumericUpDown.Name = "alphaNumericUpDown";
-            this.alphaNumericUpDown.Size = new System.Drawing.Size(65, 31);
-            this.alphaNumericUpDown.TabIndex = 5;
-            this.alphaNumericUpDown.Value = new decimal(new int[] {
-            255,
-            0,
-            0,
-            0});
-            this.alphaNumericUpDown.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
+            alphaNumericUpDown.Increment = new decimal(new int[] { 5, 0, 0, 0 });
+            alphaNumericUpDown.Location = new Point(508, 3);
+            alphaNumericUpDown.Maximum = new decimal(new int[] { 255, 0, 0, 0 });
+            alphaNumericUpDown.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            alphaNumericUpDown.Name = "alphaNumericUpDown";
+            alphaNumericUpDown.Size = new Size(65, 31);
+            alphaNumericUpDown.TabIndex = 5;
+            alphaNumericUpDown.Value = new decimal(new int[] { 255, 0, 0, 0 });
+            alphaNumericUpDown.ValueChanged += numericUpDown1_ValueChanged;
+            // 
+            // gmap
+            // 
+            gmap.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            gmap.Bearing = 0F;
+            gmap.CanDragMap = true;
+            gmap.EmptyTileColor = Color.Navy;
+            gmap.GrayScaleMode = false;
+            gmap.HelperLineOption = GMap.NET.WindowsForms.HelperLineOptions.DontShow;
+            gmap.LevelsKeepInMemory = 5;
+            gmap.Location = new Point(6, 61);
+            gmap.MarkersEnabled = true;
+            gmap.MaxZoom = 2;
+            gmap.MinZoom = 2;
+            gmap.MouseWheelZoomEnabled = true;
+            gmap.MouseWheelZoomType = GMap.NET.MouseWheelZoomType.MousePositionAndCenter;
+            gmap.Name = "gmap";
+            gmap.NegativeMode = false;
+            gmap.PolygonsEnabled = true;
+            gmap.RetryLoadTile = 0;
+            gmap.RoutesEnabled = true;
+            gmap.ScaleMode = GMap.NET.WindowsForms.ScaleModes.Integer;
+            gmap.SelectedAreaFillColor = Color.FromArgb(33, 65, 105, 225);
+            gmap.ShowTileGridLines = false;
+            gmap.Size = new Size(1091, 668);
+            gmap.TabIndex = 1;
+            gmap.Zoom = 0D;
             // 
             // ActivityMap
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.Controls.Add(this.flowLayoutPanel1);
-            this.Name = "ActivityMap";
-            this.Size = new System.Drawing.Size(651, 375);
-            this.flowLayoutPanel1.ResumeLayout(false);
-            this.flowLayoutPanel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.widthNumericUpDown)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.alphaNumericUpDown)).EndInit();
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.ActiveCaption;
+            Controls.Add(gmap);
+            Controls.Add(flowLayoutPanel1);
+            Name = "ActivityMap";
+            Size = new Size(1100, 732);
+            flowLayoutPanel1.ResumeLayout(false);
+            flowLayoutPanel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)widthNumericUpDown).EndInit();
+            ((System.ComponentModel.ISupportInitialize)alphaNumericUpDown).EndInit();
+            ResumeLayout(false);
         }
 
         #endregion
@@ -167,5 +167,6 @@
         private NumericUpDown widthNumericUpDown;
         private Label label3;
         private NumericUpDown alphaNumericUpDown;
+        private GMap.NET.WindowsForms.GMapControl gmap;
     }
 }

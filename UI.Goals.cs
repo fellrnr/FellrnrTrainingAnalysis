@@ -33,7 +33,7 @@ namespace FellrnrTrainingAnalysis.UI
                 EnableSsl = true,
             };
 
-            List<Goal.Period> periods = Goal.DefaultEmailPeriods;
+            List<Model.Period> periods = Model.Period.DefaultEmailPeriods;
             string body = GetGoalsAsHtml(periods);
 
 
@@ -48,14 +48,14 @@ namespace FellrnrTrainingAnalysis.UI
             smtpClient.Send(mailMessage);
         }
 
-        public string GetGoalsAsHtml(List<Goal.Period> periods)
+        public string GetGoalsAsHtml(List<Model.Period> periods)
         {
             if (Database.CurrentAthlete.Activities.Count == 0) //don't bother if we don't have data. It won't end well. 
             {
                 return "";
             }
 
-            List<Goal> goals = Goal.GoalFactory();
+            List<Goal> goals = GoalFactory.GetGoals();
             //List<int> periods = new List<int>() { 7 };
             StringBuilder sb = new StringBuilder();
             using (Html.Table table = new Html.Table(sb, id: "some-id", tags: "border=\"1\" cellspacing=\"0\" cellpadding=\"2\""))
@@ -65,7 +65,8 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     thead.AddCell("Metric");
                     thead.AddCell("Sport");
-                    foreach (Goal.Period period in periods)
+                    thead.AddCell("⚖");
+                    foreach (Model.Period period in periods)
                     {
                         thead.AddCell(string.Format("{0}", period.FullName));
                     }
@@ -75,16 +76,17 @@ namespace FellrnrTrainingAnalysis.UI
                 foreach (Goal goal in goals)
                 {
                     Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
-                    Dictionary<Goal.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                    Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                     if (rolling == null)
                         continue;
                     using (var tr = table.AddRow())
                     {
                         tr.AddCell(goal.TargetColumn);
                         tr.AddCell(goal.SportDescription);
-                        foreach (KeyValuePair<Goal.Period, float> kvpResult in rolling)
+                        tr.AddCell(goal.ActivityFieldname);
+                        foreach (KeyValuePair<Model.Period, float> kvpResult in rolling)
                         {
-                            string cellValue = string.Format("{0} ({1})", goal.FormatResult(kvpResult.Value), goal.AsPercentTarget(kvpResult.Value, kvpResult.Key.ApproxDays));
+                            string cellValue = goal.FormatResult(kvpResult);
                             tr.AddCell(cellValue, tags: "align=\"right\"");
                         }
                     }
@@ -101,18 +103,20 @@ namespace FellrnrTrainingAnalysis.UI
                 return;
             }
 
-            List<Goal> goals = Goal.GoalFactory();
-            List<Goal.Period> periods = Goal.DefaultDisplayPeriods;
+            List<Goal> goals = GoalFactory.GetGoals();
+            List<Model.Period> periods = Model.Period.DefaultDisplayPeriods;
             //List<int> periods = new List<int>() { 7 };
             GoalsDataGridView.RowHeadersVisible = false;
             GoalsDataGridView.Rows.Clear();
-            GoalsDataGridView.ColumnCount = periods.Count + 2;
+            int extraColumns = 3;
+            GoalsDataGridView.ColumnCount = periods.Count + extraColumns;
             GoalsDataGridView.ColumnHeadersVisible = true;
             GoalsDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             int i = 0;
             GoalsDataGridView.Columns[i++].Name = "Metric";
             GoalsDataGridView.Columns[i++].Name = "Sport";
-            foreach (Goal.Period period in periods)
+            GoalsDataGridView.Columns[i++].Name = "⚖";
+            foreach (Model.Period period in periods)
             {
                 GoalsDataGridView.Columns[i++].Name = string.Format("{0}", period.FullName);
             }
@@ -123,17 +127,18 @@ namespace FellrnrTrainingAnalysis.UI
             }
             foreach (Goal goal in goals)
             {
-                string[] row = new string[periods.Count + 2];
+                string[] row = new string[periods.Count + extraColumns];
                 Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
-                Dictionary<Goal.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                 if (rolling == null)
                     continue;
                 i = 0;
                 row[i++] = goal.TargetColumn;
                 row[i++] = goal.SportDescription;
-                foreach (KeyValuePair<Goal.Period, float> kvpResult in rolling)
+                row[i++] = goal.ActivityFieldname;
+                foreach (KeyValuePair<Model.Period, float> kvpResult in rolling)
                 {
-                    row[i++] = string.Format("{0} ({1})", goal.FormatResult(kvpResult.Value), goal.AsPercentTarget(kvpResult.Value, kvpResult.Key.ApproxDays));
+                    row[i++] = goal.FormatResult(kvpResult);
                 }
                 GoalsDataGridView.Rows.Add(row);
             }
@@ -157,27 +162,27 @@ namespace FellrnrTrainingAnalysis.UI
             {
                 return;
             }
-            List<Goal.Period> periods = Goal.DefaultDisplayPeriods;
+            List<Model.Period> periods = Model.Period.DefaultDisplayPeriods;
             GoalsTextBox.Text = GetGoalsAsText(periods);
         }
-        public string GetGoalsAsText(List<Goal.Period> periods)
+        public string GetGoalsAsText(List<Model.Period> periods)
         {
             StringBuilder stringBuilder = new StringBuilder();
 
-            List<Goal> goals = Goal.GoalFactory();
+            List<Goal> goals = GoalFactory.GetGoals();
             //List<int> periods = new List<int>() { 7 };
             foreach (Goal goal in goals)
             {
                 Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
-                Dictionary<Goal.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                 if (rolling == null)
                     continue;
                 stringBuilder.Append(string.Format("{0}: ", goal.TargetColumn)); //TODO: should be display name, not column name
                 string comma = "";
                 stringBuilder.Append(string.Format("{0}-", goal.SportDescription));
-                foreach (KeyValuePair<Goal.Period, float> kvpResult in rolling)
+                foreach (KeyValuePair<Model.Period, float> kvpResult in rolling)
                 {
-                    stringBuilder.Append(string.Format("{0}{1}: {2}", comma, kvpResult.Key.FullName, goal.FormatResult(kvpResult.Value)));
+                    stringBuilder.Append(string.Format("{0}{1}: {2}", comma, kvpResult.Key.FullName, goal.FormatResult(kvpResult)));
                     comma = ", ";
                 }
                 stringBuilder.AppendLine();

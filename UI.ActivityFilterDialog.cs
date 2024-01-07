@@ -38,7 +38,7 @@ namespace FellrnrTrainingAnalysis
 
 
             //TODO: can you have a datum and time series with the same name? 
-            IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.TimeSeriesNames;
+            IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.AllTimeSeriesNames;
             foreach(string name in timeSeriesNames)
             {
                 if (!Filters.ContainsKey(name))
@@ -62,7 +62,7 @@ namespace FellrnrTrainingAnalysis
         {
             private static int CurrentRow = 1;//zero is header row
 
-            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, Tuple<String, Type> tuple, KeyPressEventHandler onEnter)
+            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, Tuple<String, Type> tuple, KeyPressEventHandler onEnterHandler)
             {
                 string name = tuple.Item1;
                 Type type = tuple.Item2;
@@ -70,19 +70,19 @@ namespace FellrnrTrainingAnalysis
                 FilterRow filterRow;
                 if (type == typeof(TypedDatum<float>))
                 {
-                    FloatFilter newFilter = new FloatFilter(tableLayoutPanel, name, CurrentRow, onEnter);
+                    FloatFilter newFilter = new FloatFilter(tableLayoutPanel, name, CurrentRow, onEnterHandler);
 
                     filterRow = newFilter;
                 } 
                 else if (type == typeof(TypedDatum<DateTime>))
                 {
-                    DateFilter newFilter = new DateFilter(tableLayoutPanel, name, CurrentRow, onEnter);
+                    DateFilter newFilter = new DateFilter(tableLayoutPanel, name, CurrentRow, onEnterHandler);
 
                     filterRow = newFilter;
                 }
                 else //string
                 {
-                    StringFilter newFilter = new StringFilter(tableLayoutPanel, name, CurrentRow, onEnter);
+                    StringFilter newFilter = new StringFilter(tableLayoutPanel, name, CurrentRow, onEnterHandler);
 
                     filterRow = newFilter;
                 }
@@ -92,11 +92,11 @@ namespace FellrnrTrainingAnalysis
                 return filterRow;
             }
 
-            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, string name, KeyPressEventHandler onEnter)
+            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, string name, KeyPressEventHandler onEnterHandler)
             {
 
                 FilterRow filterRow;
-                DataStreamFilter newFilter = new DataStreamFilter(tableLayoutPanel, name, CurrentRow, onEnter);
+                DataStreamFilter newFilter = new DataStreamFilter(tableLayoutPanel, name, CurrentRow, onEnterHandler);
 
                 filterRow = newFilter;
 
@@ -105,11 +105,11 @@ namespace FellrnrTrainingAnalysis
                 return filterRow;
             }
 
-            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, KeyPressEventHandler onEnter)
+            public static FilterRow Create(TableLayoutPanel tableLayoutPanel, KeyPressEventHandler onEnterHandler)
             {
 
                 FilterRow filterRow;
-                BadDataFilter newFilter = new BadDataFilter(tableLayoutPanel, BadDataName, CurrentRow, onEnter);
+                BadDataFilter newFilter = new BadDataFilter(tableLayoutPanel, BadDataName, CurrentRow, onEnterHandler);
 
                 filterRow = newFilter;
 
@@ -126,6 +126,7 @@ namespace FellrnrTrainingAnalysis
             protected ComboBox Filter;
             protected TableLayoutPanel TableLayoutPanel;
             protected int Row;
+            protected KeyPressEventHandler OnEnterHandler;
             public string FilterValue() { return Filter.Text; }
 
 
@@ -135,7 +136,7 @@ namespace FellrnrTrainingAnalysis
             public abstract string ValueTwo();
 
 
-            public FilterRow(TableLayoutPanel tableLayoutPanel, string name, int row, string[] filterCommands, KeyPressEventHandler onEnter)
+            public FilterRow(TableLayoutPanel tableLayoutPanel, string name, int row, string[] filterCommands, KeyPressEventHandler onEnterHandler)
             {
                 TableLayoutPanel = tableLayoutPanel;
                 Row = row;
@@ -143,9 +144,10 @@ namespace FellrnrTrainingAnalysis
                 Filter = new ComboBox { Dock = DockStyle.Fill };
                 Filter.Items.AddRange(filterCommands);
                 Filter.SelectedIndexChanged += Filter_SelectedIndexChanged;
-                Filter.KeyPress += onEnter;
+                Filter.KeyPress += onEnterHandler;
                 tableLayoutPanel.Controls.Add(FieldName, 0, row);
                 tableLayoutPanel.Controls.Add(Filter, 1, row);
+                OnEnterHandler = onEnterHandler;
             }
 
             protected abstract void Filter_SelectedIndexChanged(object? sender, EventArgs e);
@@ -157,7 +159,7 @@ namespace FellrnrTrainingAnalysis
             public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
             public override string ValueTwo() { return ""; }
 
-            public StringFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnter) : base(tableLayoutPanel, name, row, FilterString.filterCommands, onEnter)
+            public StringFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler) : base(tableLayoutPanel, name, row, FilterString.filterCommands, onEnterHandler)
             {
             }
 
@@ -166,6 +168,7 @@ namespace FellrnrTrainingAnalysis
                 if(Value1 == null)
                 {
                     Value1 = new TextBox { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                    Value1.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value1, 2, Row);
                 }
                 if (Filter.Text != "" && Filter.Text != "has")
@@ -196,8 +199,8 @@ namespace FellrnrTrainingAnalysis
             public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
             public override string ValueTwo() { return Value2 != null ? Value2.Text : ""; }
 
-            public DateFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnter) : 
-                base(tableLayoutPanel, name, row, FilterDateTime.FilterCommands, onEnter)
+            public DateFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler) : 
+                base(tableLayoutPanel, name, row, FilterDateTime.FilterCommands, onEnterHandler)
             {
             }
             protected override void Filter_SelectedIndexChanged(object? sender, EventArgs e)
@@ -205,11 +208,14 @@ namespace FellrnrTrainingAnalysis
                 if (Value1 == null)
                 {
                     Value1 = new DateTimePicker { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                    Value1.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value1, 2, Row);
                     Value1_text = new TextBox { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true, Visible = false };
+                    Value1_text.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value1_text, 2, Row);
 
                     Value2 = new DateTimePicker { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                    Value2.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value2, 3, Row);
                 }
 
@@ -259,8 +265,8 @@ namespace FellrnrTrainingAnalysis
 
             public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
             public override string ValueTwo() { return Value2 != null ? Value2.Text : ""; }
-            public FloatFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnter) : 
-                base(tableLayoutPanel, name, row, FilterFloat.FilterCommands, onEnter)
+            public FloatFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler) : 
+                base(tableLayoutPanel, name, row, FilterFloat.FilterCommands, onEnterHandler)
             {
             }
             protected override void Filter_SelectedIndexChanged(object? sender, EventArgs e)
@@ -271,9 +277,11 @@ namespace FellrnrTrainingAnalysis
                     TableLayoutPanel.Controls.Add(Value1, 2, Row);
                     Value1.Minimum= decimal.MinValue; Value1.Maximum= decimal.MaxValue;
                     Value1.Width = 200;
+                    Value1.KeyPress += OnEnterHandler;
                     Value2 = new NumericUpDown { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
                     Value2.Minimum = decimal.MinValue; Value1.Maximum = decimal.MaxValue;
                     Value2.Width = 200;
+                    Value2.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value2, 3, Row);
                 }
 
@@ -313,11 +321,10 @@ namespace FellrnrTrainingAnalysis
         {
             NumericUpDown? Value1;
             NumericUpDown? Value2;
-
             public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
             public override string ValueTwo() { return Value2 != null ? Value2.Text : ""; }
-            public DataStreamFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnter) : 
-                base(tableLayoutPanel, name, row, FilterDataStream.FilterCommands, onEnter)
+            public DataStreamFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler) : 
+                base(tableLayoutPanel, name, row, FilterDataStream.FilterCommands, onEnterHandler)
             {
             }
             protected override void Filter_SelectedIndexChanged(object? sender, EventArgs e)
@@ -328,9 +335,11 @@ namespace FellrnrTrainingAnalysis
                     TableLayoutPanel.Controls.Add(Value1, 2, Row);
                     Value1.Minimum = decimal.MinValue; Value1.Maximum = decimal.MaxValue;
                     Value1.Width = 200;
+                    Value1.KeyPress += OnEnterHandler;
                     Value2 = new NumericUpDown { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
                     Value2.Minimum = decimal.MinValue; Value1.Maximum = decimal.MaxValue;
                     Value2.Width = 200;
+                    Value2.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value2, 3, Row);
                 }
 
@@ -373,8 +382,8 @@ namespace FellrnrTrainingAnalysis
             public override string ValueOne() { return ""; }
             public override string ValueTwo() { return ""; }
 
-            public BadDataFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnter) : 
-                base(tableLayoutPanel, name, row, FilterBadData.filterCommands, onEnter)
+            public BadDataFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler) : 
+                base(tableLayoutPanel, name, row, FilterBadData.filterCommands, onEnterHandler)
             {
             }
             protected override void Filter_SelectedIndexChanged(object? sender, EventArgs e)

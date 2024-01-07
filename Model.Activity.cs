@@ -1,10 +1,12 @@
-﻿using System.Collections.ObjectModel;
+﻿using MemoryPack;
+using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
     [Serializable]
-    public class Activity : Extensible
+    [MemoryPackable(GenerateType.CircularReference)]
+    public partial class Activity : Extensible
     {
         public Activity()
         {
@@ -29,19 +31,26 @@ namespace FellrnrTrainingAnalysis.Model
 
         //NB:The date of an activity could change with the time zone. Not sure if Strava has these in UTC or local time
         //An activity must have a start date
+        [MemoryPackOrder(0)]
         public DateTime? StartDateTime { 
             get { return GetNamedDateTimeDatum(StartDateAndTimeTag); }
             set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeTag, true, (DateTime)value)); }
         }
+
+        [MemoryPackIgnore]
         public DateTime? StartDateNoTime { get { return StartDateTime == null ? null : ((DateTime)StartDateTime).Date; } }
 
+        [MemoryPackOrder(1)]
         public LocationStream? LocationStream { get; set; } = null;
 
-        public override Utils.DateTimeTree Id { get { return new Utils.DateTimeTree(StartDateTime!.Value, DateTimeTree.DateTreeType.Time); } } //HACK: to see if tree works
+        public override Utils.DateTimeTree Id() { return new Utils.DateTimeTree(StartDateTime!.Value, DateTimeTree.DateTreeType.Time); } //HACK: to see if tree works
 
 
+        [MemoryPackIgnore]
         public string? Filename { get { return GetNamedStringDatum(FilenameTag); } }
+        [MemoryPackIgnore]
         public string? FileFullPath { get { return GetNamedStringDatum(FileFullPathTag); } set { if(value != null) AddOrReplaceDatum(new TypedDatum<string>(FileFullPathTag, true, value)); } }
+        [MemoryPackIgnore]
         public string? ActivityType { get { return GetNamedStringDatum(ActivityTypeTag); } }
 
         //This needs to be static so callers can validate and find an activity given a dictionary of string/Datum by primary keys
@@ -68,14 +77,29 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //set of time series, one for HR, speed, etc. 
-        private Dictionary<string, IDataStream> timeSeries = new Dictionary<string, IDataStream>();
-        private Dictionary<string, IDataStream>? removedTimeSeries;
+        [MemoryPackInclude]
+        [MemoryPackOrder(2)]
+        private Dictionary<string, DataStreamBase> timeSeries = new Dictionary<string, DataStreamBase>();
+        [MemoryPackInclude]
+        [MemoryPackOrder(3)]
+        private Dictionary<string, DataStreamBase>? removedTimeSeries;
 
-        public ReadOnlyDictionary<string, IDataStream> TimeSeries { get { return timeSeries.AsReadOnly(); } }
+        [MemoryPackIgnore]
+        public ReadOnlyDictionary<string, DataStreamBase> TimeSeries { get { return timeSeries.AsReadOnly(); } }
 
-        public List<String> TimeSeriesNames { get { return TimeSeries.Keys.ToList(); } } 
+        [MemoryPackIgnore]
+        public List<String> TimeSeriesNames { get { return TimeSeries.Keys.ToList(); } }
 
-        public void AddDataStreams(Dictionary<string, KeyValuePair<List<uint>, List<float>>> dataStreams)
+        public void PostDeserialize()
+        {
+            foreach (KeyValuePair<string, DataStreamBase> kvp in TimeSeries)
+            {
+                kvp.Value.PostDeserialize(this);
+            }
+
+        }
+
+        public void AddDataStreams(Dictionary<string, KeyValuePair<List<uint>, List<float>>> dataStreams, Activity activity)
         {
             foreach (KeyValuePair<string, KeyValuePair<List<uint>, List<float>>> kvp in dataStreams)
             {
@@ -91,23 +115,23 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     else
                     {
-                        AddDataStream(name, times.ToArray(), values.ToArray());
+                        AddDataStream(name, times.ToArray(), values.ToArray(), activity);
                     }
                 }
 
             }
         }
 
-        public void AddDataStream(string name, uint[] times, float[] values)
+        public void AddDataStream(string name, uint[] times, float[] values, Activity activity)
         {
             if (!timeSeries.ContainsKey(name))
             {
-                DataStream activityDataStream = new DataStream(name, new Tuple<uint[], float[]>(times, values));
+                DataStream activityDataStream = new DataStream(name, new Tuple<uint[], float[]>(times, values), activity);
                 timeSeries.Add(name, activityDataStream);
             }
         }
 
-        public void AddDataStream(IDataStream dataStream)
+        public void AddDataStream(DataStreamBase dataStream)
         {
             if (!timeSeries.ContainsKey(dataStream.Name))
             {
@@ -124,7 +148,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (timeSeries.ContainsKey(name))
             {
                 if(removedTimeSeries == null)
-                    removedTimeSeries = new Dictionary<string, IDataStream>();
+                    removedTimeSeries = new Dictionary<string, DataStreamBase>();
                 removedTimeSeries.Add(name, timeSeries[name]);
                 timeSeries.Remove(name);
             }
@@ -136,6 +160,7 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //a list of URIs to photos that were attached to the workout, typically from Strava
+        [MemoryPackOrder(4)]
         public List<Uri>? PhotoUris { get; set; }
 
         public override void Recalculate(bool force)
@@ -144,22 +169,22 @@ namespace FellrnrTrainingAnalysis.Model
 
             //clear all existing virtual data streams - only an issue of they change names, but keeps things tidy
             List<string> toDelete = new List<string>();  
-            foreach(KeyValuePair<string, IDataStream> kvp in TimeSeries)
+            foreach(KeyValuePair<string, DataStreamBase> kvp in TimeSeries)
             {
                 if(kvp.Value.IsVirtual())
                     toDelete.Add(kvp.Key);
             }
             foreach(string s in toDelete) { timeSeries.Remove(s); }
 
-            List<IDataStream> dataStreams = DataStreamFactory.Instance.DataStreams;
+            List<DataStreamBase> dataStreams = DataStreamFactory.Instance.DataStreams(this);
 
-            foreach (IDataStream dataStream in dataStreams)
+            foreach (DataStreamBase dataStream in dataStreams)
             {
-                if (dataStream.IsValid(this))
+                if (dataStream.IsValid())
                 {
                     try
                     {
-                        dataStream.Recalculate(this, force);
+                        dataStream.Recalculate(force);
                         this.AddDataStream(dataStream);
                     }
                     catch (Exception ex)
@@ -170,9 +195,38 @@ namespace FellrnrTrainingAnalysis.Model
                 }
             }
 
-            foreach(ICalculate calculate in CaclulateFactory.Instance.Calulators)
+            foreach(ICalculateField calculate in CaclulateFieldFactory.Instance.Calulators)
             {
                 calculate.Recalculate(this, force);
+            }
+
+        }
+
+
+        private const string START = "⌗";
+        private const string MIDDLE = "༶";
+        private const string END = "֍";
+        //start char is ⌗ U+2317
+        //middle markers are ༶ (U+0F36)
+        //end is ֍ (U+058D)
+        //new TagActivities("Delete Altitude", "⌗Altitude༶Delete֍"),
+        //new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
+        //new TagActivities("Delete Power", "⌗Power༶Delete֍"),
+        //new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
+
+        private void ProcessTags()
+        {
+            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)this.GetNamedDatum("Description");
+            if (descriptionDatum == null || descriptionDatum.Data == null)
+                return;
+            string description = descriptionDatum.Data;
+
+
+            TypedDatum<string>? processedDatum = (TypedDatum<string>?)this.GetNamedDatum("Processed Tags");
+            string processedTags = (processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
+
+            while (description.Contains(START))
+            {
             }
 
         }
@@ -198,6 +252,8 @@ namespace FellrnrTrainingAnalysis.Model
                 float nearestLat = 0;
                 float nearestLon = 0;
 
+
+                //if(hill.Number == 2503)
 
                 //first optimization; is the hill within the bounds of the route?
                 if (LocationStream.WithinBounds(hill.Latitude, hill.Longitude))
@@ -326,8 +382,11 @@ namespace FellrnrTrainingAnalysis.Model
 
         //let's hold on to these rather than querying every time
         //[NonSerialized] 
+        [MemoryPackInclude]
+        [MemoryPackOrder(5)]
         public List<string>? DataQualityIssues = null; //we don't persist data quality issues as it depends on the criteria applied, and it's quick to check each time
 
+        [MemoryPackOrder(6)]
         public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches
     }
 }

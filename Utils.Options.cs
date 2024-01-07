@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using System.ComponentModel;
-using static FellrnrTrainingAnalysis.Utils.Utils.TimeSeries;
+using static FellrnrTrainingAnalysis.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -191,6 +191,19 @@ namespace FellrnrTrainingAnalysis.Utils
         public string EmailDestination { get; set; } = "";
 
 
+        //    _____  _               _       _             _           _   __  __      _        _          
+        //   |  __ \| |             (_)     | |           (_)         | | |  \/  |    | |      (_)         
+        //   | |__) | |__  _   _ ___ _  ___ | | ___   __ _ _  ___ __ _| | | \  / | ___| |_ _ __ _  ___ ___ 
+        //   |  ___/| '_ \| | | / __| |/ _ \| |/ _ \ / _` | |/ __/ _` | | | |\/| |/ _ \ __| '__| |/ __/ __|
+        //   | |    | | | | |_| \__ \ | (_) | | (_) | (_| | | (_| (_| | | | |  | |  __/ |_| |  | | (__\__ \
+        //   |_|    |_| |_|\__, |___/_|\___/|_|\___/ \__, |_|\___\__,_|_| |_|  |_|\___|\__|_|  |_|\___|___/
+        //                  __/ |                     __/ |                                                
+        //                 |___/                     |___/                                                 
+        [Description("Critical Power in Watts")]
+        public int CriticalPower { get; set; } = 250;
+
+        [Description("Max Heart Rate")]
+        public int MaxHeartRate { get; set; } = 174;
 
 
     }

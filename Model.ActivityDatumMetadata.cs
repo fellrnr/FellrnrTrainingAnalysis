@@ -29,16 +29,29 @@ namespace FellrnrTrainingAnalysis.Model
         public string Comment { get; set; } = ""; //for commenting the CSV file
 
         private const string PathToCsv = "Config.ActivityDatumMetadata.csv";
-        private static Dictionary<string, ActivityDatumMetadata>? map = null;
+
+        private static Dictionary<string, ActivityDatumMetadata>? _map = null;
+        private static int _maxReportColumn = int.MinValue;
+        private static Dictionary<string, ActivityDatumMetadata> Map
+        {
+            get
+            {
+                if (_map == null)
+                {
+                    _maxReportColumn = int.MinValue;
+                    _map = ReadFromCsv();
+                }
+
+                if (_map == null)
+                    _map = new Dictionary<string, ActivityDatumMetadata>();
+
+                return _map;
+            }
+        }
+
         public static ActivityDatumMetadata? FindMetadata(string name)
         {
-            if (map == null)
-                map = ReadFromCsv();
-            
-            if (map == null)
-                map = new Dictionary<string, ActivityDatumMetadata>();
-
-            if (!map.ContainsKey(name))
+            if (!Map.ContainsKey(name))
             {
                 //return null; 
                 //Let's generate any missing definitions to make editing them easier
@@ -47,11 +60,11 @@ namespace FellrnrTrainingAnalysis.Model
                 activityDatumMetadata.Title = name;
                 activityDatumMetadata.PositionInReport = null;
                 activityDatumMetadata.PositionInTree = null;
-                map.Add(name, activityDatumMetadata);
+                Map.Add(name, activityDatumMetadata);
 
                 return activityDatumMetadata;
             }
-            return map[name];
+            return Map[name];
         }
 
         private static Dictionary<string, ActivityDatumMetadata>? ReadFromCsv()
@@ -77,9 +90,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static void WriteToCsv()
         {
-            if (map == null)
+            if (Map == null)
                 return;
-            List<ActivityDatumMetadata> definitions = map.Values.ToList();
+            List<ActivityDatumMetadata> definitions = Map.Values.ToList();
             using (var writer = new StreamWriter(PathToCsv))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
@@ -89,37 +102,36 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //don't use a property as it will confuse the ObjectListView editor
-        public static List<ActivityDatumMetadata>? GetDefinitions() { return map?.Values.ToList(); }
+        public static List<ActivityDatumMetadata>? GetDefinitions() { return Map?.Values.ToList(); }
         public static void SetDefinitions(List<ActivityDatumMetadata> value)
         {
+            _maxReportColumn = int.MinValue;
             if (value == null)
             {
-                map = null;
+                _map = null;
                 return;
             }
-            map = new Dictionary<string, ActivityDatumMetadata>();
+            _map = new Dictionary<string, ActivityDatumMetadata>();
             foreach (ActivityDatumMetadata activityDatumMetadata in value)
-                map.Add(activityDatumMetadata.Name, activityDatumMetadata);
+                _map.Add(activityDatumMetadata.Name, activityDatumMetadata);
             WriteToCsv();
         }
 
 
         public static int LastPositionInReport()
         {
-            if (map == null)
-                map = ReadFromCsv();
-            if (map == null)
-                return 0;
-            int maxReportColumn = 0;
-            foreach(KeyValuePair<string, ActivityDatumMetadata> kvp in map)
+            if(_maxReportColumn != int.MinValue) return _maxReportColumn+1;
+
+            _maxReportColumn = 0;
+            foreach(KeyValuePair<string, ActivityDatumMetadata> kvp in Map)
             {
                 if (kvp.Value.PositionInReport != null)
                 {
                     int positionInReport = (int)kvp.Value.PositionInReport;
-                    maxReportColumn = Math.Max(maxReportColumn, positionInReport);
+                    _maxReportColumn = Math.Max(_maxReportColumn, positionInReport);
                 }
             }
-            return maxReportColumn+1; //positions are zero indexed
+            return _maxReportColumn +1; //positions are zero indexed
         }
     }
 }

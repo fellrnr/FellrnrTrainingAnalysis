@@ -1,58 +1,86 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using GMap.NET;
+using System.Drawing.Drawing2D;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
     public class GMapRouteColored : GMap.NET.WindowsForms.GMapRoute
     {
-        private IDataStream DataStream { get; set; }
-        private Activity Activity { get; set; }
 
         static GMapRouteColored()
         {
             initColorsBlocks();
         }
 
-        public int Alpha;
 
-        public GMapRouteColored(IEnumerable<PointLatLng> points, string name, IDataStream dataStream, Activity activity, int alpha)
+        public GMapRouteColored(IEnumerable<PointLatLng> points, string name, float[] zValues, int alpha, int width, float top, float bottom)
                 : base(points, name)
         {
-            DataStream= dataStream;
-            Activity = activity;
+            ZValues = zValues;
             Alpha = alpha;
+            Width = width;
+            Top = top;
+            Bottom = bottom;
         }
+
+        private float[] ZValues;
+        private float Top { get; set; }
+        private float Bottom {  get; set; }
+        private int Alpha { get; }
+        private int Width { get; }
+
 
         public override void OnRender(Graphics g)
         {
-            Tuple<uint[], float[]>? data = DataStream.GetData(Activity);
-            if(data == null)
-            {
-                base.OnRender(g); return;
-            }
-            float[] zvalues = data.Item2;
-            float min = zvalues.Min();
-            float max = zvalues.Max();
 
-            List<Color> colors = new List<Color>();
+            Color? previousColor = null;
             for (int i = 0; i < LocalPoints.Count - 1; i++)
             {
+
                 int red = 255;
                 int green = 255;
                 int blue = 255;
                 Color c;
-                if (i < zvalues.Length)
+                float diff = Top - Bottom;
+                if (i < ZValues.Length)
                 {
-                    float z = zvalues[i];
-                    c = GetColorForValue(z-min, max-min, Alpha);
+                    float z = ZValues[i];
+                    if (z > Top)
+                        z = Top;
+                    if(z < Bottom)
+                        z = Bottom;
+                    c = GetColorForValue(z-Bottom, diff, Alpha);
                 }
                 else
                 {
                     c = Color.FromArgb(255, red, green, blue);
                 }
-                Pen pen = new Pen(c, 10);
-                colors.Add(c);
-                g.DrawLine(pen, LocalPoints[i].X, LocalPoints[i].Y, LocalPoints[i + 1].X, LocalPoints[i + 1].Y);
+                if(previousColor ==  null) { previousColor = c; }
+
+                long x1 = LocalPoints[i].X;
+                long x2 = LocalPoints[i + 1].X;
+                long y1 = LocalPoints[i].Y;
+                long y2 = LocalPoints[i + 1].Y;
+
+
+                int margin = 4;
+                if ((x1 > x2+margin || x1 < x2 - margin) &&
+                    (y1 > y2 + margin || y1 < y2 - margin))
+                {
+                    using (LinearGradientBrush linGrBrush = new LinearGradientBrush(new Point((int)x1, (int)y1), new Point((int)x2, (int)y2), previousColor.Value, c))
+                    using (Pen pen = new Pen(linGrBrush, Width))
+                    {
+                        g.DrawLine(pen, x1, y1, x2, y2);
+                    }
+                }
+                else
+                {
+                    using (Pen pen = new Pen(c, 10))
+                    {
+                        g.DrawLine(pen, x1, y1, x2, y2);
+                    }
+                }
+                previousColor = c;
             }
         }
 
@@ -97,7 +125,7 @@ namespace FellrnrTrainingAnalysis.Utils
             double percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
 
             Color cTarget = ColorsOfMap[blockIdx];
-            Color cNext = cNext = ColorsOfMap[blockIdx + 1];
+            Color cNext = ColorsOfMap[blockIdx + 1];
 
             var deltaR = cNext.R - cTarget.R;
             var deltaG = cNext.G - cTarget.G;

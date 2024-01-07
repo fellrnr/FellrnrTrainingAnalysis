@@ -86,8 +86,8 @@ namespace FellrnrTrainingAnalysis.Action
             }
 
             FitReader.SummaryErrors();//HACK diagnostics using static variables
-            Logging.Instance.Log(string.Format("\r\nCurrent athlete has {0} field names\r\n", database.CurrentAthlete.TimeSeriesNames.Count));
-            foreach (string s in database.CurrentAthlete.TimeSeriesNames)
+            Logging.Instance.Log(string.Format("\r\nCurrent athlete has {0} field names\r\n", database.CurrentAthlete.AllTimeSeriesNames.Count));
+            foreach (string s in database.CurrentAthlete.AllTimeSeriesNames)
                 Logging.Instance.Log(string.Format("Time Series Name[{0}]", s));
             Logging.Instance.Log("Load complete");
             return activities.Count;

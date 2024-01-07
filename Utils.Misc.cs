@@ -1,4 +1,10 @@
-﻿using System.IO.Compression;
+﻿using de.schumacher_bw.Strava.Model;
+using FellrnrTrainingAnalysis.Model;
+using GMap.NET;
+using GMap.NET.WindowsForms;
+using Microsoft.VisualBasic.Logging;
+using System.IO.Compression;
+using static FellrnrTrainingAnalysis.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -23,7 +29,100 @@ namespace FellrnrTrainingAnalysis.Utils
 
             FileStream fitSource = new FileStream(filename, FileMode.Open, FileAccess.Read);
             return fitSource;
-
         }
+
+
+        public static List<PointLatLng> SampleLocations(uint[]? Times, float[] Lats, float[] Lons, uint interval)
+        {
+            List<PointLatLng> points = new List<PointLatLng>();
+
+            if (Times != null)
+            {
+                uint lastTime = 0;
+                for (int i = 0; i < Lats.Count(); i++)
+                {
+                    if (Times[i] >= lastTime)
+                    {
+                        float lat = Lats[i];
+                        float lon = Lons[i];
+                        points.Add(new PointLatLng(lat, lon));
+                        lastTime = Times[i] + interval;
+                    }
+                }
+            }
+            else
+            {
+                //if we have one second recording, this will be close. If not, it's the best we can do
+                for (int i = 0; i < Lats.Count(); i += (int)interval)
+                {
+                    float lat = Lats[i];
+                    float lon = Lons[i];
+                    points.Add(new PointLatLng(lat, lon));
+                }
+            }
+            return points;
+        }
+
+        //as above, but sample a secondary array (too ugly to combine the two methods)
+        public static Tuple<List<PointLatLng>, List<float>> SampleLocations(uint[] Times, float[] Lats, float[] Lons, float[] secondary, uint interval)
+        {
+            List<PointLatLng> points = new List<PointLatLng>();
+            List<float> values = new List<float>();
+            Tuple<List<PointLatLng>, List<float>> retval = new Tuple<List<PointLatLng>, List<float>>(points, values);
+
+            uint lastTime = 0;
+            for (int i = 0; i < Lats.Count(); i++)
+            {
+                if (Times[i] >= lastTime)
+                {
+                    float lat = Lats[i];
+                    float lon = Lons[i];
+                    points.Add(new PointLatLng(lat, lon));
+                    values.Add(secondary[i]);
+                    lastTime = Times[i] + interval;
+                }
+            }
+            return retval;
+        }
+
+        public static GMapRoute? GmapActivity(Activity? activity, string selectedDataStream, int width, int alpha)
+        {
+            if (activity == null) { return null; }
+
+            if (activity.LocationStream == null) { return null; }
+
+            List<PointLatLng> points = new List<PointLatLng>();
+
+            LocationStream locationStream = activity.LocationStream;
+
+
+            DataStreamBase? dataStream = null;
+            if (activity.TimeSeries.ContainsKey(selectedDataStream))
+                dataStream = activity.TimeSeries[selectedDataStream];
+
+            const uint INTERVAL = 30;
+            if (dataStream != null)
+            {
+                AlignedTimeSeries? aligned = Utils.TimeSeries.Align(locationStream, dataStream);
+
+                if (aligned != null)
+                {
+                    points = Utils.Misc.SampleLocations(aligned.Time, aligned.Lats, aligned.Lons, INTERVAL);
+
+                    GMapRouteColored routeColored = new GMapRouteColored(points, "Route", aligned.Secondary, alpha, width, 
+                        dataStream.Percentile(DataStreamBase.StaticsValue.SD2High),
+                        dataStream.Percentile(DataStreamBase.StaticsValue.SD2Low));
+
+                    return routeColored;
+                }
+            }
+
+            points = Utils.Misc.SampleLocations(locationStream.Times, locationStream.Latitudes, locationStream.Longitudes, INTERVAL);
+
+            GMapRoute route = new GMapRoute(points, "Route");
+            route.Stroke = new Pen(Color.FromArgb(alpha, 255, 0, 0), width);
+            return route;
+        }
+
     }
 }

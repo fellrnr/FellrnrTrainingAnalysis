@@ -23,17 +23,39 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public bool HasErrors { get; set; } = false;
 
+        private int depth = 0;
+        private Stack<string> names = new Stack<string>();
+
         private Stopwatch Timer(string name) { if (!timing.ContainsKey(name)) timing.Add(name, new Stopwatch());  return timing[name]; }
 
-        public void StartTimer(string name = "") { Timer(name).Reset(); Timer(name).Start(); }
+        public void StartResetTimer(string name = "") { Timer(name).Reset(); Timer(name).Start(); }
+
+        public void Enter(string name, bool announce = true)
+        {
+            depth++;
+            StartResetTimer(name);
+            if (announce) Log("Entering " + name);
+            names.Push(name);
+        }
+
+        public void Leave()
+        {
+            string name = names.Pop();
+            TimeSpan ts = Logging.Instance.GetAndResetTime(name);
+            string seconds = new string('#', (int)ts.TotalSeconds);
+            Logging.Instance.Log(string.Format("{0}{1} took {2}", seconds, name, ts));
+            depth--;
+        }
+
 
         public TimeSpan GetAndResetTime(string name = "") { Timer(name).Stop(); TimeSpan retval = Timer(name).Elapsed; Timer(name).Reset(); Timer(name).Start();  return retval; }
+        public TimeSpan GetAndStopTime(string name = "") { Timer(name).Stop(); TimeSpan retval = Timer(name).Elapsed; return retval; }
 
         public void Debug(string message)
         {
             if (Options.Instance.LogLevel == Options.Level.Debug)
             {
-                if(Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(message).Append("\r\n");
+                if(Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
                 DebugFile.WriteLine(message);
                 DebugFile.Flush();
             }
@@ -43,7 +65,7 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             if (Options.Instance.LogLevel == Options.Level.Debug || Options.Instance.LogLevel == Options.Level.Log)
             {
-                if (Options.Instance.InMemory) LogStringBuilder.Append("LOG: ").Append(message).Append("\r\n");
+                if (Options.Instance.InMemory) LogStringBuilder.Append("LOG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
                 LogFile.WriteLine(message);
                 Debug(message);
             }
@@ -53,7 +75,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public void Error(string message) 
         {
             HasErrors = true;
-            if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: " ).Append(message).Append("\r\n");
+            if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: " ).Append(new string('>', depth)).Append(message).Append("\r\n");
             ErrorFile.WriteLine(message);
             Log(message); 
         }

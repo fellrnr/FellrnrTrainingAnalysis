@@ -1,5 +1,6 @@
 ﻿using BrightIdeasSoftware;
 using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using System.Data;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -25,6 +26,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void Display(Database database)
         {
+            Logging.Instance.Enter("ActivityTree.Display");
             DataTreeListView dataTreeListView_debug = dataTreeListView; //make this a local to simplify debugging
 
 
@@ -42,6 +44,7 @@ namespace FellrnrTrainingAnalysis.UI
                 database.CurrentAthlete.CalendarTree.Count > 0 && 
                 database.CurrentAthlete.CalendarTree.First().Value.DataNames != null)
             {
+                Logging.Instance.Enter("ActivityTree.Display-datatable");
                 //gather the list of column names from the root calendar nodes
                 List<string> masterDataNames = new List<string>();
                 foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
@@ -71,6 +74,8 @@ namespace FellrnrTrainingAnalysis.UI
                 foreach (KeyValuePair<int, DataColumn> keyValuePair in keyValuePairs)
                     myTable.Columns.Add(keyValuePair.Value);
 
+                Logging.Instance.Leave();
+                Logging.Instance.Enter("ActivityTree.Display-tree");
                 foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
                 {
                     CalendarNode calendarNode = kvp.Value;
@@ -82,6 +87,8 @@ namespace FellrnrTrainingAnalysis.UI
 
 
 
+                Logging.Instance.Leave();
+                Logging.Instance.Enter("ActivityTree.Display-view");
                 dataTreeListView.SuspendLayout();
 
 
@@ -126,7 +133,10 @@ namespace FellrnrTrainingAnalysis.UI
                 dataTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
 
                 dataTreeListView.ResumeLayout();
+                Logging.Instance.Leave();
             }
+            Logging.Instance.Leave();
+
         }
 
 
@@ -147,9 +157,9 @@ namespace FellrnrTrainingAnalysis.UI
             }
 
             DataRow dataRow = myTable.NewRow();
-            dataRow[Id] = extensible.Id;
+            dataRow[Id] = extensible.Id();
             dataRow[ParentId] = parentId;
-            dataRow[DateTreeColumn] = extensible.Id;
+            dataRow[DateTreeColumn] = extensible.Id();
             foreach (Datum d in extensible.DataValues)
             {
                 if (masterDataNames.Contains(d.Name))
@@ -174,7 +184,7 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     bool lastChild = (calendarNode.Children.Values.Last() == e);
 
-                    Add(myTable, e, extensible.Id, masterDataNames, lastChild);
+                    Add(myTable, e, extensible.Id(), masterDataNames, lastChild);
                 }
             }
         }

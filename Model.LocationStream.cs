@@ -1,7 +1,10 @@
-﻿namespace FellrnrTrainingAnalysis.Model
+﻿using MemoryPack;
+
+namespace FellrnrTrainingAnalysis.Model
 {
+    [MemoryPackable]
     [Serializable]
-    public class LocationStream
+    public partial class LocationStream
     {
         public LocationStream(uint[]? times, float[] latitudes, float[] longitudes)
         {
@@ -10,15 +13,19 @@
             Longitudes = longitudes;
         }
 
+        [MemoryPackInclude]
         float? MinLat = null;
+        [MemoryPackInclude]
         float? MaxLat = null;
+        [MemoryPackInclude]
         float? MinLon = null;
+        [MemoryPackInclude]
         float? MaxLon = null;
 
         public bool WithinBounds(float lat, float lon)
         {
             //cache these as we do it a lot when looking for hills
-            if(MinLat == null)
+            //if(MinLat == null)
             {
                 //need to add some margin, as we might be slightly short of a peak, but within the margin
                 float minLat = Latitudes.Min();
@@ -28,7 +35,7 @@
                 MinLat = OffsetLat(minLat, Hill.CLOSE_ENOUGH * -4);
                 MaxLat = OffsetLat(maxLat, Hill.CLOSE_ENOUGH * 4);
                 MinLon = OffsetLon(minLat, minLon, Hill.CLOSE_ENOUGH * -4);
-                MaxLon = OffsetLon(maxLat, minLon, Hill.CLOSE_ENOUGH * 4);
+                MaxLon = OffsetLon(maxLat, maxLon, Hill.CLOSE_ENOUGH * 4);
             }
             return (MinLat <= lat && lat <= MaxLat && MinLon <= lon && lon <= MaxLon);
         }
@@ -47,8 +54,11 @@
         }
 
 
+        [MemoryPackInclude]
         public uint[]? Times { get; set; }
+        [MemoryPackInclude]
         public float[] Latitudes { get; set; }
+        [MemoryPackInclude]
         public float[] Longitudes { get; set; }
 
 

@@ -1,33 +1,44 @@
-﻿namespace FellrnrTrainingAnalysis.Model
+﻿using MemoryPack;
+
+namespace FellrnrTrainingAnalysis.Model
 {
+    [MemoryPackable]
     [Serializable]
-    public abstract class DataStreamEphemeral : IDataStream
+    [MemoryPackUnion(0, typeof(DataStreamDelta))]
+    [MemoryPackUnion(1, typeof(DataStreamCalculated))]
+    [MemoryPackUnion(2, typeof(DataStreamGradeAdjustedDistance))]
+    public abstract partial class DataStreamEphemeral : DataStreamBase
     {
-        public DataStreamEphemeral(string name, List<string> requiredFields)
+        [MemoryPackConstructor]
+        protected DataStreamEphemeral()  //for use by memory pack deserialization only
         {
-            RequiredFields = requiredFields;
-            Name = name;
         }
 
-        public bool IsValid(Activity parent)
+        public DataStreamEphemeral(string name, List<string> requiredFields, Activity parent) : base(name, parent)
+        {
+            RequiredFields = requiredFields;
+        }
+
+        public override bool IsValid()
         {
             foreach (string s in RequiredFields)
             {
-                if (!parent.TimeSeriesNames.Contains(s))
+                if (!Parent.TimeSeriesNames.Contains(s))
                     return false;
             }
             return true;
         }
 
-        public bool IsVirtual() { return true; }
+        public override bool IsVirtual() { return true; }
 
-        public abstract Tuple<uint[], float[]>? GetData(Activity parent);
+        //public abstract Tuple<uint[], float[]>? GetData(Activity parent);
 
+        [MemoryPackInclude]
         protected List<string> RequiredFields { get; }
 
-        public string Name { get; }
+        //public string Name { get; }
 
-        public abstract void Recalculate(Activity parent, bool force);
+        //public abstract void Recalculate(Activity parent, bool force);
 
     }
 }

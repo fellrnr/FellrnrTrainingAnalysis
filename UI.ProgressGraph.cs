@@ -1,4 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using ScottPlot;
 using ScottPlot.Plottable;
 using ScottPlot.Renderable;
@@ -14,8 +15,8 @@ namespace FellrnrTrainingAnalysis.UI
             InitializeComponent();
         }
 
-        private Database? Database;
-        private FilterActivities? FilterActivities;
+        private Database? _database;
+        private FilterActivities? _filterActivities;
         private Dictionary<string, FilterRow> Filters = new Dictionary<string, FilterRow>();
         private int Row = 1; //row zero is the headers
         private delegate void DoRefresh();
@@ -32,9 +33,10 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void Display(Database database, FilterActivities filterActivities)
         {
-            Database = database;
-            FilterActivities = filterActivities;
-            if (database == null || database.CurrentAthlete == null || database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || FilterActivities == null) { return; }
+            Logging.Instance.Enter("ProgressGraph.Display");
+            _database = database;
+            _filterActivities = filterActivities;
+            if (database == null || database.CurrentAthlete == null || database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || _filterActivities == null) { return; }
 
             Athlete athlete = database.CurrentAthlete;
             DateTime earliest = athlete.ActivitiesByDateTime.First().Key;
@@ -43,6 +45,7 @@ namespace FellrnrTrainingAnalysis.UI
             dateTimePickerEnd.Value = latest;
             CreateFilterRows(database, athlete);
             RefreshGraph();
+            Logging.Instance.Leave();
         }
 
         private void CreateFilterRows(Database database, Athlete athlete)
@@ -68,7 +71,7 @@ namespace FellrnrTrainingAnalysis.UI
                 }
             }
 
-            IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.TimeSeriesNames;
+            IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.AllTimeSeriesNames;
             foreach (string name in timeSeriesNames)
             {
                 foreach (string s in TimeSeriesOperations)
@@ -94,7 +97,7 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (Axis axis in CurrentAxis) { formsPlotProgress.Plot.RemoveAxis(axis); }
             CurrentAxis.Clear();
             axisIndex = 0;
-            if (Database == null || Database.CurrentAthlete == null || Database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || FilterActivities == null) { return; }
+            if (_database == null || _database.CurrentAthlete == null || _database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || _filterActivities == null) { return; }
 
             foreach (KeyValuePair<string, FilterRow> kvp in Filters)
             {
@@ -106,7 +109,7 @@ namespace FellrnrTrainingAnalysis.UI
                 List<DateTime> dateTimes = new List<DateTime>();
                 List<double> values = new List<double>();
 
-                List<Activity> activities = FilterActivities.GetActivities(Database);
+                List<Activity> activities = _filterActivities.GetActivities(_database);
 
 
                 //foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
@@ -187,11 +190,11 @@ namespace FellrnrTrainingAnalysis.UI
                 string tsName = TimeSeriesFromOperation(name);
                 if (activity.TimeSeries.ContainsKey(tsName))
                 {
-                    IDataStream dataStream = activity.TimeSeries[tsName];
+                    DataStreamBase dataStream = activity.TimeSeries[tsName];
                     float value = 0;
-                    if (dataStream != null && dataStream.GetData(activity) != null)
+                    if (dataStream != null && dataStream.GetData() != null)
                     {
-                        float[] valuesFromStream = dataStream.GetData(activity)!.Item2;
+                        float[] valuesFromStream = dataStream.GetData()!.Item2;
                         if (Operation(name) == MIN)
                         {
                             value = valuesFromStream.Min();
@@ -277,8 +280,8 @@ namespace FellrnrTrainingAnalysis.UI
                 case "5Y":
                     dateTime = dateTime.AddYears(-5); break;
                 case "All":
-                    if (Database == null) return;
-                    Athlete athlete = Database.CurrentAthlete;
+                    if (_database == null) return;
+                    Athlete athlete = _database.CurrentAthlete;
                     dateTime = athlete.ActivitiesByDateTime.First().Key;
                     break;
                 default:

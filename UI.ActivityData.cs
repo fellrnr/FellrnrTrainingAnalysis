@@ -1,6 +1,8 @@
 ﻿using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -36,13 +38,18 @@ namespace FellrnrTrainingAnalysis.UI
         private Dictionary<string, Row> Rows = new Dictionary<string, Row>();
         private void Initialize(Model.Athlete athlete)
         {
+            Logging.Instance.StartResetTimer("ActivityData.Initialize");
+            tableLayoutPanel1.SuspendLayout();
             IReadOnlyCollection<string> dataNames = athlete.ActivityFieldNames; //we want the fields for the activies, not the athlete
 
             AddRows(dataNames, DATUM_POSTFIX);
 
-            IReadOnlyCollection<string> timeSeriesNames = athlete.TimeSeriesNames; //we want the fields for the activies, not the athlete
+            IReadOnlyCollection<string> timeSeriesNames = athlete.AllTimeSeriesNames; //we want the fields for the activies, not the athlete
 
             AddRows(timeSeriesNames, TIMESERIES_POSTFIX);
+
+            tableLayoutPanel1.ResumeLayout();
+            Logging.Instance.Log(string.Format("ActivityData.Initialize took {0}", Logging.Instance.GetAndResetTime("ActivityData.Initialize")));
         }
 
         private void AddRows(IReadOnlyCollection<string> dataNames, string postfix)
@@ -72,6 +79,8 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void DisplayActivity(Athlete athlete, Model.Activity? activity)
         {
+            Logging.Instance.Enter("UI.ActivityData.DisplayActivity");
+            tableLayoutPanel1.SuspendLayout();
             Initialize(athlete);
             foreach (KeyValuePair<string, Row> kvp in Rows)
             {
@@ -87,9 +96,47 @@ namespace FellrnrTrainingAnalysis.UI
                 return;
             }
 
-            IReadOnlyCollection<Datum> data = activity.DataValues;
+            DisplayActivityDatum(activity);
 
-            foreach(Datum datum in data)
+            DisplayActivityTimeSeries(activity);
+
+            tableLayoutPanel1.ResumeLayout();
+            Logging.Instance.Leave();
+        }
+
+        private void DisplayActivityTimeSeries(Activity? activity)
+        {
+            Logging.Instance.Enter("ActivityData.DisplayActivityTimeSeries");
+            ReadOnlyDictionary<string, DataStreamBase> timeSeriesList = activity!.TimeSeries;
+
+            foreach (KeyValuePair<string, DataStreamBase> kvp in timeSeriesList)
+            {
+                string fieldName = kvp.Key;
+                string entryName = fieldName + TIMESERIES_POSTFIX;
+                if (Rows.ContainsKey(entryName))
+                {
+                    DataStreamBase dataStream = kvp.Value;
+                    Tuple<uint[], float[]>? tuple = dataStream.GetData();
+                    if (tuple != null)
+                    {
+                        float[] values = tuple.Item2;
+                        Row row = Rows[entryName];
+                        row.Value.Text = "";
+                        row.Min.Text = values.Min().ToString();
+                        row.Avg.Text = values.Average().ToString();
+                        row.Max.Text = values.Max().ToString();
+                    }
+                }
+            }
+            Logging.Instance.Leave();
+        }
+
+        private void DisplayActivityDatum(Activity? activity)
+        {
+            Logging.Instance.Enter("ActivityData.DisplayActivityDatum");
+            IReadOnlyCollection<Datum> data = activity!.DataValues;
+
+            foreach (Datum datum in data)
             {
                 string fieldName = datum.Name;
                 string entryName = fieldName + DATUM_POSTFIX;
@@ -108,29 +155,7 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                 }
             }
-
-            ReadOnlyDictionary<string, IDataStream> timeSeriesList = activity.TimeSeries;
-
-            foreach (KeyValuePair<string, IDataStream> kvp in timeSeriesList)
-            {
-                string fieldName = kvp.Key;
-                string entryName = fieldName + TIMESERIES_POSTFIX;
-                if (Rows.ContainsKey(entryName))
-                {
-                    IDataStream dataStream = kvp.Value;
-                    Tuple<uint[], float[]>? tuple = dataStream.GetData(activity);
-                    if(tuple != null)
-                    {
-                        float[] values = tuple.Item2;
-                        Row row = Rows[entryName];
-                        row.Value.Text = "";
-                        row.Min.Text = values.Min().ToString();
-                        row.Avg.Text = values.Average().ToString();
-                        row.Max.Text = values.Max().ToString();
-                    }
-                }
-            }
-
+            Logging.Instance.Leave();
         }
     }
 }

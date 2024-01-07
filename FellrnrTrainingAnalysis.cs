@@ -10,11 +10,12 @@ namespace FellrnrTrainingAnalysis
     {
         private Model.Database Database { get; set; }
 
-        
+
 
 
         public FellrnrTrainingAnalysisForm(bool StravaSync, bool email, bool batch)
         {
+            Logging.Instance.Enter("FellrnrTrainingAnalysisForm");
             //TODO: consider using http://dockpanelsuite.com/
             InitializeComponent();
             Options.LoadConfig();
@@ -28,11 +29,11 @@ namespace FellrnrTrainingAnalysis
             {
                 Action.StravaApi.Instance.SyncNewActivites(Database);
             }
-            if(email)
+            if (email)
             {
                 GoalsUI.SendGoals();
             }
-            if(batch)
+            if (batch)
             {
                 ExitApp(true);
             }
@@ -40,6 +41,7 @@ namespace FellrnrTrainingAnalysis
             activityReport1.UpdateViews += UpdateViewsEventHandler;
 
             //Model.Goal.test();
+            Logging.Instance.Leave();
         }
 
         private void AddDataQualityMenus()
@@ -66,10 +68,13 @@ namespace FellrnrTrainingAnalysis
 
         private void FellrnrTrainingAnalysisForm_Load(object sender, EventArgs e)
         {
+            Logging.Instance.Log("Entering FellrnrTrainingAnalysisForm_Load");
+            Logging.Instance.StartResetTimer("FellrnrTrainingAnalysisForm_Load");
             SetMenuAvailability();
-            
+
             UpdateViews(false);
             AddDataQualityMenus();
+            Logging.Instance.Log(string.Format("FellrnrTrainingAnalysisForm_Load took {0}", Logging.Instance.GetAndResetTime("FellrnrTrainingAnalysisForm_Load")));
         }
 
 
@@ -86,40 +91,42 @@ namespace FellrnrTrainingAnalysis
 
         private void UpdateViews(bool force)
         {
-            Logging.Instance.StartTimer();
+            Logging.Instance.Enter("UpdateViews");
             Database.MasterRecalculate(force);
-            Logging.Instance.Log(string.Format("Recalculate took {0}", Logging.Instance.GetAndResetTime()));
 
             UpdateSummary();
-            Logging.Instance.Log(string.Format("UpdateSummary took {0}", Logging.Instance.GetAndResetTime()));
             UpdateGoals();
-            Logging.Instance.Log(string.Format("UpdateGoals took {0}", Logging.Instance.GetAndResetTime()));
-            
+
             activityReport1.UpdateReport(Database, FilterActivities);
-            Logging.Instance.Log(string.Format("UpdateReport took {0}", Logging.Instance.GetAndResetTime()));
             activityTree1.Display(Database);
-            Logging.Instance.Log(string.Format("activityList1.Display took {0}", Logging.Instance.GetAndResetTime()));
 
             progressGraph1.Display(Database, FilterActivities);
+
+            overviewMap1.Display(Database, FilterActivities);
 
             if (Logging.Instance.HasErrors)
             {
                 showErrorsToolStripMenuItem.Enabled = true;
                 showErrorsToolStripMenuItem.ForeColor = Color.Red;
             }
+            Logging.Instance.Leave();
         }
 
         private void UpdateGoals()
         {
+            Logging.Instance.Enter("UpdateGoals");
             GoalsUI.UpdateGoalsText();
             GoalsUI.UpdateGoalsGrid();
+            Logging.Instance.Leave();
         }
         private void UpdateSummary()
         {
+            Logging.Instance.Enter("UpdateSummary");
             StringBuilder sb = new StringBuilder();
             sb.Append(string.Format("A total of {0} athletes loaded\r\n", Database.Athletes.Count));
             sb.Append(Database.CurrentAthlete);
             summaryTextBox.Text = sb.ToString();
+            Logging.Instance.Leave();
         }
 
         private void SetMenuAvailability()
@@ -160,13 +167,14 @@ namespace FellrnrTrainingAnalysis
 
         private void LoadFromStravaCsv(string filePath)
         {
-            System.Diagnostics.Stopwatch load = new System.Diagnostics.Stopwatch();
-            load.Start();
+            Logging.Instance.Enter("LoadFromStravaCsv");
+
             Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
             int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database);
-            load.Stop();
-            Logging.Instance.Log(string.Format("Load took {0}", load.Elapsed));
             UpdateViews(true);
+
+            Logging.Instance.Leave();
+
             MessageBox.Show($"Loaded {count} activities from archive");
         }
 
@@ -186,7 +194,7 @@ namespace FellrnrTrainingAnalysis
         private void syncWithStravaToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Application.UseWaitCursor = true;
-            Tuple<int,int> count = Action.StravaApi.Instance.SyncNewActivites(Database);
+            Tuple<int, int> count = Action.StravaApi.Instance.SyncNewActivites(Database);
             Application.UseWaitCursor = false;
 
             MessageBox.Show($"Synced {count.Item1} activities, with at least {count.Item2} remaining");
@@ -217,7 +225,7 @@ namespace FellrnrTrainingAnalysis
             Options.SaveConfig();
             ActivityDatumMetadata.WriteToCsv();
             DataStreamDefinition.WriteToCsv();
-            if(force)
+            if (force)
             {
                 Environment.Exit(0);
             }
@@ -243,7 +251,8 @@ namespace FellrnrTrainingAnalysis
             {
                 string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
                 openFileDialog.InitialDirectory = folder;
-                openFileDialog.Filter = "*.bin|*.bin|All files (*.*)|*.*";
+                //openFileDialog.Filter = "*.bin|*.bin|All files (*.*)|*.*";
+                openFileDialog.Filter = "*.bin_mp|*.bin_mp|All files (*.*)|*.*";
                 openFileDialog.FilterIndex = 1;
                 openFileDialog.ReadOnlyChecked = true;
 
@@ -253,6 +262,7 @@ namespace FellrnrTrainingAnalysis
                     var filePath = openFileDialog.FileName;
 
                     Database.LoadFromFile(filePath);
+                    //Database.LoadFromMemoryMapFile(filePath);
                 }
             }
         }
@@ -291,7 +301,9 @@ namespace FellrnrTrainingAnalysis
             showErrorsToolStripMenuItem.Enabled = false;
         }
 
-        private void clearAllLogsToolStripMenuItem_Click(object sender, EventArgs e)
+
+
+        private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Logging.Instance.HasErrors = false;
             Logging.Instance.Clear();
@@ -324,7 +336,7 @@ namespace FellrnrTrainingAnalysis
             if (definitions != null)
             {
                 UI.DataStreamDefinitionEditor dataStreamDefinitionEditor = new UI.DataStreamDefinitionEditor(definitions);
-                dataStreamDefinitionEditor.Edited += EditEventHandler;
+                dataStreamDefinitionEditor.Edited += DataStreamEditEventHandler;
 
                 dataStreamDefinitionEditor.ShowDialog(); //TODO: update this to be non-modal with a callback
                 UpdateViews(false);
@@ -338,7 +350,7 @@ namespace FellrnrTrainingAnalysis
 
 
 
-        public void EditEventHandler(DataStreamDefinitionEditor sender) //a callback from clients
+        public void DataStreamEditEventHandler(DataStreamDefinitionEditor sender) //a callback from clients
         {
             List<Model.DataStreamDefinition>? definitions = sender.Definitions;
             DataStreamDefinition.SetDefinitions(definitions);
@@ -355,11 +367,16 @@ namespace FellrnrTrainingAnalysis
         private void clearDataQualityToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ClearDataQualityIssues();
+            UpdateViews(false);
         }
 
+
+        private FilterBadData aFilterBadData = new FilterBadData(FilterBadData.HasBadValueTag);
         private void ClearDataQualityIssues()
         {
             if (Database == null || Database.CurrentAthlete == null) { return; }
+
+            FilterActivities.Filters.Remove(aFilterBadData);
 
             foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
             {
@@ -379,7 +396,7 @@ namespace FellrnrTrainingAnalysis
             rescanForDataQualityIssues(dataQualityCheck);
 
             FilterActivities.Filters.Clear();
-            FilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
+            FilterActivities.Filters.Add(aFilterBadData);
             UpdateViews(false);
         }
 
@@ -399,7 +416,7 @@ namespace FellrnrTrainingAnalysis
         ActivityFilterDialog? activityFilterDialog;
         private void filterToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if(activityFilterDialog == null) 
+            if (activityFilterDialog == null)
                 activityFilterDialog = new ActivityFilterDialog();
             activityFilterDialog.UpdatedHandler += CallbackEventHandler;
             activityFilterDialog.Display(Database);
@@ -429,6 +446,10 @@ namespace FellrnrTrainingAnalysis
             largeTextDialogForm.ShowDialog();
         }
 
+        private void emailGoalsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            GoalsUI.SendGoals();
+        }
     }
 
 }

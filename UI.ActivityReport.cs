@@ -1,9 +1,9 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using ScottPlot.Renderable;
 using ScottPlot;
-using static FellrnrTrainingAnalysis.Utils.Utils;
-using System.Text;
 using FellrnrTrainingAnalysis.Utils;
+using System.Text;
+using System.Reflection;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -13,6 +13,12 @@ namespace FellrnrTrainingAnalysis
         {
             InitializeComponent();
             CreateRightClickMenus();
+            typeof(DataGridView).InvokeMember(
+               "DoubleBuffered",
+               BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
+               null,
+               activityDataGridView,
+               new object[] { true });
         }
 
 
@@ -27,20 +33,34 @@ namespace FellrnrTrainingAnalysis
 
         public void UpdateReport(Database database, FilterActivities filterActivities)
         {
+            Logging.Instance.Enter("UpdateReport");
             Database = database;
             FilterActivities = filterActivities;
             UpdateReport();
+            Logging.Instance.Leave();
         }
         private void UpdateReport()
         {
-            if(Database == null || FilterActivities == null) { return; }
+            if (Database == null || FilterActivities == null) { return; }
+            Logging.Instance.StartResetTimer("UpdateReport-private");
+            Logging.Instance.Enter("UpdateReport");
 
             activityDataGridView.Rows.Clear();
+            Logging.Instance.Log(string.Format("ActivityReport.UpdateReport rows.clear took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
             //Database.CurrentAthlete.
-            IReadOnlyCollection<string> activityFieldNames = Database.CurrentAthlete.ActivityFieldNames;
+            //IReadOnlyCollection<string> activityFieldNames = Database.CurrentAthlete.ActivityFieldNames;
+            List<ActivityDatumMetadata>? columnMetadata = ActivityDatumMetadata.GetDefinitions();
+            if (columnMetadata == null)
+            {
+                Logging.Instance.Leave();
+                return;
+            }
             activityDataGridView.ColumnCount = ActivityDatumMetadata.LastPositionInReport();
             if (activityDataGridView.ColumnCount == 0)
+            {
+                Logging.Instance.Leave();
                 return;
+            }
             activityDataGridView.ColumnHeadersVisible = true;
 
             // Set the column header style.
@@ -50,10 +70,12 @@ namespace FellrnrTrainingAnalysis
             columnHeaderStyle.Font = new Font("Verdana", 8, FontStyle.Regular);
             activityDataGridView.ColumnHeadersDefaultCellStyle = columnHeaderStyle;
 
+            Logging.Instance.Log(string.Format("ActivityReport.UpdateReport setup took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
             // Set the column header names.
-            foreach (string s in activityFieldNames)
+            //foreach (string s in activityFieldNames)
+            foreach (ActivityDatumMetadata activityDatumMetadata in columnMetadata)
             {
-                ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
+                //ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
                 if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
                 {
                     int positionInReport = (int)activityDatumMetadata.PositionInReport;
@@ -80,6 +102,7 @@ namespace FellrnrTrainingAnalysis
 
                 }
             }
+            Logging.Instance.Log(string.Format("ActivityReport.UpdateReport set column metadata took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
 
             /*
             ReadOnlyDictionary<DateTime, Activity> activities = database.CurrentAthlete.ActivitiesByDateTime;
@@ -87,29 +110,35 @@ namespace FellrnrTrainingAnalysis
             foreach (KeyValuePair<DateTime, Model.Activity> kvp in enumerator)
                 */
             List<Activity> activities = FilterActivities.GetActivities(Database);
-            labelTotalRows.Text= $"Total activities {activities.Count}";
+            Logging.Instance.Log(string.Format("ActivityReport.UpdateReport get activities took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
+            labelTotalRows.Text = $"Total activities {activities.Count}";
             IEnumerable<Model.Activity> enumerator;
             if (PageSize < 0)
             {
                 enumerator = activities;
             }
             else
-            { 
+            {
                 enumerator = activities.Skip(Math.Max(0, activities.Count() - PageSize));
             }
+
+            //List<DataGridViewRow> dataGridViewRows = new List<DataGridViewRow>();
+            activityDataGridView.SuspendLayout();
+            IgnoreSelectionChanged = true;
             foreach (Model.Activity activity in enumerator)
             {
-                string[] row = new string[activityFieldNames.Count];
-                foreach (string fieldname in activityFieldNames)
+                string[] row = new string[ActivityDatumMetadata.LastPositionInReport()];
+                //foreach (string fieldname in activityFieldNames)
+                foreach (ActivityDatumMetadata activityDatumMetadata in columnMetadata)
                 {
-                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldname);
+                    //ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldname);
                     if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
                     {
                         int positionInReport = (int)activityDatumMetadata.PositionInReport;
-                        if (activity.HasNamedDatum(fieldname))
+                        if (activity.HasNamedDatum(activityDatumMetadata.Name))
                         {
                             //row[activityDatumMetadata.PositionInReport] = activity.GetNamedDatumForDisplay(fieldname);
-                            row[positionInReport] = UI.DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldname), activityDatumMetadata);
+                            row[positionInReport] = UI.DatumFormatter.FormatForGrid(activity.GetNamedDatum(activityDatumMetadata.Name), activityDatumMetadata);
                         }
                         else
                         {
@@ -118,45 +147,62 @@ namespace FellrnrTrainingAnalysis
                     }
                 }
                 activityDataGridView.Rows.Add(row);
+                //dataGridViewRows.Add(new DataGridViewRow(row));
             }
+            activityDataGridView.ResumeLayout();
+            //activityDataGridView.Rows.AddRange(dataGridViewRows.ToArray());
+            Logging.Instance.Log(string.Format("UpdateReport add rows took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
+            IgnoreSelectionChanged = false;
             if (activityDataGridView.Rows.Count > 0)
             {
                 activityDataGridView.FirstDisplayedScrollingRowIndex = activityDataGridView.RowCount - 1; //this changes the selected row to be zero
                 activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
             }
+            Logging.Instance.Leave();
         }
 
         private List<Axis> CurrentAxis { get; set; } = new List<Axis>();
         private List<Tuple<double, double>> YAxisMinMax { get; set; } = new List<Tuple<double, double>>();
         private int axisIndex = 0;
-        private const int AXIS_OFFSET= 3;
+        private const int AXIS_OFFSET = 3;
 
 
-        DataGridViewSelectedRowCollection? currentSelectedRowCollection = null;
+        //DataGridViewSelectedRowCollection? currentSelectedRowCollection = null;
 
+
+        private bool IgnoreSelectionChanged = false;
         private void dataGridView1_SelectionChanged(object sender, EventArgs e)
         {
+            if (IgnoreSelectionChanged)
+                return;
+            Logging.Instance.Enter("dataGridView1_SelectionChanged");
+
+            //hmmmm. I wrote all this optimisation code which never worked as there's no update to currentSelectedRowCollection. Commenting out for now.
+            /*
             DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
-            if (currentSelectedRowCollection != null && 
-                dataGridViewSelectedRowCollection.Count == currentSelectedRowCollection.Count) 
+            bool match = true;
+            if (currentSelectedRowCollection != null &&
+                dataGridViewSelectedRowCollection.Count == currentSelectedRowCollection.Count)
             {
-                bool match = true;
-                for(int i=0;i < dataGridViewSelectedRowCollection.Count; i++)
+                for (int i = 0; i < dataGridViewSelectedRowCollection.Count; i++)
                 {
                     if (dataGridViewSelectedRowCollection[i] != currentSelectedRowCollection[i])
                     {
                         match = false; break;
                     }
                 }
-                if(match) 
-                    return;
-
             }
-            UpdateSelectedRow();
+            if(!match)
+                UpdateSelectedRow();
+            */
+
+            UpdateSelectedRow(); 
+            Logging.Instance.Leave();
         }
 
         private void UpdateActivityDisplay()
         {
+            Logging.Instance.Enter("UpdateActivityDisplay");
             Model.Activity? activity = null;
             DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
             if (dataGridViewSelectedRowCollection.Count > 0)
@@ -166,17 +212,21 @@ namespace FellrnrTrainingAnalysis
             }
             activityData1.DisplayActivity(Database!.CurrentAthlete, activity); //if we've got here, we have to have a database with an athlete
             activityMap1.DisplayActivity(activity, Database!.Hills);
+            Logging.Instance.Leave();
         }
 
         public void UpdateSelectedRow()
         {
+            Logging.Instance.Enter("UpdateSelectedRow");
             UpdateDataStreamGraph();
             UpdateActivityDisplay();
+            Logging.Instance.Leave();
         }
 
         private void UpdateDataStreamGraph()
         {
-            if(Database == null)
+            Logging.Instance.Enter("UpdateDataStreamGraph");
+            if (Database == null)
                 return;
 
             DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
@@ -194,7 +244,7 @@ namespace FellrnrTrainingAnalysis
                 Model.Activity? activity = GetActivityForRow(row);
                 if (activity != null)
                 {
-                    foreach (KeyValuePair<string, IDataStream> kvp in activity.TimeSeries)
+                    foreach (KeyValuePair<string, DataStreamBase> kvp in activity.TimeSeries)
                     {
                         DisplayTimeSeries(activity, kvp);
                     }
@@ -204,6 +254,7 @@ namespace FellrnrTrainingAnalysis
 
             }
             formsPlot1.Refresh();
+            Logging.Instance.Leave();
         }
 
         private Model.Activity? GetActivityForRow(DataGridViewRow row)
@@ -229,7 +280,7 @@ namespace FellrnrTrainingAnalysis
         }
 
         const double MINPACE = 0.3; //0.3 is 55:30 min/km. Anything slower can be considered not moving to make the graph work, otherwise min/km values tend towards infinity
-        private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, IDataStream> kvp)
+        private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, DataStreamBase> kvp)
         {
             string timeSeriesName = kvp.Key;
 
@@ -280,14 +331,14 @@ namespace FellrnrTrainingAnalysis
             return;
         }
 
-        private Tuple<double[], double[]>? GetDataStreamForDisplay(Activity activity, KeyValuePair<string, IDataStream> kvp, DataStreamDefinition dataStreamDefinition)
+        private Tuple<double[], double[]>? GetDataStreamForDisplay(Activity activity, KeyValuePair<string, DataStreamBase> kvp, DataStreamDefinition dataStreamDefinition)
         {
             string timeSeriesName = kvp.Key;
             double[] xArray;
             double[] yArraySmoothed;
 
-            Model.IDataStream activityDataStreamdataStream = kvp.Value;
-            Tuple<uint[], float[]>? dataStream = activityDataStreamdataStream.GetData(activity);
+            Model.DataStreamBase activityDataStreamdataStream = kvp.Value;
+            Tuple<uint[], float[]>? dataStream = activityDataStreamdataStream.GetData();
             if (dataStream == null)
             {
                 return null;
@@ -321,7 +372,7 @@ namespace FellrnrTrainingAnalysis
 
         private void SetAxis()
         {
-            for(int i = 0; i < axisIndex; i++)
+            for (int i = 0; i < axisIndex; i++)
             {
                 Axis yAxis;
                 if (i == 0)
@@ -330,13 +381,13 @@ namespace FellrnrTrainingAnalysis
                 }
                 else
                 {
-                    yAxis = CurrentAxis[i-1];
+                    yAxis = CurrentAxis[i - 1];
                 }
                 double min = YAxisMinMax[i].Item1 * 0.95; //add some margins so they don't overlap
                 double max = YAxisMinMax[i].Item2 * 1.05;
                 double diff = max - min;
                 double newMin = min - diff * i;
-                double newMax = min + diff * (axisIndex-i); //only one axis, then (min + diff * 1 == max)
+                double newMax = min + diff * (axisIndex - i); //only one axis, then (min + diff * 1 == max)
                 //formsPlot1.Plot.SetAxisLimits(yMax: newMax, yMin: newMin, yAxisIndex: i);
                 //formsPlot1.Plot.SetAxisLimits(yMax: i+1, yMin: i, yAxisIndex: i);
 
@@ -399,16 +450,21 @@ namespace FellrnrTrainingAnalysis
             AddContextMenu("Scan For Data Quality Issues...", new EventHandler(toolStripItem1_Click_findDataQuality));
             AddContextMenu("Show Data Quality Issues...", new EventHandler(toolStripItem1_Click_showDataQuality));
             AddContextMenu("Open ALL in Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
-            AddContextMenu("Tag ALL in Strava as #race", new EventHandler(toolStripItem1_Click_tagAllStravaAsRace));
+            foreach(TagActivities t in tags)
+            {
+                AddContextMenu(t.Name, new EventHandler(toolStripItem1_Click_tagStrava), t);
+            }
+            //AddContextMenu("Tag ALL in Strava as #race", new EventHandler(toolStripItem1_Click_tagAllStravaAsRace));
 
 
         }
 
-        private void AddContextMenu(string text, EventHandler eventHandler)
+        private void AddContextMenu(string text, EventHandler eventHandler, TagActivities? tagActivities = null)
         {
             ToolStripMenuItem toolStripItem3 = new ToolStripMenuItem();
             toolStripItem3.Text = text;
             toolStripItem3.Click += eventHandler;
+            toolStripItem3.Tag = tagActivities;
             toolStripMenuItems.Add(toolStripItem3);
         }
 
@@ -515,7 +571,7 @@ namespace FellrnrTrainingAnalysis
 
             DateTime? start = activity.StartDateNoTime;
 
-            if(start == null)
+            if (start == null)
             {
                 MessageBox.Show("No activity found");
                 return;
@@ -549,9 +605,9 @@ namespace FellrnrTrainingAnalysis
             {
                 filepath = filepath.Remove(filepath.Length - 3);
             }
-            if(!filepath.ToLower().EndsWith(".fit"))
+            if (!filepath.ToLower().EndsWith(".fit"))
             {
-                if(MessageBox.Show($"File is not fit, {filepath}", "Really?", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                if (MessageBox.Show($"File is not fit, {filepath}", "Really?", MessageBoxButtons.OKCancel) != DialogResult.OK)
                 {
                     return;
                 }
@@ -620,12 +676,71 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
+        private class TagActivities
+        {
+            public string Name;
+            public string Tag;
+
+            public TagActivities(string name, string tag)
+            {
+                Name = name;
+                Tag = tag;
+            }
+        }
+
+        //start char is ⌗ U+2317
+        //middle markers are ༶ (U+0F36)
+        //end is ֍ (U+058D)
+        TagActivities[] tags = {
+            new TagActivities("Delete Altitude", "⌗Altitude༶Delete֍"),
+            new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
+            new TagActivities("Delete Power", "⌗Power༶Delete֍"),
+            new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
+        };
+
         //TODO: generalize the update to strava beyond just tagging as race
+        private void toolStripItem1_Click_tagStrava(object? sender, EventArgs args)
+        {
+            if (mouseLocation == null || sender == null)
+                return;
+            ToolStripMenuItem toolStripMenuItem = (ToolStripMenuItem)sender;
+            string tag = (string)toolStripMenuItem.Tag;
+
+            DataGridViewRow row = activityDataGridView.Rows[mouseLocation.RowIndex];
+            Model.Activity? activity = GetActivityForRow(row);
+            if (activity == null)
+            {
+                MessageBox.Show("No activity found");
+                return;
+            }
+
+            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum("Description");
+            if (descriptionDatum == null)
+                descriptionDatum = new TypedDatum<string>("Description", false, "");
+
+            string? description = descriptionDatum.Data;
+
+            if (description != null && !description.Contains(tag))
+            {
+                description = description + tag;
+                if (!Action.StravaApi.Instance.UpdateActivity(activity, null, description))
+                {
+                    MessageBox.Show("Update Failed");
+                    return;
+                }
+                descriptionDatum.Data = description;
+                activity.AddOrReplaceDatum(descriptionDatum);
+
+                activity.Recalculate(true);
+
+                UpdateViews?.Invoke();
+                MessageBox.Show("Done");
+            }
+        }
         private void toolStripItem1_Click_tagAllStravaAsRace(object? sender, EventArgs args)
         {
-            /*
             const string TAG = " #race";
-            int success=0, error=0;
+            int success = 0, error = 0;
             foreach (DataGridViewRow row in activityDataGridView.Rows)
             {
                 Model.Activity? activity = GetActivityForRow(row);
@@ -633,17 +748,16 @@ namespace FellrnrTrainingAnalysis
                     return;
 
                 string? name = activity.GetNamedStringDatum("Name");
-                if(name != null && !name.Contains(TAG))
+                if (name != null && !name.Contains(TAG))
                 {
                     name = name + TAG;
-                    if(StravaApi.Instance.UpdateActivity(activity, name))
+                    if (Action.StravaApi.Instance.UpdateActivity(activity, name))
                         success++;
-                    else 
+                    else
                         error++;
                 }
             }
             MessageBox.Show($"Updated {success} entries, with {error} failures");
-            */
             MessageBox.Show($"not doing that again. Left in place for future expansion and generalization");
 
         }
@@ -725,7 +839,7 @@ namespace FellrnrTrainingAnalysis
 
         private void pageSizeComboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if(pageSizeComboBox1.Text == "All")
+            if (pageSizeComboBox1.Text == "All")
             {
                 PageSize = -1;
             }
