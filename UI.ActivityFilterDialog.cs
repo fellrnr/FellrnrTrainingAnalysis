@@ -1,6 +1,6 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 
-namespace FellrnrTrainingAnalysis
+namespace FellrnrTrainingAnalysis.UI
 {
     public partial class ActivityFilterDialog : Form
     {
@@ -171,7 +171,7 @@ namespace FellrnrTrainingAnalysis
                     Value1.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value1, 2, Row);
                 }
-                if (Filter.Text != "" && Filter.Text != "has")
+                if (Filter.Text != "" && Filter.Text != "has" && Filter.Text != "missing")
                 {
                     Value1!.Visible = true;
                 }
@@ -221,7 +221,7 @@ namespace FellrnrTrainingAnalysis
 
                 //        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "1M", "6M", "1Y" };
 
-                if (Filter.Text != "" && Filter.Text != "1M" && Filter.Text != "6M" && Filter.Text != "1Y" && Filter.Text != "in")
+                if (Filter.Text != "" && Filter.Text != "1M" && Filter.Text != "6M" && Filter.Text != "1Y" && Filter.Text != "in" && Filter.Text != "has" && Filter.Text != "missing")
                 {
                     Value1!.Visible = true;
                 }
@@ -279,7 +279,7 @@ namespace FellrnrTrainingAnalysis
                     Value1.Width = 200;
                     Value1.KeyPress += OnEnterHandler;
                     Value2 = new NumericUpDown { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
-                    Value2.Minimum = decimal.MinValue; Value1.Maximum = decimal.MaxValue;
+                    Value2.Minimum = decimal.MinValue; Value2.Maximum = decimal.MaxValue;
                     Value2.Width = 200;
                     Value2.KeyPress += OnEnterHandler;
                     TableLayoutPanel.Controls.Add(Value2, 3, Row);

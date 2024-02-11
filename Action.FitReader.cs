@@ -1,6 +1,7 @@
 ﻿using Dynastream.Fit;
 using FellrnrTrainingAnalysis.Utils;
 using FellrnrTrainingAnalysis.Model;
+using System.Diagnostics;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -11,14 +12,15 @@ namespace FellrnrTrainingAnalysis.Action
         {
             Calculation = new CalculationData(path);
             Accumulation = new AccumulationData(activity);
-            Calculation.activityStart = activity.StartDateTime;
+            //Let's get the start time from the fit file, rather than the CSV
+            Calculation.activityStartFallback = activity.StartDateTimeUTC;
         }
 
         public FitReader(FellrnrTrainingAnalysis.Model.Activity activity)
         {
             Calculation = new CalculationData();
             Accumulation = new AccumulationData(activity);
-            Calculation.activityStart = activity.StartDateTime;
+            Calculation.activityStartFallback = activity.StartDateTimeUTC;
         }
 
         //The things we know about the activity
@@ -44,7 +46,9 @@ namespace FellrnrTrainingAnalysis.Action
             public CalculationData() { this.Path = ""; }
             public double totalStopped = 0;
             public System.DateTime lastStop;
-            public System.DateTime? activityStart = null;
+            public System.DateTime? activityStartUTC = null;
+            public System.DateTime? activityStartLocal = null;
+            public System.DateTime? activityStartFallback = null;
             public bool IsRunning = true; //We seem to get a start message a few seconds after the recording starts, so lets assume we're already running
             public string Path;
             public bool debugMode = false;
@@ -110,6 +114,13 @@ namespace FellrnrTrainingAnalysis.Action
 
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
+
+            if(Calculation.activityStartLocal != null)
+                Accumulation.activity.StartDateTimeLocal = Calculation.activityStartLocal;
+            else
+                Accumulation.activity.StartDateTimeLocal = Calculation.activityStartUTC; //last ditch fallback
+            Accumulation.activity.StartDateTimeUTC = Calculation.activityStartUTC;
+
             Calculation.Overall.Stop();
 
 
@@ -119,23 +130,27 @@ namespace FellrnrTrainingAnalysis.Action
             double relativeTime = Calculation.Overall.Elapsed.TotalMicroseconds / fi.Length;
             if (Options.Instance.DebugFitPerformance) 
                 Logging.Instance.Log(String.Format("{4}: {5} Kb, {6:f1} us/Kb, {0} Finished in {3:f1}s, Read {7:f1}, Record {9:f1}, Other {8:f1}, reading {1} from {2} ", 
-                    System.DateTime.Now, filepath, Accumulation.activity.StartDateTime, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
+                    System.DateTime.Now, filepath, Accumulation.activity.StartDateTimeLocal, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
                     Calculation.Read.Elapsed.TotalSeconds, Calculation.Other.Elapsed.TotalSeconds, Calculation.InRecord.Elapsed.TotalSeconds));
             if (Calculation.Overall.Elapsed.TotalSeconds > 10)
             {
                 Logging.Instance.Error(String.Format(">Slow> {4}: {5} Kb, {6:f1} us/Kb, {0} Finished in {3:f1}s, Read {7:f1}, Record {9:f1}, Other {8:f1}, reading {1} from {2} ",
-                    System.DateTime.Now, filepath, Accumulation.activity.StartDateTime, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
+                    System.DateTime.Now, filepath, Accumulation.activity.StartDateTimeLocal, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
                     Calculation.Read.Elapsed.TotalSeconds, Calculation.Other.Elapsed.TotalSeconds, Calculation.InRecord.Elapsed.TotalSeconds));
             }
         }
 
         private void OnRecordMesgEvent(object sender, MesgEventArgs e)
         {
+            if (Calculation.activityStartUTC == null) //this happens occasionally, where there's a couple of data points recorded before the start
+            {
+                if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                    Logging.Instance.Debug($"Received OnRecordMesgEvent before we have a start time, using fallback. {e.mesg.Num}, {e.mesg.Name}");
+                Calculation.activityStartUTC = Calculation.activityStartFallback;
+            }
             Calculation.InRecord.Start();
-            if (Calculation.activityStart == null)
-                throw new Exception("Activity without start time, can't process");
 
-            if(Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+            if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("RecordMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             RecordMesg myRecordMesg = (RecordMesg)e.mesg;
 
@@ -143,11 +158,11 @@ namespace FellrnrTrainingAnalysis.Action
             var timestampUint = myRecordMesg.GetFieldValue(RecordMesg.FieldDefNum.Timestamp);
             Dynastream.Fit.DateTime dt = new Dynastream.Fit.DateTime((uint)timestampUint);
             System.DateTime recordTime = dt.GetDateTime();
-            System.DateTime activityStart = (System.DateTime)Calculation.activityStart!;
+            System.DateTime activityStart = (System.DateTime)Calculation.activityStartUTC!;
             uint elapsedTime = (uint)((recordTime - activityStart).TotalSeconds - Calculation.totalStopped);
             if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                 Logging.Instance.Debug(String.Format("RecordMesgEvent: elapsedTime {0}, recordTime {1} activityStart {2}, totalStopped {3}", 
-                    elapsedTime, recordTime, Calculation.activityStart, Calculation.totalStopped));
+                    elapsedTime, recordTime, Calculation.activityStartUTC, Calculation.totalStopped));
 
 
             foreach (var field in myRecordMesg.Fields) 
@@ -359,6 +374,13 @@ namespace FellrnrTrainingAnalysis.Action
             Dynastream.Fit.DateTime dt = new Dynastream.Fit.DateTime((uint)timestampUint);
             System.DateTime startTime = dt.GetDateTime();
             Calculation.lastStop = startTime;
+
+
+            //we shouldn't use the file creation time as the start time
+            //...but we have to, as some FIT files never have a start event. Doh. 
+            Accumulation.activity.StartDateTimeUTC = startTime;
+
+            /*
             if (Calculation.activityStart != null)
             {
                 if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
@@ -374,8 +396,9 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug(String.Format("No activity start time, FIT file is {0}", startTime));
-                Accumulation.activity.StartDateTime = startTime;
+                Accumulation.activity.StartDateTimeLocal = startTime;
             }
+            */
             Calculation.Other.Stop();
         }
 
@@ -449,9 +472,15 @@ namespace FellrnrTrainingAnalysis.Action
                 {
                     if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                         Logging.Instance.Debug("Start Timer Event");
+                    System.DateTime restartTime = myEventMesg.GetTimestamp().GetDateTime();
+                    
+                    //the first start is the start of the activity (the activity event comes at the end of the file)
+                    if (Calculation.activityStartUTC == null)
+                        Calculation.activityStartUTC = restartTime;
+
                     if (!Calculation.IsRunning)
                     {
-                        System.DateTime restartTime = myEventMesg.GetTimestamp().GetDateTime();
+
                         double stoppage = (restartTime - Calculation.lastStop).TotalSeconds;
                         if(stoppage > 0) { stoppage--; } //otherwise we end up with the next even on the same second
                         Calculation.totalStopped += stoppage;
@@ -465,91 +494,124 @@ namespace FellrnrTrainingAnalysis.Action
         }
 
 
+        //This should be the start of the activity, giving us UTC and local times
+        void OnActivityMesgEvent(object sender, MesgEventArgs e)
+        {
+            Logging.Instance.Debug(String.Format("ActivityMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
+            ActivityMesg? myActivityMesg = (ActivityMesg)e.mesg;
+            if (myActivityMesg != null)
+            {
+                Dynastream.Fit.DateTime dt = myActivityMesg.GetTimestamp();
+                //System.DateTime startTime = dt.GetDateTime();
+                //don't do this - it's the timestamp of the record that's at the end of the activity! Oops. 
+                //Calculation.activityStartUTC = startTime; 
+
+                if (!myActivityMesg.GetLocalTimestamp().HasValue)
+                {
+                    uint? timestampUint = myActivityMesg.GetLocalTimestamp();
+                    Dynastream.Fit.DateTime ldt = new Dynastream.Fit.DateTime((uint)timestampUint!);
+                    System.DateTime startTimeLocal = ldt.GetDateTime();
+                    Calculation.activityStartLocal = startTimeLocal;
+
+                    if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                        Logging.Instance.Debug($"Start time local {startTimeLocal}");
+                }
+                else
+                {
+                    if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
+                        Logging.Instance.Debug($"no local start time in activity");
+                }
+
+            }
+
+        }
+
+
         #region DebugHandlers
 
         //This is the generic handler that gets called on every message.
-        void OnMesg(object sender, MesgEventArgs e)
+        void DebugOnMesg(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("OnMesg: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             DebugLogEvent(e);
         }
         //TODO: process lap messages into the activity
-        void OnLapMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnLapMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("LapMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             LapMesg myLapMesg = (LapMesg)e.mesg;
         }
 
         //TODO: handle HRV data into the activity
-        void OnHrvMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnHrvMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("HrvMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             HrvMesg myHrvMesg = (HrvMesg)e.mesg;
             //PrintProperties(myHrvMesg);
         }
 
-        void OnUserProfileMesg(object sender, MesgEventArgs e)
+        void DebugOnUserProfileMesg(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("OnUserProfileMesg: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
         }
-        void OnDeviceInfoMessage(object sender, MesgEventArgs e)
+        void DebugOnDeviceInfoMessage(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("OnDeviceInfoMessage: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
         }
-        void OnMonitoringMessage(object sender, MesgEventArgs e)
+        void DebugOnMonitoringMessage(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("OnMonitoringMessage: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
         }
 
-        void OnFileIdMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnFileIdMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("FileIdMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             FileIdMesg myFileIdMesg = (FileIdMesg)e.mesg;
         }
 
-        void OnFileCreatorMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnFileCreatorMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("FileCreatorMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             FileCreatorMesg myFileCreatorMesg = (FileCreatorMesg)e.mesg;
         }
 
-        void OnSoftwareMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnSoftwareMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("SoftwareMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SoftwareMesg mySoftwareMesg = (SoftwareMesg)e.mesg;
         }
 
-        void OnSlaveDeviceMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnSlaveDeviceMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("SlaveDeviceMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SlaveDeviceMesg mySlaveDeviceMesg = (SlaveDeviceMesg)e.mesg;
         }
 
-        void OnCapabilitiesMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnCapabilitiesMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("CapabilitiesMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             CapabilitiesMesg myCapabilitiesMesg = (CapabilitiesMesg)e.mesg;
         }
 
-        void OnFileCapabilitiesMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnFileCapabilitiesMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("FileCapabilitiesMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             FileCapabilitiesMesg myFileCapabilitiesMesg = (FileCapabilitiesMesg)e.mesg;
         }
 
-        void OnMesgCapabilitiesMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnMesgCapabilitiesMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("MesgCapabilitiesMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             MesgCapabilitiesMesg myMesgCapabilitiesMesg = (MesgCapabilitiesMesg)e.mesg;
         }
 
-        void OnFieldCapabilitiesMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnFieldCapabilitiesMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("FieldCapabilitiesMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             FieldCapabilitiesMesg myFieldCapabilitiesMesg = (FieldCapabilitiesMesg)e.mesg;
         }
 
-        void OnDeviceSettingsMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnDeviceSettingsMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("DeviceSettingsMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             DeviceSettingsMesg myDeviceSettingsMesg = (DeviceSettingsMesg)e.mesg;
@@ -579,7 +641,7 @@ namespace FellrnrTrainingAnalysis.Action
             Logging.Instance.Debug(String.Format("GetTapInterface {0}", myDeviceSettingsMesg.GetTapInterface()));
         }
 
-        void OnUserProfileMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnUserProfileMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("UserProfileMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             UserProfileMesg myUserProfileMesg = (UserProfileMesg)e.mesg;
@@ -587,155 +649,150 @@ namespace FellrnrTrainingAnalysis.Action
 
 
 
-        void OnHrmProfileMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnHrmProfileMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("HrmProfileMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             HrmProfileMesg myHrmProfileMesg = (HrmProfileMesg)e.mesg;
         }
 
-        void OnSdmProfileMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnSdmProfileMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("SdmProfileMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SdmProfileMesg mySdmProfileMesg = (SdmProfileMesg)e.mesg;
         }
 
-        void OnBikeProfileMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnBikeProfileMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("BikeProfileMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             BikeProfileMesg myBikeProfileMesg = (BikeProfileMesg)e.mesg;
         }
 
-        void OnZonesTargetMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnZonesTargetMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("ZonesTargetMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             ZonesTargetMesg myZonesTargetMesg = (ZonesTargetMesg)e.mesg;
         }
 
 
-        void OnHrZoneMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnHrZoneMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("HrZoneMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             HrZoneMesg myHrZoneMesg = (HrZoneMesg)e.mesg;
         }
 
-        void OnSpeedZoneMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnSpeedZoneMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("SpeedZoneMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SpeedZoneMesg mySpeedZoneMesg = (SpeedZoneMesg)e.mesg;
         }
 
-        void OnCadenceZoneMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnCadenceZoneMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("CadenceZoneMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             CadenceZoneMesg myCadenceZoneMesg = (CadenceZoneMesg)e.mesg;
         }
 
-        void OnPowerZoneMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnPowerZoneMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("PowerZoneMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             PowerZoneMesg myPowerZoneMesg = (PowerZoneMesg)e.mesg;
         }
 
-        void OnMetZoneMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnMetZoneMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("MetZoneMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             MetZoneMesg myMetZoneMesg = (MetZoneMesg)e.mesg;
         }
 
-        void OnGoalMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnGoalMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("GoalMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             GoalMesg myGoalMesg = (GoalMesg)e.mesg;
         }
 
-        void OnActivityMesgEvent(object sender, MesgEventArgs e)
-        {
-            Logging.Instance.Debug(String.Format("ActivityMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
-            ActivityMesg myActivityMesg = (ActivityMesg)e.mesg;
-        }
 
-        void OnSessionMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnSessionMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("SessionMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             SessionMesg mySessionMesg = (SessionMesg)e.mesg;
         }
 
 
-        void OnLengthMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnLengthMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("LengthMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             LengthMesg myLengthMesg = (LengthMesg)e.mesg;
         }
 
 
-        void OnDeviceInfoMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnDeviceInfoMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("DeviceInfoMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             DeviceInfoMesg myDeviceInfoMesg = (DeviceInfoMesg)e.mesg;
         }
 
 
-        void OnCourseMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnCourseMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("CourseMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             CourseMesg myCourseMesg = (CourseMesg)e.mesg;
         }
 
-        void OnCoursePointMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnCoursePointMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("CoursePointMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             CoursePointMesg myCoursePointMesg = (CoursePointMesg)e.mesg;
         }
 
-        void OnWorkoutMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnWorkoutMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("WorkoutMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             WorkoutMesg myWorkoutMesg = (WorkoutMesg)e.mesg;
         }
 
-        void OnWorkoutStepMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnWorkoutStepMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("WorkoutStepMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             WorkoutStepMesg myWorkoutStepMesg = (WorkoutStepMesg)e.mesg;
         }
 
-        void OnScheduleMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnScheduleMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("ScheduleMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             ScheduleMesg myScheduleMesg = (ScheduleMesg)e.mesg;
         }
 
-        void OnTotalsMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnTotalsMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("TotalsMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             TotalsMesg myTotalsMesg = (TotalsMesg)e.mesg;
         }
 
-        void OnWeightScaleMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnWeightScaleMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("WeightScaleMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             WeightScaleMesg myWeightScaleMesg = (WeightScaleMesg)e.mesg;
         }
 
-        void OnBloodPressureMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnBloodPressureMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("BloodPressureMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             BloodPressureMesg myBloodPressureMesg = (BloodPressureMesg)e.mesg;
         }
 
-        void OnMonitoringInfoMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnMonitoringInfoMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("MonitoringInfoMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             MonitoringInfoMesg myMonitoringInfoMesg = (MonitoringInfoMesg)e.mesg;
         }
 
-        void OnMonitoringMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnMonitoringMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("MonitoringMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             MonitoringMesg myMonitoringMesg = (MonitoringMesg)e.mesg;
         }
 
-        void OnPadMesgEvent(object sender, MesgEventArgs e)
+        void DebugOnPadMesgEvent(object sender, MesgEventArgs e)
         {
             Logging.Instance.Debug(String.Format("PadMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             PadMesg myPadMesg = (PadMesg)e.mesg;
@@ -759,53 +816,52 @@ namespace FellrnrTrainingAnalysis.Action
             mesgBroadcaster.RecordMesgEvent += OnRecordMesgEvent;
             mesgBroadcaster.EventMesgEvent += OnEventMesgEvent;
             mesgBroadcaster.SportMesgEvent += OnSportMesgEvent;
+            mesgBroadcaster.ActivityMesgEvent += OnActivityMesgEvent;
             if (Options.Instance.DebugFitLoading && Options.Instance.DebugFitExtraDetails) //this will produce massive details and be very slow
             {
 
-                mesgBroadcaster.MesgEvent += new MesgEventHandler(OnMesg);
-                mesgBroadcaster.UserProfileMesgEvent += OnUserProfileMesg;
-                mesgBroadcaster.MonitoringMesgEvent += OnMonitoringMessage;
-                mesgBroadcaster.DeviceInfoMesgEvent += OnDeviceInfoMessage;
+                //Debug only
+                mesgBroadcaster.MesgEvent += new MesgEventHandler(DebugOnMesg);
+                mesgBroadcaster.UserProfileMesgEvent += DebugOnUserProfileMesg;
+                mesgBroadcaster.MonitoringMesgEvent += DebugOnMonitoringMessage;
+                mesgBroadcaster.DeviceInfoMesgEvent += DebugOnDeviceInfoMessage;
 
-                ///generated
-                ///
-                mesgBroadcaster.FileIdMesgEvent += OnFileIdMesgEvent;
-                mesgBroadcaster.FileCreatorMesgEvent += OnFileCreatorMesgEvent;
-                mesgBroadcaster.SoftwareMesgEvent += OnSoftwareMesgEvent;
-                mesgBroadcaster.SlaveDeviceMesgEvent += OnSlaveDeviceMesgEvent;
-                mesgBroadcaster.CapabilitiesMesgEvent += OnCapabilitiesMesgEvent;
-                mesgBroadcaster.FileCapabilitiesMesgEvent += OnFileCapabilitiesMesgEvent;
-                mesgBroadcaster.MesgCapabilitiesMesgEvent += OnMesgCapabilitiesMesgEvent;
-                mesgBroadcaster.FieldCapabilitiesMesgEvent += OnFieldCapabilitiesMesgEvent;
-                mesgBroadcaster.DeviceSettingsMesgEvent += OnDeviceSettingsMesgEvent;
-                mesgBroadcaster.UserProfileMesgEvent += OnUserProfileMesgEvent;
-                mesgBroadcaster.HrmProfileMesgEvent += OnHrmProfileMesgEvent;
-                mesgBroadcaster.SdmProfileMesgEvent += OnSdmProfileMesgEvent;
-                mesgBroadcaster.BikeProfileMesgEvent += OnBikeProfileMesgEvent;
-                mesgBroadcaster.ZonesTargetMesgEvent += OnZonesTargetMesgEvent;
-                mesgBroadcaster.HrZoneMesgEvent += OnHrZoneMesgEvent;
-                mesgBroadcaster.SpeedZoneMesgEvent += OnSpeedZoneMesgEvent;
-                mesgBroadcaster.CadenceZoneMesgEvent += OnCadenceZoneMesgEvent;
-                mesgBroadcaster.PowerZoneMesgEvent += OnPowerZoneMesgEvent;
-                mesgBroadcaster.MetZoneMesgEvent += OnMetZoneMesgEvent;
-                mesgBroadcaster.GoalMesgEvent += OnGoalMesgEvent;
-                mesgBroadcaster.ActivityMesgEvent += OnActivityMesgEvent;
-                mesgBroadcaster.SessionMesgEvent += OnSessionMesgEvent;
-                mesgBroadcaster.LapMesgEvent += OnLapMesgEvent;
-                mesgBroadcaster.LengthMesgEvent += OnLengthMesgEvent;
-                mesgBroadcaster.DeviceInfoMesgEvent += OnDeviceInfoMesgEvent;
-                mesgBroadcaster.HrvMesgEvent += OnHrvMesgEvent;
-                mesgBroadcaster.CourseMesgEvent += OnCourseMesgEvent;
-                mesgBroadcaster.CoursePointMesgEvent += OnCoursePointMesgEvent;
-                mesgBroadcaster.WorkoutMesgEvent += OnWorkoutMesgEvent;
-                mesgBroadcaster.WorkoutStepMesgEvent += OnWorkoutStepMesgEvent;
-                mesgBroadcaster.ScheduleMesgEvent += OnScheduleMesgEvent;
-                mesgBroadcaster.TotalsMesgEvent += OnTotalsMesgEvent;
-                mesgBroadcaster.WeightScaleMesgEvent += OnWeightScaleMesgEvent;
-                mesgBroadcaster.BloodPressureMesgEvent += OnBloodPressureMesgEvent;
-                mesgBroadcaster.MonitoringInfoMesgEvent += OnMonitoringInfoMesgEvent;
-                mesgBroadcaster.MonitoringMesgEvent += OnMonitoringMesgEvent;
-                mesgBroadcaster.PadMesgEvent += OnPadMesgEvent;
+                mesgBroadcaster.FileIdMesgEvent += DebugOnFileIdMesgEvent;
+                mesgBroadcaster.FileCreatorMesgEvent += DebugOnFileCreatorMesgEvent;
+                mesgBroadcaster.SoftwareMesgEvent += DebugOnSoftwareMesgEvent;
+                mesgBroadcaster.SlaveDeviceMesgEvent += DebugOnSlaveDeviceMesgEvent;
+                mesgBroadcaster.CapabilitiesMesgEvent += DebugOnCapabilitiesMesgEvent;
+                mesgBroadcaster.FileCapabilitiesMesgEvent += DebugOnFileCapabilitiesMesgEvent;
+                mesgBroadcaster.MesgCapabilitiesMesgEvent += DebugOnMesgCapabilitiesMesgEvent;
+                mesgBroadcaster.FieldCapabilitiesMesgEvent += DebugOnFieldCapabilitiesMesgEvent;
+                mesgBroadcaster.DeviceSettingsMesgEvent += DebugOnDeviceSettingsMesgEvent;
+                mesgBroadcaster.UserProfileMesgEvent += DebugOnUserProfileMesgEvent;
+                mesgBroadcaster.HrmProfileMesgEvent += DebugOnHrmProfileMesgEvent;
+                mesgBroadcaster.SdmProfileMesgEvent += DebugOnSdmProfileMesgEvent;
+                mesgBroadcaster.BikeProfileMesgEvent += DebugOnBikeProfileMesgEvent;
+                mesgBroadcaster.ZonesTargetMesgEvent += DebugOnZonesTargetMesgEvent;
+                mesgBroadcaster.HrZoneMesgEvent += DebugOnHrZoneMesgEvent;
+                mesgBroadcaster.SpeedZoneMesgEvent += DebugOnSpeedZoneMesgEvent;
+                mesgBroadcaster.CadenceZoneMesgEvent += DebugOnCadenceZoneMesgEvent;
+                mesgBroadcaster.PowerZoneMesgEvent += DebugOnPowerZoneMesgEvent;
+                mesgBroadcaster.MetZoneMesgEvent += DebugOnMetZoneMesgEvent;
+                mesgBroadcaster.GoalMesgEvent += DebugOnGoalMesgEvent;
+                mesgBroadcaster.SessionMesgEvent += DebugOnSessionMesgEvent;
+                mesgBroadcaster.LapMesgEvent += DebugOnLapMesgEvent;
+                mesgBroadcaster.LengthMesgEvent += DebugOnLengthMesgEvent;
+                mesgBroadcaster.DeviceInfoMesgEvent += DebugOnDeviceInfoMesgEvent;
+                mesgBroadcaster.HrvMesgEvent += DebugOnHrvMesgEvent;
+                mesgBroadcaster.CourseMesgEvent += DebugOnCourseMesgEvent;
+                mesgBroadcaster.CoursePointMesgEvent += DebugOnCoursePointMesgEvent;
+                mesgBroadcaster.WorkoutMesgEvent += DebugOnWorkoutMesgEvent;
+                mesgBroadcaster.WorkoutStepMesgEvent += DebugOnWorkoutStepMesgEvent;
+                mesgBroadcaster.ScheduleMesgEvent += DebugOnScheduleMesgEvent;
+                mesgBroadcaster.TotalsMesgEvent += DebugOnTotalsMesgEvent;
+                mesgBroadcaster.WeightScaleMesgEvent += DebugOnWeightScaleMesgEvent;
+                mesgBroadcaster.BloodPressureMesgEvent += DebugOnBloodPressureMesgEvent;
+                mesgBroadcaster.MonitoringInfoMesgEvent += DebugOnMonitoringInfoMesgEvent;
+                mesgBroadcaster.MonitoringMesgEvent += DebugOnMonitoringMesgEvent;
+                mesgBroadcaster.PadMesgEvent += DebugOnPadMesgEvent;
             }
 
             return fitDecoder;

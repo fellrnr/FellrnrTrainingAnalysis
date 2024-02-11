@@ -33,19 +33,19 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void Display(Database database, FilterActivities filterActivities)
         {
-            Logging.Instance.Enter("ProgressGraph.Display");
+            Logging.Instance.TraceEntry("ProgressGraph.Display");
             _database = database;
             _filterActivities = filterActivities;
-            if (database == null || database.CurrentAthlete == null || database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || _filterActivities == null) { return; }
+            if (database == null || database.CurrentAthlete == null || database.CurrentAthlete.ActivitiesByLocalDateTime.Count == 0 || _filterActivities == null) { return; }
 
             Athlete athlete = database.CurrentAthlete;
-            DateTime earliest = athlete.ActivitiesByDateTime.First().Key;
-            DateTime latest = athlete.ActivitiesByDateTime.Last().Key;
+            DateTime earliest = athlete.ActivitiesByLocalDateTime.First().Key;
+            DateTime latest = athlete.ActivitiesByLocalDateTime.Last().Key;
             dateTimePickerStart.Value = earliest;
             dateTimePickerEnd.Value = latest;
             CreateFilterRows(database, athlete);
             RefreshGraph();
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void CreateFilterRows(Database database, Athlete athlete)
@@ -97,7 +97,7 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (Axis axis in CurrentAxis) { formsPlotProgress.Plot.RemoveAxis(axis); }
             CurrentAxis.Clear();
             axisIndex = 0;
-            if (_database == null || _database.CurrentAthlete == null || _database.CurrentAthlete.ActivitiesByDateTime.Count == 0 || _filterActivities == null) { return; }
+            if (_database == null || _database.CurrentAthlete == null || _database.CurrentAthlete.ActivitiesByLocalDateTime.Count == 0 || _filterActivities == null) { return; }
 
             foreach (KeyValuePair<string, FilterRow> kvp in Filters)
             {
@@ -116,7 +116,7 @@ namespace FellrnrTrainingAnalysis.UI
                 foreach(Activity activity in activities)
                 {
                     //DateTime dateTime = kvp.Key;
-                    DateTime? startDateTime = activity.StartDateTime;
+                    DateTime? startDateTime = activity.StartDateTimeLocal;
                     if (startDateTime != null && startDateTime >= dateTimePickerStart.Value && startDateTime <= dateTimePickerEnd.Value)
                     {
                         //Activity activity = kvp.Value;
@@ -131,6 +131,9 @@ namespace FellrnrTrainingAnalysis.UI
                 }
                 double[] xArray = dateTimes.Select(x => x.ToOADate()).ToArray();
                 double[] yArray = values.ToArray();
+                if(filterRow.Smoothing > 0)
+                    yArray = TimeSeries.WindowSmoothed(yArray, (int)filterRow.Smoothing);
+
                 IPlottable plottable;
                 if (filterRow.IsBar)
                 {
@@ -163,7 +166,7 @@ namespace FellrnrTrainingAnalysis.UI
                     plottable.YAxisIndex = yAxis.AxisIndex;
                     CurrentAxis.Add(yAxis);
                 }
-                //yAxis.Label(dataStreamDefinition.DisplayTitle);
+                yAxis.Label(filterRow.Name);
                 yAxis.Color(myPalette.GetColor(axisIndex));
                 axisIndex++;
 
@@ -239,6 +242,8 @@ namespace FellrnrTrainingAnalysis.UI
             public bool IsBar { get { return BarGraph == null ? false : BarGraph.Checked; } }
             public decimal Smoothing { get { return SmoothingBox == null ? 0 : SmoothingBox.Value; } }
 
+            public string Name { get { return FieldName.Text; } }
+
             protected void ChangedHandler(object? sender, EventArgs e)
             {
                 if (BarGraph == null)
@@ -282,7 +287,7 @@ namespace FellrnrTrainingAnalysis.UI
                 case "All":
                     if (_database == null) return;
                     Athlete athlete = _database.CurrentAthlete;
-                    dateTime = athlete.ActivitiesByDateTime.First().Key;
+                    dateTime = athlete.ActivitiesByLocalDateTime.First().Key;
                     break;
                 default:
                     break;

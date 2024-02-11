@@ -27,7 +27,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void DisplayActivity(Activity? activity, List<Hill>? hills)
         {
-            Logging.Instance.Enter("UI.ActivityMap.DisplayActivity");
+            Logging.Instance.TraceEntry("UI.ActivityMap.DisplayActivity");
             if (FirstTime)
             {
                 ConfigureGmap();
@@ -56,7 +56,7 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (string s in deleteMe) { showComboBox.Items.Remove(s); }
 
             DisplayMap(true);
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void DisplayMap(bool zoomAndCenter)

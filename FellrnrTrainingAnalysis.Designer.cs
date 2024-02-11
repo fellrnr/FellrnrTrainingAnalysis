@@ -36,11 +36,16 @@
             saveDatabaseAsToolStripMenuItem = new ToolStripMenuItem();
             clearDatabaseToolStripMenuItem = new ToolStripMenuItem();
             forceRecalculationToolStripMenuItem = new ToolStripMenuItem();
+            openBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
+            saveBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
             exitToolStripMenuItem = new ToolStripMenuItem();
             dataSourcesToolStripMenuItem = new ToolStripMenuItem();
             bootstrapToolStripMenuItem = new ToolStripMenuItem();
             connectToStravaToolStripMenuItem = new ToolStripMenuItem();
             syncWithStravaToolStripMenuItem = new ToolStripMenuItem();
+            loadWeightDataToolStripMenuItem = new ToolStripMenuItem();
+            verifyAgainstFitlogToolStripMenuItem = new ToolStripMenuItem();
+            updateFromFitlogToolStripMenuItem = new ToolStripMenuItem();
             viewToolStripMenuItem = new ToolStripMenuItem();
             logToolStripMenuItem = new ToolStripMenuItem();
             normalLogToolStripMenuItem = new ToolStripMenuItem();
@@ -55,6 +60,7 @@
             rescanForDataQualityIssuesToolStripMenuItem = new ToolStripMenuItem();
             scanForDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
             fixDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
+            emailGoalsToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             stravaToolStripMenuItem = new ToolStripMenuItem();
             graphTabPage = new TabPage();
@@ -74,7 +80,7 @@
             goalsDataGridView = new DataGridView();
             tabPage1 = new TabPage();
             overviewMap1 = new UI.OverviewMap();
-            emailGoalsToolStripMenuItem = new ToolStripMenuItem();
+            loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -106,7 +112,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, exitToolStripMenuItem });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(102, 35);
             fileToolStripMenuItem.Text = "Database";
@@ -114,48 +120,62 @@
             // openToolStripMenuItem
             // 
             openToolStripMenuItem.Name = "openToolStripMenuItem";
-            openToolStripMenuItem.Size = new Size(267, 34);
+            openToolStripMenuItem.Size = new Size(296, 34);
             openToolStripMenuItem.Text = "Open Database...";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
             // 
             // saveToolStripMenuItem
             // 
             saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            saveToolStripMenuItem.Size = new Size(267, 34);
+            saveToolStripMenuItem.Size = new Size(296, 34);
             saveToolStripMenuItem.Text = "Save Database";
             saveToolStripMenuItem.Click += saveToolStripMenuItem_Click;
             // 
             // saveDatabaseAsToolStripMenuItem
             // 
             saveDatabaseAsToolStripMenuItem.Name = "saveDatabaseAsToolStripMenuItem";
-            saveDatabaseAsToolStripMenuItem.Size = new Size(267, 34);
+            saveDatabaseAsToolStripMenuItem.Size = new Size(296, 34);
             saveDatabaseAsToolStripMenuItem.Text = "Save Database As...";
             saveDatabaseAsToolStripMenuItem.Click += saveDatabaseAsToolStripMenuItem_Click;
             // 
             // clearDatabaseToolStripMenuItem
             // 
             clearDatabaseToolStripMenuItem.Name = "clearDatabaseToolStripMenuItem";
-            clearDatabaseToolStripMenuItem.Size = new Size(267, 34);
+            clearDatabaseToolStripMenuItem.Size = new Size(296, 34);
             clearDatabaseToolStripMenuItem.Text = "Clear Database";
             clearDatabaseToolStripMenuItem.Click += clearDatabaseToolStripMenuItem_Click;
             // 
             // forceRecalculationToolStripMenuItem
             // 
             forceRecalculationToolStripMenuItem.Name = "forceRecalculationToolStripMenuItem";
-            forceRecalculationToolStripMenuItem.Size = new Size(267, 34);
+            forceRecalculationToolStripMenuItem.Size = new Size(296, 34);
             forceRecalculationToolStripMenuItem.Text = "Force Recalculation";
             forceRecalculationToolStripMenuItem.Click += forceRecalculationToolStripMenuItem_Click;
+            // 
+            // openBinDatabaseToolStripMenuItem
+            // 
+            openBinDatabaseToolStripMenuItem.Name = "openBinDatabaseToolStripMenuItem";
+            openBinDatabaseToolStripMenuItem.Size = new Size(296, 34);
+            openBinDatabaseToolStripMenuItem.Text = "Open Bin Database...";
+            openBinDatabaseToolStripMenuItem.Click += openBinDatabaseToolStripMenuItem_Click;
+            // 
+            // saveBinDatabaseToolStripMenuItem
+            // 
+            saveBinDatabaseToolStripMenuItem.Name = "saveBinDatabaseToolStripMenuItem";
+            saveBinDatabaseToolStripMenuItem.Size = new Size(296, 34);
+            saveBinDatabaseToolStripMenuItem.Text = "Save As Bin Database...";
+            saveBinDatabaseToolStripMenuItem.Click += saveAsBinDatabaseToolStripMenuItem_Click;
             // 
             // exitToolStripMenuItem
             // 
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            exitToolStripMenuItem.Size = new Size(267, 34);
+            exitToolStripMenuItem.Size = new Size(296, 34);
             exitToolStripMenuItem.Text = "Exit";
             exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
             // 
             // dataSourcesToolStripMenuItem
             // 
-            dataSourcesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bootstrapToolStripMenuItem, connectToStravaToolStripMenuItem, syncWithStravaToolStripMenuItem });
+            dataSourcesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bootstrapToolStripMenuItem, connectToStravaToolStripMenuItem, syncWithStravaToolStripMenuItem, loadWeightDataToolStripMenuItem, verifyAgainstFitlogToolStripMenuItem, updateFromFitlogToolStripMenuItem });
             dataSourcesToolStripMenuItem.Name = "dataSourcesToolStripMenuItem";
             dataSourcesToolStripMenuItem.Size = new Size(132, 35);
             dataSourcesToolStripMenuItem.Text = "Data Sources";
@@ -182,6 +202,27 @@
             syncWithStravaToolStripMenuItem.Size = new Size(471, 58);
             syncWithStravaToolStripMenuItem.Text = "Sync with Strava";
             syncWithStravaToolStripMenuItem.Click += syncWithStravaToolStripMenuItem_Click;
+            // 
+            // loadWeightDataToolStripMenuItem
+            // 
+            loadWeightDataToolStripMenuItem.Name = "loadWeightDataToolStripMenuItem";
+            loadWeightDataToolStripMenuItem.Size = new Size(471, 58);
+            loadWeightDataToolStripMenuItem.Text = "Load Weight Data...";
+            loadWeightDataToolStripMenuItem.Click += loadWeightDataToolStripMenuItem_Click;
+            // 
+            // verifyAgainstFitlogToolStripMenuItem
+            // 
+            verifyAgainstFitlogToolStripMenuItem.Name = "verifyAgainstFitlogToolStripMenuItem";
+            verifyAgainstFitlogToolStripMenuItem.Size = new Size(471, 58);
+            verifyAgainstFitlogToolStripMenuItem.Text = "Verify against Fitlog...";
+            verifyAgainstFitlogToolStripMenuItem.Click += verifyAgainstFitlogToolStripMenuItem_Click;
+            // 
+            // updateFromFitlogToolStripMenuItem
+            // 
+            updateFromFitlogToolStripMenuItem.Name = "updateFromFitlogToolStripMenuItem";
+            updateFromFitlogToolStripMenuItem.Size = new Size(471, 58);
+            updateFromFitlogToolStripMenuItem.Text = "Update from Fitlog...";
+            updateFromFitlogToolStripMenuItem.Click += updateFromFitlogToolStripMenuItem_Click;
             // 
             // viewToolStripMenuItem
             // 
@@ -279,6 +320,13 @@
             fixDataQualityIssueToolStripMenuItem.Size = new Size(392, 34);
             fixDataQualityIssueToolStripMenuItem.Text = "Fix Data Quality Issue";
             // 
+            // emailGoalsToolStripMenuItem
+            // 
+            emailGoalsToolStripMenuItem.Name = "emailGoalsToolStripMenuItem";
+            emailGoalsToolStripMenuItem.Size = new Size(392, 34);
+            emailGoalsToolStripMenuItem.Text = "Email Goals";
+            emailGoalsToolStripMenuItem.Click += emailGoalsToolStripMenuItem_Click;
+            // 
             // filterToolStripMenuItem
             // 
             filterToolStripMenuItem.Name = "filterToolStripMenuItem";
@@ -347,6 +395,7 @@
             tabControl1.SelectedIndex = 0;
             tabControl1.Size = new Size(1831, 1158);
             tabControl1.TabIndex = 1;
+            tabControl1.SelectedIndexChanged += tabControl1_SelectedIndexChanged;
             // 
             // activityReport
             // 
@@ -482,12 +531,12 @@
             overviewMap1.Size = new Size(186, 56);
             overviewMap1.TabIndex = 0;
             // 
-            // emailGoalsToolStripMenuItem
+            // loadStravaCsvBackgroundWorker
             // 
-            emailGoalsToolStripMenuItem.Name = "emailGoalsToolStripMenuItem";
-            emailGoalsToolStripMenuItem.Size = new Size(392, 34);
-            emailGoalsToolStripMenuItem.Text = "Email Goals";
-            emailGoalsToolStripMenuItem.Click += emailGoalsToolStripMenuItem_Click;
+            loadStravaCsvBackgroundWorker.WorkerReportsProgress = true;
+            loadStravaCsvBackgroundWorker.DoWork += loadStravaCsvBackgroundWorker_DoWork;
+            loadStravaCsvBackgroundWorker.ProgressChanged += loadStravaCsvBackgroundWorker_ProgressChanged;
+            loadStravaCsvBackgroundWorker.RunWorkerCompleted += loadStravaCsvBackgroundWorker_RunWorkerCompleted;
             // 
             // FellrnrTrainingAnalysisForm
             // 
@@ -574,5 +623,11 @@
         private UI.OverviewMap overviewMap1;
         private ToolStripMenuItem stravaToolStripMenuItem;
         private ToolStripMenuItem emailGoalsToolStripMenuItem;
+        private ToolStripMenuItem openBinDatabaseToolStripMenuItem;
+        private ToolStripMenuItem saveBinDatabaseToolStripMenuItem;
+        private ToolStripMenuItem loadWeightDataToolStripMenuItem;
+        private ToolStripMenuItem verifyAgainstFitlogToolStripMenuItem;
+        private ToolStripMenuItem updateFromFitlogToolStripMenuItem;
+        private System.ComponentModel.BackgroundWorker loadStravaCsvBackgroundWorker;
     }
 }

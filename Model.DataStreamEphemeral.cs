@@ -9,10 +9,9 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(2, typeof(DataStreamGradeAdjustedDistance))]
     public abstract partial class DataStreamEphemeral : DataStreamBase
     {
+        //Note: there is an instance of each DataStream object for each activity
         [MemoryPackConstructor]
-        protected DataStreamEphemeral()  //for use by memory pack deserialization only
-        {
-        }
+        protected DataStreamEphemeral() { RequiredFields = new List<string>(); } //for use by memory pack deserialization only
 
         public DataStreamEphemeral(string name, List<string> requiredFields, Activity parent) : base(name, parent)
         {
@@ -21,6 +20,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override bool IsValid()
         {
+            if (Parent == null) return false;
+
             foreach (string s in RequiredFields)
             {
                 if (!Parent.TimeSeriesNames.Contains(s))
@@ -31,14 +32,23 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override bool IsVirtual() { return true; }
 
-        //public abstract Tuple<uint[], float[]>? GetData(Activity parent);
+
+        //we don't persist the cached data, but we hang onto it during the run
+        [MemoryPackIgnore]
+        Tuple<uint[], float[]>? CachedData = null;
+
+        public abstract Tuple<uint[], float[]>? CalculateData();
+
+        public override Tuple<uint[], float[]>? GetData()
+        {
+            if(CachedData != null)
+                return CachedData;
+            return CalculateData();
+        }
 
         [MemoryPackInclude]
-        protected List<string> RequiredFields { get; }
+        protected List<string> RequiredFields { get; set; }
 
-        //public string Name { get; }
-
-        //public abstract void Recalculate(Activity parent, bool force);
-
+        public override void Recalculate(int forceCount, bool forceJustMe) { LastForceCount = forceCount; CachedData = null; return; }
     }
 }

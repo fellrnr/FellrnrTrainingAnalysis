@@ -13,3 +13,4 @@ Calc.Climb,TRUE,Calculated Climbing Rate,Calc Climb,AverageWindow,60,Meters,mete
 Grade Adjusted Pace,TRUE,Grade Adjusted Pace,GA Pace,AverageWindow,100,Pace,m/s,Calculated from Calc.Pace and Altitude
 Distance,FALSE,Distance,Distance,None,0,Meters,Meters,
 Grade Adjusted Distance,FALSE,Grade Adjusted Distance,Grade Adjusted Distance,None,0,Meters,Meters,
+HrPwr,TRUE,Heart Rate to Power,HrPwr,AverageWindow,60,Integer,mW/beat,

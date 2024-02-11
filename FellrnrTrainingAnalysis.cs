@@ -3,6 +3,12 @@ using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.UI;
 using FellrnrTrainingAnalysis.Utils;
 using System.Collections.ObjectModel;
+using CsvHelper;
+using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using FellrnrTrainingAnalysis.Action;
+using System.ComponentModel;
+using de.schumacher_bw.Strava.Endpoint;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -10,12 +16,15 @@ namespace FellrnrTrainingAnalysis
     {
         private Model.Database Database { get; set; }
 
+        UI.Goals GoalsUI { get; set; }
 
+        FilterActivities FilterActivities = new FilterActivities(); //the default filter
 
+        private UI.ProgressDialog ProgressDialog = new UI.ProgressDialog();
 
         public FellrnrTrainingAnalysisForm(bool StravaSync, bool email, bool batch)
         {
-            Logging.Instance.Enter("FellrnrTrainingAnalysisForm");
+            Logging.Instance.TraceEntry("FellrnrTrainingAnalysisForm");
             //TODO: consider using http://dockpanelsuite.com/
             InitializeComponent();
             Options.LoadConfig();
@@ -41,7 +50,7 @@ namespace FellrnrTrainingAnalysis
             activityReport1.UpdateViews += UpdateViewsEventHandler;
 
             //Model.Goal.test();
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void AddDataQualityMenus()
@@ -78,11 +87,6 @@ namespace FellrnrTrainingAnalysis
         }
 
 
-        UI.Goals GoalsUI { get; set; }
-
-        FilterActivities FilterActivities = new FilterActivities(); //the default filter
-
-
         public void CallbackEventHandler(FilterActivities filterActivities)
         {
             FilterActivities = filterActivities;
@@ -91,7 +95,8 @@ namespace FellrnrTrainingAnalysis
 
         private void UpdateViews(bool force)
         {
-            Logging.Instance.Enter("UpdateViews");
+            Logging.Instance.TraceEntry("UpdateViews");
+            //if(force) { progressBar1.Minimum = 0; progressBar1.Maximum = Database.CurrentAthlete.Activities.Count; }
             Database.MasterRecalculate(force);
 
             UpdateSummary();
@@ -109,24 +114,24 @@ namespace FellrnrTrainingAnalysis
                 showErrorsToolStripMenuItem.Enabled = true;
                 showErrorsToolStripMenuItem.ForeColor = Color.Red;
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void UpdateGoals()
         {
-            Logging.Instance.Enter("UpdateGoals");
+            Logging.Instance.TraceEntry("UpdateGoals");
             GoalsUI.UpdateGoalsText();
             GoalsUI.UpdateGoalsGrid();
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
         private void UpdateSummary()
         {
-            Logging.Instance.Enter("UpdateSummary");
+            Logging.Instance.TraceEntry("UpdateSummary");
             StringBuilder sb = new StringBuilder();
             sb.Append(string.Format("A total of {0} athletes loaded\r\n", Database.Athletes.Count));
             sb.Append(Database.CurrentAthlete);
             summaryTextBox.Text = sb.ToString();
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void SetMenuAvailability()
@@ -165,18 +170,6 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
-        private void LoadFromStravaCsv(string filePath)
-        {
-            Logging.Instance.Enter("LoadFromStravaCsv");
-
-            Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
-            int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database);
-            UpdateViews(true);
-
-            Logging.Instance.Leave();
-
-            MessageBox.Show($"Loaded {count} activities from archive");
-        }
 
         private void FellrnrTrainingAnalysis_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -209,7 +202,7 @@ namespace FellrnrTrainingAnalysis
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Database.SaveToFile();
+            Database.SaveToMemoryPackFile();
         }
 
 
@@ -221,7 +214,7 @@ namespace FellrnrTrainingAnalysis
 
         private void ExitApp(bool force)
         {
-            Database.SaveToFile();
+            Database.SaveToMemoryPackFile();
             Options.SaveConfig();
             ActivityDatumMetadata.WriteToCsv();
             DataStreamDefinition.WriteToCsv();
@@ -245,6 +238,8 @@ namespace FellrnrTrainingAnalysis
 
         }
 
+
+        //TODO: Load bin or memory map files doesn't work (does nothing)
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -261,7 +256,7 @@ namespace FellrnrTrainingAnalysis
                     //Get the path of specified file
                     var filePath = openFileDialog.FileName;
 
-                    Database.LoadFromFile(filePath);
+                    Database = Database.LoadFromMemoryMapFile(filePath);
                     //Database.LoadFromMemoryMapFile(filePath);
                 }
             }
@@ -273,7 +268,7 @@ namespace FellrnrTrainingAnalysis
             {
                 string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
                 saveFileDialog.InitialDirectory = folder;
-                saveFileDialog.Filter = "*.bin|*.bin|All files (*.*)|*.*";
+                saveFileDialog.Filter = "*.bin_mp|*.bin_mp|All files (*.*)|*.*";
                 saveFileDialog.FilterIndex = 1;
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
@@ -281,7 +276,7 @@ namespace FellrnrTrainingAnalysis
                     //Get the path of specified file
                     var filePath = saveFileDialog.FileName;
 
-                    Database.SaveToFile(filePath);
+                    Database.SaveToMemoryPack(filePath);
                 }
 
             }
@@ -378,7 +373,7 @@ namespace FellrnrTrainingAnalysis
 
             FilterActivities.Filters.Remove(aFilterBadData);
 
-            foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
+            foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByLocalDateTime)
             {
                 Activity activity = kvp.Value;
 
@@ -395,6 +390,7 @@ namespace FellrnrTrainingAnalysis
             DataQualityCheck dataQualityCheck = (DataQualityCheck)toolStripMenuItem.Tag;
             rescanForDataQualityIssues(dataQualityCheck);
 
+            //TODO: this doesn't add the bad data filter to the filter dialog
             FilterActivities.Filters.Clear();
             FilterActivities.Filters.Add(aFilterBadData);
             UpdateViews(false);
@@ -450,6 +446,211 @@ namespace FellrnrTrainingAnalysis
         {
             GoalsUI.SendGoals();
         }
+
+        private void openBinDatabaseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                openFileDialog.InitialDirectory = folder;
+                openFileDialog.Filter = "*.bin|*.bin|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 1;
+                openFileDialog.ReadOnlyChecked = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    var filePath = openFileDialog.FileName;
+
+                    Database = Database.LoadFromBinaryFile(filePath);
+                    //Database.LoadFromMemoryMapFile(filePath);
+                }
+            }
+
+        }
+
+        private void saveAsBinDatabaseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                saveFileDialog.InitialDirectory = folder;
+                saveFileDialog.Filter = "*.bin|*.bin|All files (*.*)|*.*";
+                saveFileDialog.FilterIndex = 1;
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    var filePath = saveFileDialog.FileName;
+
+                    Database.SaveToBinaryFile(filePath);
+                }
+
+            }
+        }
+
+        private class WeightData
+        {
+            public DateTime Date { get; set; }
+            public float Recorded { get; set; }
+        }
+        private void loadWeightDataToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                openFileDialog.InitialDirectory = folder;
+                openFileDialog.Filter = "*.csv|*.csv|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 1;
+                openFileDialog.ReadOnlyChecked = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    var filePath = openFileDialog.FileName;
+                    using (var reader = new StreamReader(filePath))
+                    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                    {
+                        var records = csv.GetRecords<WeightData>();
+                        foreach (var record in records)
+                        {
+                            DateTime date = record.Date;
+                            float weight = record.Recorded;
+
+                            Model.Day day = Database.CurrentAthlete.GetOrAddDay(date);
+                            day.AddOrReplaceDatum(new TypedDatum<float>(Model.Day.WeightTag, true, weight));
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabControl1.SelectedTab == activityTreeTabPage)
+            {
+                activityTree1.ShowNow(Database);
+
+            }
+        }
+
+        private void verifyAgainstFitlogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Fitlog fitlog = new Fitlog();
+            //string filePath = @"C:\Users\jfsav\OneDrive\Jonathan\FitLog From SportTracks\Jonathan-2015.fitlog";
+            //fitlog.ReadFitlog(filePath);
+
+            string filePath = @"C:\Users\jfsav\OneDrive\Jonathan\FitLog From SportTracks";
+            fitlog.ReadFitlogFolder(filePath);
+            
+            fitlog.Verify(Database.CurrentAthlete);
+            LargeTextDialogForm large = new LargeTextDialogForm(fitlog.Results);
+            large.ShowDialog();
+
+            /*
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                //string folder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                //openFileDialog.InitialDirectory = folder;
+                openFileDialog.Filter = "*.fitlog|*.fitlog|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 1;
+                openFileDialog.ReadOnlyChecked = true;
+                //openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    var filePath = openFileDialog.FileName;
+                    Fitlog fitlog = new Fitlog();
+                    fitlog.ReadFitlog(filePath, Database.CurrentAthlete);
+                    LargeTextDialogForm large = new LargeTextDialogForm(fitlog.Results);
+                    large.ShowDialog();
+                }
+            }
+            */
+
+        }
+
+        private void updateFromFitlogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Fitlog fitlog = new Fitlog();
+            fitlog.FixFromFitlog(Database.CurrentAthlete);
+        }
+
+
+        //Async Load Strava CSV
+        //                                    _                     _    _____ _                           _____  _______      __
+        //       /\                          | |                   | |  / ____| |                         / ____|/ ____\ \    / /
+        //      /  \   ___ _   _ _ __   ___  | |     ___   __ _  __| | | (___ | |_ _ __ __ ___   ____ _  | |    | (___  \ \  / / 
+        //     / /\ \ / __| | | | '_ \ / __| | |    / _ \ / _` |/ _` |  \___ \| __| '__/ _` \ \ / / _` | | |     \___ \  \ \/ /  
+        //    / ____ \\__ \ |_| | | | | (__  | |___| (_) | (_| | (_| |  ____) | |_| | | (_| |\ V / (_| | | |____ ____) |  \  /   
+        //   /_/    \_\___/\__, |_| |_|\___| |______\___/ \__,_|\__,_| |_____/ \__|_|  \__,_| \_/ \__,_|  \_____|_____/    \/    
+        //                  __/ |                                                                                                
+        //                 |___/                                                                                                 
+
+        private void loadStravaCsvBackgroundWorker_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        {
+            string filePath = (string)e.Argument!;
+            BackgroundWorker worker = (BackgroundWorker)sender!;
+
+            Logging.Instance.TraceEntry("loadStravaCsvBackgroundWorker_DoWork");
+
+
+            Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
+            int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database, worker);
+
+            Database.MasterRecalculate(true, worker);
+
+            Logging.Instance.TraceLeave();
+
+            e.Result = count;
+        }
+
+        private void loadStravaCsvBackgroundWorker_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
+        {
+            if(e.UserState != null && e.UserState is Misc.ProgressReport)
+            {
+                Misc.ProgressReport progress = (Misc.ProgressReport)e.UserState;
+                ProgressDialog.TaskName = progress.TaskName;
+                ProgressDialog.Maximum = progress.Maximum;
+            }
+            ProgressDialog.Progress = e.ProgressPercentage;
+        }
+
+        private void loadStravaCsvBackgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        {
+            UpdateViews(false); //has to be done in this thread
+            ProgressDialog.Hide();
+            if (e.Result != null)
+            {
+                int count = (int)e.Result;
+                MessageBox.Show($"Loaded {count} activities from archive");
+            }
+
+        }
+
+        private void LoadFromStravaCsv(string filePath)
+        {
+            ProgressDialog.Progress = 0;
+            ProgressDialog.TaskName = "Load FIT Files";
+            ProgressDialog.ShowMe();
+
+
+            loadStravaCsvBackgroundWorker.RunWorkerAsync(filePath);
+
+            //Logging.Instance.TraceEntry("LoadFromStravaCsv");
+
+            //Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
+            //int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database, ProgressDialog);
+
+            //UpdateViews(true);
+
+            //Logging.Instance.TraceLeave();
+
+            //MessageBox.Show($"Loaded {count} activities from archive");
+        }
+
     }
 
 }

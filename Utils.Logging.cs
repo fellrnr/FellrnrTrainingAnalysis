@@ -30,7 +30,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public void StartResetTimer(string name = "") { Timer(name).Reset(); Timer(name).Start(); }
 
-        public void Enter(string name, bool announce = true)
+        public void TraceEntry(string name, bool announce = true)
         {
             depth++;
             StartResetTimer(name);
@@ -38,7 +38,7 @@ namespace FellrnrTrainingAnalysis.Utils
             names.Push(name);
         }
 
-        public void Leave()
+        public void TraceLeave()
         {
             string name = names.Pop();
             TimeSpan ts = Logging.Instance.GetAndResetTime(name);

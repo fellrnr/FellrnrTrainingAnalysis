@@ -20,8 +20,10 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
 
-        public override Tuple<uint[], float[]>? GetData()
+        public override Tuple<uint[], float[]>? CalculateData()
         {
+            if(Parent == null) {  return null; }
+
             ReadOnlyDictionary<string, DataStreamBase> timeSeries = Parent.TimeSeries;
             string distanceField = RequiredFields[0];
             DataStreamBase distanceStream = timeSeries[distanceField];
@@ -63,7 +65,7 @@ namespace FellrnrTrainingAnalysis.Model
                 }
                 else
                 {
-                    Logging.Instance.Error($"GradeAdjustedDistance: distance {distanceData.Item1.Length} points and altitude {altitudeData.Item1.Length} points for activity {Parent.PrimaryKey()} from {Parent.StartDateTime} for data stream {Name} ");
+                    Logging.Instance.Error($"GradeAdjustedDistance: distance {distanceData.Item1.Length} points and altitude {altitudeData.Item1.Length} points for activity {Parent}for data");
                     return distanceData; //default to returning the raw distance data, otherwise the data isn't counted at all. 
                 }
             }
@@ -78,7 +80,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public override void Recalculate(bool force) { return; }
+        
 
     }
 }

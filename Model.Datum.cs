@@ -19,6 +19,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackInclude]
         public bool Recorded { get; set; }
+
+        public abstract string ToDebugString();
     }
 
     [MemoryPackable]
@@ -29,11 +31,15 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Data = data;
         }
+
         /// Override ToString() for display
         public override string ToString()
         {
             return Data == null ? "null" : Data.ToString()!;
         }
+
+        public override string ToDebugString() { return $"Name {Name.Replace("\n", "⏎")}, Value {this}"; }
+
 
         [MemoryPackInclude]
         public T Data { get; set; }

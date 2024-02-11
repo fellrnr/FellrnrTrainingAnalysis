@@ -6,6 +6,7 @@ using System.Text.Json;
 using MemoryPack;
 using de.schumacher_bw.Strava.Endpoint;
 using System;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -24,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         [MemoryPackInclude]
-        public Dictionary<string, Athlete> Athletes { get; private set; }
+        public Dictionary<string, Athlete> Athletes { get; set; }
 
         [MemoryPackInclude]
         public List<Hill>? Hills { get; set; } = null;
@@ -32,15 +33,17 @@ namespace FellrnrTrainingAnalysis.Model
 
         static bool ForceHillsOnce = false; //useful for debugging hill problems
 
+        [MemoryPackIgnore]
+        protected int LastForceCount = 0;
 
 
         //reapply the dynamic components, currently dyanamic data streams and goals
-        public void MasterRecalculate(bool force)
+        public void MasterRecalculate(bool force, BackgroundWorker? worker = null)
         {
             Logging.Instance.StartResetTimer("MasterRecalculate");
             bool forceHills = (ForceHillsOnce || force);
             ForceHillsOnce = false;
-
+            int forceCount = force ? LastForceCount +1 : LastForceCount;
 
             if (Hills == null || Hills.Count == 0 || forceHills)
             {
@@ -51,7 +54,7 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string,Athlete> kvp in Athletes)
             {
                 Athlete athlete = kvp.Value;
-                athlete.Recalculate(force);
+                athlete.Recalculate(forceCount, false);
 
                 Logging.Instance.StartResetTimer();
             }
@@ -65,10 +68,13 @@ namespace FellrnrTrainingAnalysis.Model
             //        hill.Climbed = new List<Activity>();
             //    }
             //}
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
+            int i = 0;
             foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
             {
                 Activity activity = kvp.Value;
                 activity.RecalculateHills(Hills, forceHills, false);
+                if (worker != null) worker.ReportProgress(++i);
             }
 
             if (forceHills && Options.Instance.LogLevel == Options.Level.Debug)
@@ -109,32 +115,17 @@ namespace FellrnrTrainingAnalysis.Model
 
         private const string DatabaseSerializedName = "Database.bin";
         private const string DatabaseSerializedNameMP = "Database.bin_mp";
-        public void SaveToFile()
-        {
-            SaveToBinaryFile();
-            SaveToMemoryPackFile();
-        }
 
-        private void SaveToBinaryFile()
-        {
-            string path = Path.Combine(AppDataPath, DatabaseSerializedName);
-            SaveToBinaryFile(path);
-        }
-        private void SaveToMemoryPackFile()
+        public void SaveToMemoryPackFile()
         {
             string path = Path.Combine(AppDataPath, DatabaseSerializedNameMP);
             SaveToMemoryPack(path);
         }
 
-        public void SaveToFile(string path)
+ 
+        public void SaveToBinaryFile(string path)
         {
-            //SaveToBinaryFile(path);
-            SaveToMemoryPack(path);
-        }
-
-        private void SaveToBinaryFile(string path)
-        {
-            Logging.Instance.Enter("Database.SaveToFile");
+            Logging.Instance.TraceEntry("Database.SaveToFile");
 
             if (File.Exists(path))
             {
@@ -166,13 +157,13 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                 }
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
 
         }
 
-        private void SaveToMemoryPack(string path)
+        public  void SaveToMemoryPack(string path)
         {
-            Logging.Instance.Enter("Database.SaveToMemoryPack");
+            Logging.Instance.TraceEntry("Database.SaveToMemoryPack");
 
             if (File.Exists(path))
             {
@@ -201,7 +192,7 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                 }
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
 
         }
         public void PostDeserialize()
@@ -222,17 +213,6 @@ namespace FellrnrTrainingAnalysis.Model
             //return LoadFromBinaryFile();
         }
 
-        private static Database LoadFromBinaryFile()
-        {
-            string path = Path.Combine(AppDataPath, DatabaseSerializedName);
-
-            if (!File.Exists(path))
-            {
-                return new Database();
-            }
-            return LoadFromBinaryFile(path);
-        }
-
         private static Database LoadFromMemoryMapFile()
         {
             string path = Path.Combine(AppDataPath, DatabaseSerializedNameMP);
@@ -244,11 +224,7 @@ namespace FellrnrTrainingAnalysis.Model
             return LoadFromMemoryMapFile(path);
         }
 
-        public static Database LoadFromFile(string path)
-        {
-            return LoadFromBinaryFile(path);
-        }
-        private static Database LoadFromBinaryFile(string path)
+        public static Database LoadFromBinaryFile(string path)
         {
 
             Stopwatch deserialize = new Stopwatch();
@@ -285,7 +261,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        private static Database LoadFromMemoryMapFile(string path)
+        public static Database LoadFromMemoryMapFile(string path)
         {
 
             Stopwatch deserialize = new Stopwatch();

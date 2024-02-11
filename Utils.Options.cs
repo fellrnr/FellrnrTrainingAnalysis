@@ -199,12 +199,29 @@ namespace FellrnrTrainingAnalysis.Utils
         //   |_|    |_| |_|\__, |___/_|\___/|_|\___/ \__, |_|\___\__,_|_| |_|  |_|\___|\__|_|  |_|\___|___/
         //                  __/ |                     __/ |                                                
         //                 |___/                     |___/                                                 
-        [Description("Critical Power in Watts")]
-        public int CriticalPower { get; set; } = 250;
+        [Description("Starting point (in the absense of daily values) for Critical Power in Watts")]
+        public int StartingCriticalPower { get; set; } = 250;
 
-        [Description("Max Heart Rate")]
-        public int MaxHeartRate { get; set; } = 174;
+        [Description("Starting point (in the absense of daily values) for Max Heart Rate")]
+        public int StartingMaxHeartRate { get; set; } = 174;
+
+        [Description("Starting point (in the absense of daily values) for Resting Heart Rate")]
+        public int StartingRestingHeartRate { get; set; } = 40;
+
+        [Description("Starting point (in the absense of daily values) for Weight (Kg)")]
+        public float StartingWeight { get; set; } = 60.0f;
 
 
+        //    _____  _           _             
+        //   |  __ \(_)         | |            
+        //   | |  | |_ ___ _ __ | | __ _ _   _ 
+        //   | |  | | / __| '_ \| |/ _` | | | |
+        //   | |__| | \__ \ |_) | | (_| | |_| |
+        //   |_____/|_|___/ .__/|_|\__,_|\__, |
+        //                | |             __/ |
+        //                |_|            |___/ 
+
+        [Description("Seperate Activity Graphs rather than overlaying them")]
+        public bool SpaceOutActivityGraphs { get; set; } = false;
     }
 }

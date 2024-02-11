@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -23,7 +24,7 @@ namespace FellrnrTrainingAnalysis.Model
         public override Utils.DateTimeTree Id() { return DateTimeTree; } //Hack to see if tree works
 
         [MemoryPackInclude]
-        public Utils.DateTimeTree DateTimeTree { get; }
+        public Utils.DateTimeTree DateTimeTree { get; set;  } //setter for MemoryPack
 
         //public string DisplayString { get { return string.Format(DateFormat, DateTime); } }
 
@@ -35,7 +36,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddChild(DateTime date, Extensible child)
         {
-            _children.Add(date, child);
+            if (!_children.ContainsKey(date))
+            {
+                _children.Add(date, child);
+            }
         }
 
         public bool HasChild(DateTime date)
@@ -44,10 +48,13 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
 
-        public override void Recalculate(bool force)
+        public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
+            bool force = false;
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
-            base.Recalculate(force);
+            if (force)
+                base.Clean();
 
             //recalculate each field of the calendar node to reflect the underlying children
 

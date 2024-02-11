@@ -2,11 +2,11 @@
 
 namespace FellrnrTrainingAnalysis.Model
 {
-    public abstract class CalculateDataFieldFromDataStreamBase : ICalculateField
+    public abstract class CalculateDataFieldFromDataStreamBase : CalculateFieldBase
     {
         public CalculateDataFieldFromDataStreamBase(string activityFieldname, DataStreamBase ds)
         {
-            dataStream = ds;
+            SourceDataStream = ds;
             SourceStreamName = ds.Name;
             ActivityFieldname = activityFieldname;
         }
@@ -14,18 +14,18 @@ namespace FellrnrTrainingAnalysis.Model
         public CalculateDataFieldFromDataStreamBase(string activityFieldname, string sourceStreamName)
         {
             SourceStreamName = sourceStreamName;
-            dataStream = null;
+            SourceDataStream = null;
             ActivityFieldname = activityFieldname;
         }
 
         private string SourceStreamName;
-        private DataStreamBase? dataStream = null;
+        private DataStreamBase? SourceDataStream = null;
 
 
         private DataStreamBase? DataStream(Activity activity)
         {
-            if (dataStream != null)
-                return dataStream;
+            if (SourceDataStream != null)
+                return SourceDataStream;
 
 
             if (!activity.TimeSeries.ContainsKey(SourceStreamName))
@@ -36,15 +36,20 @@ namespace FellrnrTrainingAnalysis.Model
 
         private Tuple<uint[], float[]>? GetUnderlyingDataStream(Activity parent)
         {
-            return DataStream(parent) == null ? null : DataStream(parent)!.GetData();
+            //calling DataStream(parent) does the computation,
+            DataStreamBase? dataStreamBase = DataStream(parent);
+            return dataStreamBase == null ? null : dataStreamBase!.GetData();
         }
 
 
         public string ActivityFieldname { get; set; }
 
 
-        public void Recalculate(Extensible extensible, bool force)
+        public override void Recalculate(Extensible extensible, int forceCount, bool forceJustMe)
         {
+            bool force = false;
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
+
             if (extensible == null || extensible is not Activity)
             {
                 return;
@@ -56,8 +61,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (DataStream(activity) == null)
                 return;
 
-            DataStream(activity)!.Recalculate(force);
-
+            DataStream(activity)!.Recalculate(forceCount, false);
 
             if (activity.HasNamedDatum(ActivityFieldname) && !force)
                 return;
@@ -77,6 +81,7 @@ namespace FellrnrTrainingAnalysis.Model
         protected abstract float ExtractValue(Tuple<uint[], float[]> data);
 
     }
+
     public class CalculateDataFieldFromDataStreamSimple : CalculateDataFieldFromDataStreamBase
     {
         public CalculateDataFieldFromDataStreamSimple(string activityFieldname, Mode extractionMode, DataStreamBase ds) : base(activityFieldname, ds)
@@ -110,6 +115,62 @@ namespace FellrnrTrainingAnalysis.Model
                 value = data.Item2.Min();
             }
             return value;
+        }
+    }
+    public class CalculateDataFieldFromDataStreamThreashold : CalculateDataFieldFromDataStreamBase
+    {
+        public CalculateDataFieldFromDataStreamThreashold(string activityFieldname, Mode extractionMode, float threashold, DataStreamBase ds) : base(activityFieldname, ds)
+        {
+            ExtractionMode = extractionMode;
+            Threashold = threashold;
+        }
+        public CalculateDataFieldFromDataStreamThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName) : base(activityFieldname, sourceStreamName)
+        {
+            ExtractionMode = extractionMode;
+            Threashold = threashold;
+        }
+        public enum Mode { AboveAbs, BelowAbs, AbovePercent, BelowPercent }
+        Mode ExtractionMode { get; set; }
+
+        float Threashold {  get; set; }
+
+        protected override float ExtractValue(Tuple<uint[], float[]> data)
+        {
+            uint pastThreashold = 0;
+            uint lastTime = 0;
+            for (int i = 0; i < data.Item1.Length; i++)
+            {
+                uint thisTime = data.Item1[i] - lastTime;
+                float thisValue = data.Item2[i];
+                if (ExtractionMode == Mode.AboveAbs && thisValue > Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.BelowAbs && thisValue < Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.AbovePercent && thisValue > Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.BelowPercent && thisValue < Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+
+                lastTime = data.Item1[i];
+            }
+
+            if(ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
+            {
+                float percent = (pastThreashold * 100.0f) / ((float)lastTime);
+                return percent;
+            }
+            else
+            {
+                return pastThreashold;
+            }
         }
     }
 

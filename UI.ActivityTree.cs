@@ -24,9 +24,17 @@ namespace FellrnrTrainingAnalysis.UI
 
         }
 
+        private bool HasBeenShown = false;
+        public void ShowNow(Database database)
+        {
+            HasBeenShown = true;
+            Display(database);
+        }
+
         public void Display(Database database)
         {
-            Logging.Instance.Enter("ActivityTree.Display");
+            if(!HasBeenShown) { Logging.Instance.Debug("UI.ActivityTree.Display, !HasBeenShown, returning"); return;  }
+            Logging.Instance.TraceEntry("ActivityTree.Display");
             DataTreeListView dataTreeListView_debug = dataTreeListView; //make this a local to simplify debugging
 
 
@@ -44,7 +52,7 @@ namespace FellrnrTrainingAnalysis.UI
                 database.CurrentAthlete.CalendarTree.Count > 0 && 
                 database.CurrentAthlete.CalendarTree.First().Value.DataNames != null)
             {
-                Logging.Instance.Enter("ActivityTree.Display-datatable");
+                Logging.Instance.TraceEntry("ActivityTree.Display-datatable");
                 //gather the list of column names from the root calendar nodes
                 List<string> masterDataNames = new List<string>();
                 foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
@@ -74,8 +82,8 @@ namespace FellrnrTrainingAnalysis.UI
                 foreach (KeyValuePair<int, DataColumn> keyValuePair in keyValuePairs)
                     myTable.Columns.Add(keyValuePair.Value);
 
-                Logging.Instance.Leave();
-                Logging.Instance.Enter("ActivityTree.Display-tree");
+                Logging.Instance.TraceLeave();
+                Logging.Instance.TraceEntry("ActivityTree.Display-tree");
                 foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
                 {
                     CalendarNode calendarNode = kvp.Value;
@@ -87,8 +95,8 @@ namespace FellrnrTrainingAnalysis.UI
 
 
 
-                Logging.Instance.Leave();
-                Logging.Instance.Enter("ActivityTree.Display-view");
+                Logging.Instance.TraceLeave();
+                Logging.Instance.TraceEntry("ActivityTree.Display-view");
                 dataTreeListView.SuspendLayout();
 
 
@@ -133,9 +141,9 @@ namespace FellrnrTrainingAnalysis.UI
                 dataTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
 
                 dataTreeListView.ResumeLayout();
-                Logging.Instance.Leave();
+                Logging.Instance.TraceLeave();
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
 
         }
 

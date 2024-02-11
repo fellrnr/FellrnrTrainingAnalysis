@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using System.ComponentModel;
 using System.Formats.Asn1;
 
 namespace FellrnrTrainingAnalysis.Model
@@ -21,7 +22,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackInclude]
         [MemoryPackOrder(20)] //start at 20 to avoid conflict with Activity
-        protected Dictionary<string, Datum> Data { get; }
+        protected Dictionary<string, Datum> Data { get; set; }
 
         public abstract Utils.DateTimeTree Id(); //Hack to see if tree works
 
@@ -98,20 +99,27 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public virtual void Recalculate(bool force)
+        [MemoryPackIgnore]
+        protected int LastForceCount = 0;
+
+
+        public abstract void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null);
+
+        public void Recalculate(bool forceJustMe)
         {
-            if (force)
-            {
-                List<string> toDelete = new List<string>();
-                foreach (KeyValuePair<string, Datum> kvp in Data)
-                {
-                    if (!kvp.Value.Recorded)
-                        toDelete.Add(kvp.Key);
-                }
-                foreach (string s in toDelete)
-                    Data.Remove(s);
-            }
+            Recalculate(LastForceCount, forceJustMe);
         }
 
+        public void Clean()
+        {
+            List<string> toDelete = new List<string>();
+            foreach (KeyValuePair<string, Datum> kvp in Data)
+            {
+                if (!kvp.Value.Recorded)
+                    toDelete.Add(kvp.Key);
+            }
+            foreach (string s in toDelete)
+                Data.Remove(s);
+        }
     }
 }

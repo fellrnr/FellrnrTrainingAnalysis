@@ -4,6 +4,8 @@ using System.Globalization;
 using FellrnrTrainingAnalysis.Utils;
 using static FellrnrTrainingAnalysis.Model.ActivityDatumMapping;
 using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.UI;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -17,11 +19,11 @@ namespace FellrnrTrainingAnalysis.Action
         int CountBadFiles = 0;
         int CountActivitiesWithoutFilename = 0;
 
-        public int LoadFromStravaArchive(string profileCsvPath, Database database)
+        public int LoadFromStravaArchive(string profileCsvPath, Database database, BackgroundWorker worker)
         {
             LoadAthletesFromStravaArchive(profileCsvPath, database);
 
-            int count = LoadActivitiesFromStravaArchive(profileCsvPath, database);
+            int count = LoadActivitiesFromStravaArchive(profileCsvPath, database, worker);
             
             return count;
         }
@@ -43,7 +45,7 @@ namespace FellrnrTrainingAnalysis.Action
             }
             Contract.Ensures(database.Athletes.Count > 0);
         }
-        private int LoadActivitiesFromStravaArchive(string profileCsvPath, Database database)
+        private int LoadActivitiesFromStravaArchive(string profileCsvPath, Database database, BackgroundWorker worker)
         {
             string activitiesCsvPath = Path.GetDirectoryName(profileCsvPath) + "\\activities.csv";
 
@@ -60,7 +62,7 @@ namespace FellrnrTrainingAnalysis.Action
                 }
                 else
                 {
-                    Activity? activity = database.CurrentAthlete.AddOrUpdateActivity(activityRow);
+                    Activity? activity = database.CurrentAthlete.InitialAddOrUpdateActivity(activityRow);
                     if (activity != null)
                     {
                         activities.Add(activity);
@@ -71,11 +73,14 @@ namespace FellrnrTrainingAnalysis.Action
             //load the detailed activity data (from FIT, etc.)
             Logging.Instance.Log(string.Format("Total of {0} activities to process", activities.Count));
             FitReader.ClearSummaryErrors(); //HACK diagnostics using static variables
+            int i = 0;
+            worker.ReportProgress(0, new Misc.ProgressReport($"Load FIT files ({activities.Count})", activities.Count));
             foreach (Activity activity in activities)
             {
                 LoadFromFile(activity, profileCsvPath);
+                database.CurrentAthlete.FinalizeAdd(activity);
+                worker.ReportProgress(i++);
             }
-
 
             if (CountActivitiesWithoutFilename > 0 || CountBadFiles > 0)
             {
@@ -95,7 +100,7 @@ namespace FellrnrTrainingAnalysis.Action
 
         private void LoadFromFile(Activity activity, string profileCsvPath)
         {
-            System.DateTime? activityDateTime = activity.StartDateTime;
+            System.DateTime? activityDateTime = activity.StartDateTimeLocal;
             if (activityDateTime != null && Options.Instance.OnlyLoadAfter != null && Options.Instance.OnlyLoadAfter >= activityDateTime)
             {
                 Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", activityDateTime, Options.Instance.OnlyLoadAfter));
@@ -127,8 +132,11 @@ namespace FellrnrTrainingAnalysis.Action
             if (filepath.ToLower().EndsWith(".fit") || filepath.ToLower().EndsWith(".fit.gz"))
             {
                 FitReader fitReader = new FitReader(activity);
-
-                fitReader.ReadFitFromStravaArchive();
+                try
+                {
+                    fitReader.ReadFitFromStravaArchive();
+                }
+                catch(Exception e) { Logging.Instance.Debug($"Exception thrown reading FIT file {filepath}, {e}"); }
                 CountFitFiles++;
             }
             else if (filepath.ToLower().EndsWith(".gpx") || filepath.ToLower().EndsWith(".gpx.gz"))
@@ -141,7 +149,7 @@ namespace FellrnrTrainingAnalysis.Action
             else
             { 
                 if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
-                    Logging.Instance.Debug("Activity file is not FIT " + filepath);
+                    Logging.Instance.Debug("Activity file is not recognized type " + filepath);
                 CountBadFiles++;
                 return;
             }

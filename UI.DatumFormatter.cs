@@ -11,18 +11,23 @@ namespace FellrnrTrainingAnalysis.UI
             if(Utils.Options.Instance.DebugAddRawDataToGrids)
             {
                 if (datum == null) 
-                { 
-                    retval += " (datum null)"; 
+                {
+                    retval += " dnull";
+                    //retval += " (datum null)"; 
                 }
                 else if(activityDatumMetadata == null)
                 {
-                    retval += " (meta null)";
+                    retval += " mnull";
+                    //retval += " (meta null)";
                 }
                 else
                 {
-                    retval += $" [{datum}]";
+                    retval = $"Raw:{datum}/F:{retval}";
+                    //retval += $" raw:{datum}";
+                    //retval += $" [{datum}]";
                 }
             }
+            //retval += " tst";
             return retval;
         }
 
@@ -36,77 +41,51 @@ namespace FellrnrTrainingAnalysis.UI
             if (datum == null) { return "";  }
             if(activityDatumMetadata == null) { return datum.ToString()!; }
 
-            switch(activityDatumMetadata.DisplayUnits)
+            float value = 0;
+
+            switch (activityDatumMetadata.DisplayUnits)
             {
                 case ActivityDatumMetadata.DisplayUnitsType.Meters:
-                    return FormatFloat(datum, "{0:#,0} m", 1.0f);
                 case ActivityDatumMetadata.DisplayUnitsType.Kilometers:
-                    return FormatFloat(datum, "{0:#,0.0} Km", 1.0f / 1000.0f);
                 case ActivityDatumMetadata.DisplayUnitsType.Pace:
-                    return FormatPace(datum);
                 case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
-                    return FormatTime(datum);
+                case ActivityDatumMetadata.DisplayUnitsType.Integer:
+                case ActivityDatumMetadata.DisplayUnitsType.Percent:
+                    if (datum is not TypedDatum<float>) { return ""; }
+
+                    TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
+                    value = floatDatum.Data;
+                    break;
+                case ActivityDatumMetadata.DisplayUnitsType.None:
+                case ActivityDatumMetadata.DisplayUnitsType.BPM:
+                    break;
+                default:
+                    return "";
+            }
+
+
+            switch (activityDatumMetadata.DisplayUnits)
+            {
+                case ActivityDatumMetadata.DisplayUnitsType.Meters:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0} m", 1.0f);
+                case ActivityDatumMetadata.DisplayUnitsType.Kilometers:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0.0} Km", 1.0f / 1000.0f);
+                case ActivityDatumMetadata.DisplayUnitsType.Pace:
+                    return Utils.Misc.FormatPace(value);
+                case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
+                    return Utils.Misc.FormatTime(value);
+                case ActivityDatumMetadata.DisplayUnitsType.Integer:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0}", 1.0f);
+                case ActivityDatumMetadata.DisplayUnitsType.Percent:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0}%", 1.0f);
                 case ActivityDatumMetadata.DisplayUnitsType.None:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     return datum.ToString()!;
-                case ActivityDatumMetadata.DisplayUnitsType.Integer:
-                    return FormatFloat(datum, "{0:#,0}", 1.0f);
                 default:
                     return "";
             }
         }
 
-        private static string FormatFloat(Datum datum, string format, float mulitplier)
-        {
-            if(datum is not TypedDatum<float>) { return ""; }
-
-            TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
-            float value = floatDatum.Data;
-            value = value * mulitplier;
-            return string.Format(format, value);
-        }
-
-        //pace is in 
-        private static string FormatPace(Datum datum)
-        {
-            if (datum is not TypedDatum<float>) { return ""; }
-
-            TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
-            float metersPerSecond = floatDatum.Data;
-            float minutesPerKm = 16.666666667f / metersPerSecond; //https://www.aqua-calc.com/convert/speed/meter-per-second-to-minute-per-kilometer
-            float secondsPerKm = minutesPerKm * 60;
-            return FormatTime(secondsPerKm);
-
-        }
-
-        private static string FormatTime(Datum datum)
-        {
-            if (datum is not TypedDatum<float>) { return ""; }
-
-            TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
-            float value = floatDatum.Data;
-            return FormatTime(value);
-
-        }
-
-        private static string FormatTime(float totalSeconds)
-        {
-            float secInHour = 60 * 60;
-            float hours = (float)Math.Floor(totalSeconds / secInHour);
-            float remainder = totalSeconds % secInHour;
-            float secInMin = 60;
-            float mins = (float)Math.Floor(remainder / secInMin);
-            float secs = remainder % secInMin;
-
-            if (hours > 0)
-            {
-                return string.Format("{0}:{1:00}:{2:00}", hours, mins, secs);
-            }
-            else
-            {
-                return string.Format("{0}:{1:00}", mins, secs);
-            }
-        }
 
         public static bool RightJustify(ActivityDatumMetadata activityDatumMetadata) //no datum as we're doing this for the column, not the cell
         {
@@ -120,6 +99,7 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.TimeSpan:
                 case ActivityDatumMetadata.DisplayUnitsType.Integer:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
+                case ActivityDatumMetadata.DisplayUnitsType.Percent:
                     return true;
                 case ActivityDatumMetadata.DisplayUnitsType.None:
                 default:

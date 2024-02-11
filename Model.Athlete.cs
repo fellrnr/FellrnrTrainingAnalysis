@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
+using de.schumacher_bw.Strava.Endpoint;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -22,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public ReadOnlyDictionary<DateTime, Day> Days { get { return _days.AsReadOnly(); } }
 
-        private Day GetOrAddDay(DateTime date)
+        public Day GetOrAddDay(DateTime date)
         {
             DateTime dateNoTime = date.Date; //just in case
             if(!_days.ContainsKey(dateNoTime))
@@ -30,6 +33,37 @@ namespace FellrnrTrainingAnalysis.Model
             return _days[dateNoTime];
         }
 
+        //look for the given date and work backwards to find one with a datum with the name provided
+        public Day? FindRecentDayWithDatum(DateTime date, string name)
+        {
+            DateTime dateNoTime = date.Date; //just in case
+
+            //lets see if we're lucky
+            if(Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name)) 
+                return Days[dateNoTime];
+            DateTime start = Days.Keys.First();
+            while(dateNoTime > start)
+            {
+                dateNoTime = dateNoTime.AddDays(-1);
+
+                if (Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name))
+                    return Days[dateNoTime];
+            }
+            return null;
+        }
+
+        public float FindDailyValueOrDefault(DateTime dateNoTime, string tag, float defaultValue)
+        {
+            Day? dayWithTag = this.FindRecentDayWithDatum(dateNoTime, tag);
+            float? retval = null;
+            if (dayWithTag != null)
+            {
+                retval = dayWithTag.GetNamedFloatDatum(Day.WeightTag);
+            }
+            if (retval == null) { retval = defaultValue; }
+
+            return retval.Value;
+        }
 
         [MemoryPackInclude]
         private SortedList<DateTime, CalendarNode> _calendarTree { get; set; }
@@ -47,10 +81,16 @@ namespace FellrnrTrainingAnalysis.Model
         public override Utils.DateTimeTree Id() { return new DateTimeTree(); } //HACK: Hack to see if tree works
 
         [MemoryPackInclude]
-        private SortedDictionary<DateTime, Activity> _activitiesByDateTime { get; set; } = new SortedDictionary<DateTime, Activity>(); //we sometimes need to access activities in date order
+        private SortedDictionary<DateTime, Activity> _activitiesByUTCDateTime { get; set; } = new SortedDictionary<DateTime, Activity>(); //we sometimes need to access activities in date order
+
+        [MemoryPackInclude]
+        private SortedDictionary<DateTime, Activity> _activitiesByLocalDateTime { get; set; } = new SortedDictionary<DateTime, Activity>(); //we sometimes need to access activities in date order
 
         [MemoryPackIgnore]
-        public ReadOnlyDictionary<DateTime, Activity> ActivitiesByDateTime { get { return _activitiesByDateTime.AsReadOnly(); } }
+        public ReadOnlyDictionary<DateTime, Activity> ActivitiesByLocalDateTime { get { return _activitiesByLocalDateTime.AsReadOnly(); } }
+
+        [MemoryPackIgnore]
+        public ReadOnlyDictionary<DateTime, Activity> ActivitiesByUTCDateTime { get { return _activitiesByUTCDateTime.AsReadOnly(); } }
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> AllTimeSeriesNames //generate dynamically, don't cache = new List<string>();
@@ -142,7 +182,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
 
-        public Activity? AddOrUpdateActivity(Dictionary<string, Datum> activityData)
+        public Activity? InitialAddOrUpdateActivity(Dictionary<string, Datum> activityData)
         {
             if (activityData == null || !Activity.WillBeValid(activityData))
             {
@@ -170,22 +210,37 @@ namespace FellrnrTrainingAnalysis.Model
                 _activities.Add(stravaId, activity);
 
                 //if we had to add the activity to _activities, we have to add it everywhere else too
-                AddActivityToCalenderTree(activity);
-                DateTime? startDateTime = activity.StartDateTime;
-                if(startDateTime.HasValue)
-                {
-                    _activitiesByDateTime.Add(startDateTime.Value, activity);
-                    Day day = GetOrAddDay(startDateTime.Value.Date);
-                    day.AddActivity(activity);
-                }
+                //but we can't because we might not have local time, so do it in finalize Add
 
                 return activity;
             }
         }
 
+        public void FinalizeAdd(Activity activity)
+        {
+            //if we had to add the activity to _activities, we have to add it everywhere else too
+            //Without a start date/time, things don't appear in the display
+            if (!activity.StartDateTimeUTC.HasValue)
+            {
+                Logging.Instance.Error($"Activity {activity} without startDateTime");
+                return;
+            }
+            if (!activity.StartDateTimeLocal.HasValue)
+            {
+                activity.StartDateTimeLocal = activity.StartDateTimeUTC; //default to UTC if no local time
+            }
+
+            AddActivityToCalenderTree(activity);
+            _activitiesByUTCDateTime.Add(activity.StartDateTimeUTC.Value, activity);
+            _activitiesByLocalDateTime.Add(activity.StartDateTimeLocal!.Value, activity);
+            Day day = GetOrAddDay(activity.StartDateTimeLocal.Value.Date);
+            day.AddActivity(activity);
+
+        }
+
         private void AddActivityToCalenderTree(Activity activity)
         {
-            DateTime? dt = activity.StartDateTime;
+            DateTime? dt = activity.StartDateTimeLocal;
             if (dt == null)
                 return;
             DateTime dateTimeOfActivity = dt.Value;
@@ -236,9 +291,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public DateTime? GetLatestActivityDateTime()
         {
-            if(_activitiesByDateTime.Count > 0)
+            if(_activitiesByUTCDateTime.Count > 0) //whatever's really the last
             {
-                return _activitiesByDateTime.Last().Key;
+                return _activitiesByUTCDateTime.Last().Key;
             }
             return null;
         }
@@ -318,14 +373,22 @@ namespace FellrnrTrainingAnalysis.Model
             return sb.ToString();
         }
 
-        public override void Recalculate(bool force)
+        public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
-            base.Recalculate(force);
+            bool force = false;
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
-            foreach(KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
+            if (force)
+            {
+                base.Clean();
+            }
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
+            int i = 0;
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
             {
                 CalendarNode calendarNode = kvp1.Value;
-                calendarNode.Recalculate(force); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
+                calendarNode.Recalculate(forceCount, forceJustMe); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
+                if (worker != null) worker.ReportProgress(++i);
             }
         }
 
@@ -335,7 +398,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             foreach (KeyValuePair<string, Activity> kvp in _activities)
             {
-                kvp.Value.PostDeserialize();
+                kvp.Value.PostDeserialize(this);
             }
         }
         public const string AthleteIdTag = "AthleteId";

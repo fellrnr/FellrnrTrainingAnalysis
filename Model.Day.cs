@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using FellrnrTrainingAnalysis.Utils;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -24,10 +25,23 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddActivity(Activity activity)
         {
-            if(_activities == null)
+            if (_activities == null)
                 _activities = new List<Activity>();
             _activities.Add(activity);
         }
+
+        public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
+        {
+            bool force = false;
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
+
+            if (force)
+                base.Clean();
+        }
+
+        public const string WeightTag = "Weight";
+        public const string RestingHeartRateTag = "Resting Heart Rate";
+
 
     }
 }

@@ -97,10 +97,13 @@ namespace FellrnrTrainingAnalysis.Action
                     DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.GetActivityById((long)stravaActivity.Id);
                     Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
                     Dictionary<string, Datum> activityDataFromProperties = ActivityDataFromProperties(detailedActivity);
-                    Activity? activity = database!.CurrentAthlete!.AddOrUpdateActivity(activityDataFromProperties);
+                    Activity? activity = database!.CurrentAthlete!.InitialAddOrUpdateActivity(activityDataFromProperties);
+                    
 
-                    if(activity != null)
+                    if (activity != null)
                     {
+                        database!.CurrentAthlete!.FinalizeAdd(activity);
+
                         //we had a null error on this call that went away the next morning. The activity had zeros in power, and seemed to be related to the power stream
                         //https://www.strava.com/activities/9398565924
                         //also see "Testing Strava API.docx" in OneDrive 
@@ -158,7 +161,7 @@ namespace FellrnrTrainingAnalysis.Action
                     {
                         if (detailedActivity.Description != updatableActivity.Description)
                             return false;
-                        TypedDatum<string> typedDatum = new TypedDatum<string>("Description", true, description);
+                        TypedDatum<string> typedDatum = new TypedDatum<string>(Activity.DescriptionTag, true, description);
                         activity.AddOrReplaceDatum(typedDatum);
                     }
                     return true;

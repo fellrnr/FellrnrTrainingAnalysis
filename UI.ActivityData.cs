@@ -2,6 +2,7 @@
 using FellrnrTrainingAnalysis.Utils;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Configuration;
 using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -48,7 +49,8 @@ namespace FellrnrTrainingAnalysis.UI
 
             AddRows(timeSeriesNames, TIMESERIES_POSTFIX);
 
-            tableLayoutPanel1.ResumeLayout();
+            tableLayoutPanel1.ResumeLayout(true);
+            //tableLayoutPanel1.PerformLayout();
             Logging.Instance.Log(string.Format("ActivityData.Initialize took {0}", Logging.Instance.GetAndResetTime("ActivityData.Initialize")));
         }
 
@@ -79,7 +81,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void DisplayActivity(Athlete athlete, Model.Activity? activity)
         {
-            Logging.Instance.Enter("UI.ActivityData.DisplayActivity");
+            Logging.Instance.TraceEntry("UI.ActivityData.DisplayActivity");
             tableLayoutPanel1.SuspendLayout();
             Initialize(athlete);
             foreach (KeyValuePair<string, Row> kvp in Rows)
@@ -93,6 +95,7 @@ namespace FellrnrTrainingAnalysis.UI
 
             if (activity == null)
             {
+                Logging.Instance.TraceLeave();
                 return;
             }
 
@@ -101,12 +104,12 @@ namespace FellrnrTrainingAnalysis.UI
             DisplayActivityTimeSeries(activity);
 
             tableLayoutPanel1.ResumeLayout();
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void DisplayActivityTimeSeries(Activity? activity)
         {
-            Logging.Instance.Enter("ActivityData.DisplayActivityTimeSeries");
+            Logging.Instance.TraceEntry("ActivityData.DisplayActivityTimeSeries");
             ReadOnlyDictionary<string, DataStreamBase> timeSeriesList = activity!.TimeSeries;
 
             foreach (KeyValuePair<string, DataStreamBase> kvp in timeSeriesList)
@@ -128,12 +131,12 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                 }
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void DisplayActivityDatum(Activity? activity)
         {
-            Logging.Instance.Enter("ActivityData.DisplayActivityDatum");
+            Logging.Instance.TraceEntry("ActivityData.DisplayActivityDatum");
             IReadOnlyCollection<Datum> data = activity!.DataValues;
 
             foreach (Datum datum in data)
@@ -148,14 +151,20 @@ namespace FellrnrTrainingAnalysis.UI
                     if (activityDatumMetadata != null)
                     {
                         row.Value.Text = DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldName), activityDatumMetadata);
+                        //row.Value.BackColor = Color.White;
                     }
                     else
                     {
-                        row.Value.Text = datum.ToString();
+                        string? val = datum.ToString();
+                        if (Utils.Options.Instance.DebugAddRawDataToGrids)
+                        {
+                            val += " [No Metadata]";
+                        }
+                        row.Value.Text = val;
                     }
                 }
             }
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
     }
 }

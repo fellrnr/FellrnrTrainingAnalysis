@@ -48,7 +48,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
             if (database == null || database.CurrentAthlete == null) { return badStreams; }
 
-            foreach (KeyValuePair<DateTime, Activity> kvp in database.CurrentAthlete.ActivitiesByDateTime)
+            foreach (KeyValuePair<DateTime, Activity> kvp in database.CurrentAthlete.ActivitiesByUTCDateTime)
             {
                 Activity activity = kvp.Value;
 
@@ -344,7 +344,7 @@ namespace FellrnrTrainingAnalysis.Utils
             }
             else
             {
-                convertedToDelta = Utils.TimeSeries.SpanDeltas(data, 1, null, null, (float)Period);
+                convertedToDelta = Utils.TimeSeries.SpanDeltas(data, 1, null, null, (float)Period, false);
             }
             if (convertedToDelta == null)
                 return null;

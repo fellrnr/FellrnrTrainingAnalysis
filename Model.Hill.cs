@@ -36,11 +36,11 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackInclude]
         [Name(" latitude")] //note leading space
-        public float Latitude { get; }
+        public float Latitude { get; set;  }
 
         [MemoryPackInclude]
         [Name(" longitude")] //note leading space
-        public float Longitude { get; }
+        public float Longitude { get; set; }
 
         [MemoryPackInclude]
         [Name(" metres")] //note leading space

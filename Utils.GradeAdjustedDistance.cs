@@ -4,18 +4,18 @@ namespace FellrnrTrainingAnalysis.Utils
 {
     public class GradeAdjustedDistance
     {
-        public GradeAdjustedDistance(Tuple<uint[], float[]> distances, Tuple<uint[], float[]> altitudes) 
+        public GradeAdjustedDistance(Tuple<uint[], float[]> distanceOrSpeed, Tuple<uint[], float[]> altitudes) 
         { 
-            this.Distances = distances;
+            this.DistanceOrSpeed = distanceOrSpeed;
             this.Altitudes = altitudes;
-            if (Distances.Item1.Length < 2)
+            if (DistanceOrSpeed.Item1.Length < 2)
                 throw new ArgumentException("need at least two distances to calculate GAP");
-            if (Distances.Item1.Length != altitudes.Item1.Length)
+            if (DistanceOrSpeed.Item1.Length != altitudes.Item1.Length)
                 throw new ArgumentException("distance and altitude must have the same number of entries");
 
             //calculate the initial deltas for distance and altitude
 
-            _distanceDeltas = CalculateDelta(Distances.Item2);
+            _distanceDeltas = CalculateDelta(DistanceOrSpeed.Item2);
 
             _altitudeDeltas = CalculateDelta(Altitudes.Item2);
 
@@ -36,7 +36,7 @@ namespace FellrnrTrainingAnalysis.Utils
             _gradeAdjustedDistance = CalculateGradeAdjustedDistance(_distanceDeltas, _costs);
         }
 
-        private Tuple<uint[], float[]> Distances { get; set; }
+        private Tuple<uint[], float[]> DistanceOrSpeed { get; set; }
         private Tuple<uint[], float[]> Altitudes { get; set; }
 
         private float[] _distanceDeltas;
@@ -48,7 +48,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public Tuple<uint[], float[]> GetGradeAdjustedDistance()
         {
-            Tuple<uint[], float[]> gradeAdjustedDistance = new Tuple<uint[], float[]>(Distances.Item1, _gradeAdjustedDistance);
+            Tuple<uint[], float[]> gradeAdjustedDistance = new Tuple<uint[], float[]>(DistanceOrSpeed.Item1, _gradeAdjustedDistance);
 
             return gradeAdjustedDistance; 
         }

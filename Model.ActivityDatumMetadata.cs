@@ -11,7 +11,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string Name { get; set; } = "";
         public string Title { get; set; } = "";
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, None }; //Integer is misc value
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, Percent, None }; //Integer is misc value
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 

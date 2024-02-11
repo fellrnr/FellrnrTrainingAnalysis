@@ -4,13 +4,14 @@ namespace FellrnrTrainingAnalysis.Model
 {
     [MemoryPackable]
     [Serializable]
-    public partial class DataStream : DataStreamBase
+    public partial class DataStreamRecorded : DataStreamBase
     {
         [MemoryPackConstructor]
-        private DataStream()
+        private DataStreamRecorded()
         {
+            Data = new Tuple<uint[], float[]>(new uint[0], new float[0]);
         }
-        public DataStream(string name, Tuple<uint[], float[]> data, Activity parent) : base(name, parent)
+        public DataStreamRecorded(string name, Tuple<uint[], float[]> data, Activity parent) : base(name, parent)
         {
             Data = data;
         }
@@ -31,7 +32,7 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity
-        public override void Recalculate(bool force) { return; }
+        public override void Recalculate(int forceCount, bool forceJustMe) { LastForceCount = forceCount; return; }
 
 
 

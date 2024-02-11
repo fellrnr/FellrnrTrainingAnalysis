@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.Model
 {
-    public abstract class CalculateFieldTRIMP : ICalculateField
+    public abstract class CalculateFieldTRIMP : CalculateFieldBase
     {
         protected CalculateFieldTRIMP(string fieldSubname)
         {
@@ -20,11 +20,5 @@ namespace FellrnrTrainingAnalysis.Model
 
         private string FieldName {  get { return FieldTRIMP + FieldSubname;  } }
 
-        public void Recalculate(Extensible extensible, bool force)
-        {
-            if(extensible.HasNamedDatum(FieldName) && !force) { return; }
-
-
-        }
     }
 }

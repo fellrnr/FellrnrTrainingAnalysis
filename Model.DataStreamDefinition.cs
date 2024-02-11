@@ -20,7 +20,26 @@ namespace FellrnrTrainingAnalysis.Model
 
         public int SmoothingWindow { get; set; } = 50;
 
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, None };
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, Integer, None };
+
+        public string Format(float value)
+        {
+            switch (DisplayUnits)
+            {
+                case DisplayUnitsType.Meters:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0} m", 1.0f);
+                case DisplayUnitsType.Kilometers:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0.0} Km", 1.0f / 1000.0f);
+                case DisplayUnitsType.Pace:
+                    return Utils.Misc.FormatPace(value);
+                case DisplayUnitsType.Integer:
+                    return Utils.Misc.FormatFloat(value, "{0:#,0}", 1.0f);
+                case DisplayUnitsType.None:
+                    return value.ToString()!;
+                default:
+                    return "";
+            }
+        }
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 

@@ -5,16 +5,18 @@ namespace FellrnrTrainingAnalysis.Model
 {
     [MemoryPackable]
     [Serializable]
-    [MemoryPackUnion(0, typeof(DataStream))]
+    [MemoryPackUnion(0, typeof(DataStreamRecorded))]
     [MemoryPackUnion(1, typeof(DataStreamDelta))]
     [MemoryPackUnion(2, typeof(DataStreamEphemeral))]
     [MemoryPackUnion(3, typeof(DataStreamCalculated))]
     [MemoryPackUnion(4, typeof(DataStreamGradeAdjustedDistance))] 
     public abstract partial class DataStreamBase
     {
+        //Note: there is an instance of each DataStream object for each activity
         [MemoryPackConstructor]
         protected DataStreamBase()  //for use by memory pack deserialization only
         {
+            Name = "Memory Pack Default"; //check Name is overritten on memory pack load
         }
 
         public DataStreamBase(string name, Activity parent_)
@@ -23,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
             this.parent_ = parent_;
         }
 
-        //need parent in case we need to get other data to calculate this stream
+        
         public abstract Tuple<uint[], float[]>? GetData();
 
         public abstract bool IsValid();
@@ -31,24 +33,29 @@ namespace FellrnrTrainingAnalysis.Model
         public abstract bool IsVirtual();
 
         [MemoryPackInclude]
-        public string Name { get; }
+        public string Name { get; set; } //Ohhh, memory pack requires a public setter! 
 
-        public abstract void Recalculate(bool force);
+        //do a full recalculate (forced) if forceCount is greater than our LastForceCount OR if forceJustMe is true
+        public abstract void Recalculate(int forceCount, bool forceJustMe);
 
         public void PostDeserialize(Activity parent)
         {
+            //Name = name;
             parent_ = parent;
         }
 
         [MemoryPackIgnore]
-        protected Activity Parent { get { return parent_; } }
+        protected Activity? Parent { get { return parent_; } }
         //[MemoryPackInclude]
         [MemoryPackIgnore]
-        private Activity parent_;
+        private Activity? parent_;
+
+        [MemoryPackIgnore]
+        protected int LastForceCount = 0;
 
         public override string ToString()
         {
-            return string.Format("Data Stream Name {0}", Name);
+            return $"Data Stream Name [{Name}], IsValid {IsValid()}, IsVirtual {IsVirtual()}";
         }
         //percentiles - min, 0.03, 5, 32, 50, 68, 95, 99.7, max
         public enum StaticsValue { Min, SD3Low, SD2Low, SD1Low, Median, SD1High, SD2High, SD3High, Max, StandardDeviation, Mean }

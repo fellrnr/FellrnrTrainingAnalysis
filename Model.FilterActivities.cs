@@ -11,7 +11,7 @@
             if (database == null || database.CurrentAthlete == null) { return new List<Activity>(); }
 
             Athlete athlete = database.CurrentAthlete;
-            List<Activity> activities = athlete.ActivitiesByDateTime.Values.ToList();
+            List<Activity> activities = athlete.ActivitiesByUTCDateTime.Values.ToList();
 
             foreach (FilterBase filter in Filters)
             {
@@ -37,7 +37,7 @@
 
     public class FilterDateTime : FilterBase
     {
-        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "1M", "6M", "1Y", "in" };
+        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "1M", "6M", "1Y", "in", "has", "missing" };
 
         public FilterDateTime(string fieldName, string command, DateTime? startDateTime, DateTime? endDateTime, string? list)
         {
@@ -108,6 +108,10 @@
                         if (dateTime.HasValue)
                             addIt = true;
                         break;
+                    case "missing":
+                        if (!dateTime.HasValue)
+                            addIt = true;
+                        break;
                     case "1M":
                         if (dateTime.HasValue && dateTime.Value.AddMonths(1) >= DateTime.Now)
                             addIt = true;
@@ -147,7 +151,7 @@
 
     public class FilterFloat : FilterBase
     {
-        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "has" };
+        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "has", "missing" };
 
 
         public FilterFloat(string fieldName, string command, float? firstValue, float? secondValue)
@@ -197,6 +201,10 @@
                         break;
                     case "between":
                         if (value.HasValue && FirstValue.HasValue && SecondValue.HasValue && value.Value >= FirstValue && value.Value <= SecondValue)
+                            addIt = true;
+                        break;
+                    case "missing":
+                        if (!value.HasValue)
                             addIt = true;
                         break;
                     case "has":
@@ -279,7 +287,7 @@
 
                 if (Command == "has")
                 {
-                    addIt =  (value != null);
+                    addIt = (value != null);
                 }
                 else if (Command == "missing")
                 {
@@ -326,7 +334,7 @@
 
     public class FilterString : FilterBase
     {
-        public static readonly string[] filterCommands = new string[] { "", "contains", "doesn't contain", "has" };
+        public static readonly string[] filterCommands = new string[] { "", "contains", "doesn't contain", "has", "missing" };
 
 
         public FilterString(string fieldName, string command, string? value)
@@ -352,6 +360,10 @@
                 bool addIt = false;
                 switch (Command)
                 {
+                    case "missing":
+                        if (value == null)
+                            addIt = true;
+                        break;
                     case "has":
                         if (value != null)
                             addIt = true;

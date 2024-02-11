@@ -28,12 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
             splitContainerReportToTabs = new SplitContainer();
             splitContainerTopButtonsToReport = new SplitContainer();
             flowLayoutPanel1 = new FlowLayoutPanel();
             label1 = new Label();
             pageSizeComboBox1 = new ComboBox();
             labelTotalRows = new Label();
+            positionLabel = new Label();
             activityDataGridView = new DataGridView();
             splitContainerTabsToList = new SplitContainer();
             tabControl2 = new TabControl();
@@ -106,6 +109,7 @@
             flowLayoutPanel1.Controls.Add(label1);
             flowLayoutPanel1.Controls.Add(pageSizeComboBox1);
             flowLayoutPanel1.Controls.Add(labelTotalRows);
+            flowLayoutPanel1.Controls.Add(positionLabel);
             flowLayoutPanel1.Location = new Point(3, 3);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
             flowLayoutPanel1.Size = new Size(1896, 45);
@@ -140,13 +144,38 @@
             labelTotalRows.TabIndex = 2;
             labelTotalRows.Text = "label2";
             // 
+            // positionLabel
+            // 
+            positionLabel.AutoSize = true;
+            positionLabel.Location = new Point(348, 0);
+            positionLabel.Name = "positionLabel";
+            positionLabel.Size = new Size(75, 25);
+            positionLabel.TabIndex = 3;
+            positionLabel.Text = "Position";
+            // 
             // activityDataGridView
             // 
             activityDataGridView.AllowUserToAddRows = false;
             activityDataGridView.AllowUserToDeleteRows = false;
             activityDataGridView.AllowUserToOrderColumns = true;
             activityDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = SystemColors.Control;
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
+            dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
+            activityDataGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             activityDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = SystemColors.Window;
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
+            dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
+            dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            activityDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             activityDataGridView.Location = new Point(3, 3);
             activityDataGridView.MultiSelect = false;
             activityDataGridView.Name = "activityDataGridView";
@@ -156,6 +185,7 @@
             activityDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             activityDataGridView.Size = new Size(1883, 553);
             activityDataGridView.TabIndex = 2;
+            activityDataGridView.CellFormatting += activityDataGridView_CellFormatting;
             activityDataGridView.CellMouseEnter += activityDataGridView_CellMouseEnter;
             activityDataGridView.SelectionChanged += dataGridView1_SelectionChanged;
             // 
@@ -207,6 +237,7 @@
             formsPlot1.Name = "formsPlot1";
             formsPlot1.Size = new Size(1677, 645);
             formsPlot1.TabIndex = 0;
+            formsPlot1.MouseMove += formsPlot1_MouseMove;
             // 
             // tabPage2
             // 
@@ -214,7 +245,7 @@
             tabPage2.Location = new Point(4, 34);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(192, 62);
+            tabPage2.Size = new Size(1683, 650);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "Activity Data";
             tabPage2.UseVisualStyleBackColor = true;
@@ -224,7 +255,7 @@
             activityData1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             activityData1.Location = new Point(3, 3);
             activityData1.Name = "activityData1";
-            activityData1.Size = new Size(183, 53);
+            activityData1.Size = new Size(1663, 627);
             activityData1.TabIndex = 0;
             // 
             // tabPage3
@@ -302,5 +333,6 @@
         private UI.ActivityData activityData1;
         private TabPage tabPage3;
         private UI.ActivityMap activityMap1;
+        private Label positionLabel;
     }
 }

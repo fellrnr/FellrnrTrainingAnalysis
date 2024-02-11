@@ -28,7 +28,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void Display(Database database, FilterActivities filterActivities)
         {
-            Logging.Instance.Enter("OverviewMap.Display");
+            Logging.Instance.TraceEntry("OverviewMap.Display");
             _database = database;
             _filterActivities = filterActivities;
 
@@ -52,7 +52,7 @@ namespace FellrnrTrainingAnalysis.UI
             if (sportComboBox.Items.Contains("Run")) { sportComboBox.Text = "Run"; }
 
             RefreshMap(true);
-            Logging.Instance.Leave();
+            Logging.Instance.TraceLeave();
         }
 
         private void RefreshMap(bool zoom)

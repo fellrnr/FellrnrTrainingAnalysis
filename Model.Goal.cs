@@ -24,20 +24,7 @@ namespace FellrnrTrainingAnalysis.Model
         public abstract string FormatResult(KeyValuePair<Model.Period, float> kvp);
 
         public abstract Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target);
-
-        protected bool CheckSportType(Activity activity)
-        {
-            string? activitySportType = activity.ActivityType?.Trim(); //had spaces after sport
-            //if (activity.StartDateNoTime == DateTime.Now.AddDays(-1).Date)
-            //{
-            //    MessageBox.Show(activitySportType);
-            //}
-            if (activitySportType == null)
-                return false;
-            if (!SportsToInclude.Contains(activitySportType))
-                return false;
-            return true;
-        }
+         
 
 
     }
@@ -95,7 +82,7 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     Activity target = kvp2.Value;
 
-                    if (!CheckSportType(target))
+                    if (!target.CheckSportType(SportsToInclude))
                         continue;
 
                     bool alreadyDone = true;
@@ -128,10 +115,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target)
         {
-            if (target.StartDateNoTime == null)
+            if (target.StartDateNoTimeLocal == null)
                 return null;
 
-            DateTime targetDateTime = (DateTime)target.StartDateNoTime;
+            DateTime targetDateTime = (DateTime)target.StartDateNoTimeLocal;
 
             Dictionary<Model.Period, float> rolling = new Dictionary<Model.Period, float>();
             foreach (Period period in periods)
@@ -142,16 +129,16 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string, Activity> kvpActivity in database.CurrentAthlete.Activities)
             {
                 Activity activity = kvpActivity.Value;
-                if (activity.StartDateNoTime == null)
+                if (activity.StartDateNoTimeLocal == null)
                     continue;
 
-                DateTime activityDateTime = (DateTime)activity.StartDateNoTime;
+                DateTime activityDateTime = (DateTime)activity.StartDateNoTimeLocal;
 
                 if (activityDateTime > targetDateTime)
                     continue; //this is after our target
 
 
-                if(!CheckSportType(activity))
+                if (!target.CheckSportType(SportsToInclude))
                     continue;
 
                 if (activity.HasNamedDatum(TargetColumn))
@@ -201,7 +188,7 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     Activity target = kvp2.Value;
 
-                    if (!CheckSportType(target))
+                    if (!target.CheckSportType(SportsToInclude))
                         continue;
 
                     bool alreadyDone = true;
@@ -234,10 +221,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target)
         {
-            if (target.StartDateNoTime == null)
+            if (target.StartDateNoTimeLocal == null)
                 return null;
 
-            DateTime targetDateTime = (DateTime)target.StartDateNoTime;
+            DateTime targetDateTime = (DateTime)target.StartDateNoTimeLocal;
 
             Dictionary<Model.Period, float> rolling = new Dictionary<Model.Period, float>();
             foreach (Period period in periods)
@@ -248,16 +235,16 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string, Activity> kvpActivity in database.CurrentAthlete.Activities)
             {
                 Activity activity = kvpActivity.Value;
-                if (activity.StartDateNoTime == null)
+                if (activity.StartDateNoTimeLocal == null)
                     continue;
 
-                DateTime activityDateTime = (DateTime)activity.StartDateNoTime;
+                DateTime activityDateTime = (DateTime)activity.StartDateNoTimeLocal;
 
                 if (activityDateTime > targetDateTime)
                     continue; //this is after our target
 
 
-                if (!CheckSportType(activity))
+                if (!activity.CheckSportType(SportsToInclude))
                     continue;
 
                 if (activity.HasNamedDatum(TargetColumn))

@@ -1,6 +1,8 @@
 ﻿using MemoryPack;
 using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
+using System.IO;
+using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -14,7 +16,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override string ToString()
         {
-            return string.Format("Start {0} key {1} filename {2}", StartDateTime, PrimaryKey(), Filename);
+            return string.Format("Start {0} key {1} filename {2} name {3}", StartDateTimeLocal, PrimaryKey(), Filename, Name);
         }
 
 
@@ -29,21 +31,28 @@ namespace FellrnrTrainingAnalysis.Model
         //                                                               
 
 
-        //NB:The date of an activity could change with the time zone. Not sure if Strava has these in UTC or local time
-        //An activity must have a start date
-        [MemoryPackOrder(0)]
-        public DateTime? StartDateTime { 
-            get { return GetNamedDateTimeDatum(StartDateAndTimeTag); }
-            set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeTag, true, (DateTime)value)); }
+        //[MemoryPackOrder(0)]
+        [MemoryPackIgnore]
+        public DateTime? StartDateTimeLocal { 
+            get { return GetNamedDateTimeDatum(StartDateAndTimeLocalTag); }
+            set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeLocalTag, true, (DateTime)value)); } //used by fit reader
         }
 
         [MemoryPackIgnore]
-        public DateTime? StartDateNoTime { get { return StartDateTime == null ? null : ((DateTime)StartDateTime).Date; } }
+        public DateTime? StartDateTimeUTC
+        {
+            get { return GetNamedDateTimeDatum(StartDateAndTimeUTCTag); }
+            set { if (value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeUTCTag, true, (DateTime)value)); } //used by fit reader
+        }
+
+
+        [MemoryPackIgnore]
+        public DateTime? StartDateNoTimeLocal { get { return StartDateTimeLocal == null ? null : ((DateTime)StartDateTimeLocal).Date; } }
 
         [MemoryPackOrder(1)]
         public LocationStream? LocationStream { get; set; } = null;
 
-        public override Utils.DateTimeTree Id() { return new Utils.DateTimeTree(StartDateTime!.Value, DateTimeTree.DateTreeType.Time); } //HACK: to see if tree works
+        public override Utils.DateTimeTree Id() { return new Utils.DateTimeTree(StartDateTimeLocal!.Value, DateTimeTree.DateTreeType.Time); } //HACK: to see if tree works
 
 
         [MemoryPackIgnore]
@@ -53,8 +62,13 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public string? ActivityType { get { return GetNamedStringDatum(ActivityTypeTag); } }
 
+        [MemoryPackIgnore]
+        public string Description { get { return GetNamedStringDatum(DescriptionTag) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.DescriptionTag, true, value)); } }
+
+        [MemoryPackIgnore]
+        public string Name { get { return GetNamedStringDatum(NameTag) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.NameTag, true, value)); } }
         //This needs to be static so callers can validate and find an activity given a dictionary of string/Datum by primary keys
-        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(StravaActivityIDTag) && activityData.ContainsKey(StartDateAndTimeTag); }
+        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(StravaActivityIDTag); } //was  && activityData.ContainsKey(StartDateAndTimeLocalTag);
 
         //This needs to be static so callers can find an activity given a dictionary of string/Datum by primary keys
         public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[StravaActivityIDTag]).Data; }
@@ -62,8 +76,8 @@ namespace FellrnrTrainingAnalysis.Model
         public string PrimaryKey() { return ((TypedDatum<string>)Data[StravaActivityIDTag]).Data; }
 
 
-        //This needs to be static so callers can find the date to create the Day so they can create the Activity
-        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[StartDateAndTimeTag]).Data; }
+        //This needs to be static so callers can find the date to check if it's after the loading date. Has to be UTC as that's all we have from the Strava CSV file
+        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[StartDateAndTimeUTCTag]).Data; }
 
         //TimeSeries
         //    _______ _                   _____           _           
@@ -90,10 +104,19 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public List<String> TimeSeriesNames { get { return TimeSeries.Keys.ToList(); } }
 
-        public void PostDeserialize()
+
+        [MemoryPackIgnore]
+        public Athlete? Parent { get { return parent_; } }
+        //[MemoryPackInclude]
+        [MemoryPackIgnore]
+        private Athlete? parent_ = null;
+
+        public void PostDeserialize(Athlete parent)
         {
+            this.parent_ = parent;
             foreach (KeyValuePair<string, DataStreamBase> kvp in TimeSeries)
             {
+                //kvp.Value.PostDeserialize(kvp.Key, this); //we had to repair names when memory pack didn't have a public setter
                 kvp.Value.PostDeserialize(this);
             }
 
@@ -126,7 +149,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (!timeSeries.ContainsKey(name))
             {
-                DataStream activityDataStream = new DataStream(name, new Tuple<uint[], float[]>(times, values), activity);
+                DataStreamRecorded activityDataStream = new DataStreamRecorded(name, new Tuple<uint[], float[]>(times, values), activity);
                 timeSeries.Add(name, activityDataStream);
             }
         }
@@ -163,9 +186,13 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackOrder(4)]
         public List<Uri>? PhotoUris { get; set; }
 
-        public override void Recalculate(bool force)
+        public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
-            base.Recalculate(force);
+            bool force = false;
+            if(forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
+
+            if (force)
+                base.Clean();
 
             //clear all existing virtual data streams - only an issue of they change names, but keeps things tidy
             List<string> toDelete = new List<string>();  
@@ -176,6 +203,9 @@ namespace FellrnrTrainingAnalysis.Model
             }
             foreach(string s in toDelete) { timeSeries.Remove(s); }
 
+            if (ProcessTags())
+                force = true;
+
             List<DataStreamBase> dataStreams = DataStreamFactory.Instance.DataStreams(this);
 
             foreach (DataStreamBase dataStream in dataStreams)
@@ -184,18 +214,23 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     try
                     {
-                        dataStream.Recalculate(force);
+                        dataStream.Recalculate(forceCount, forceJustMe); //if this object is forced, force dependent objects
                         this.AddDataStream(dataStream);
                     }
                     catch (Exception ex)
                     {
                         Logging.Instance.Error(string.Format("Failed to process activity {0} from {1} for data stream {2} due to {3}", 
-                            this.PrimaryKey(), this.StartDateTime, dataStream.Name, ex));
+                            this.PrimaryKey(), this.StartDateTimeLocal, dataStream.Name, ex));
                     }
                 }
+                //TODO: extra debug on recalculate
+                //else 
+                //{
+                //    Logging.Instance.Debug($"activity.recalculate datastream {dataStream.Name} is not valid for activity {this}");
+                //}
             }
 
-            foreach(ICalculateField calculate in CaclulateFieldFactory.Instance.Calulators)
+            foreach(CalculateFieldBase calculate in CaclulateFieldFactory.Instance.Calulators)
             {
                 calculate.Recalculate(this, force);
             }
@@ -204,8 +239,8 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         private const string START = "⌗";
-        private const string MIDDLE = "༶";
         private const string END = "֍";
+        private const char MIDDLE = '༶';
         //start char is ⌗ U+2317
         //middle markers are ༶ (U+0F36)
         //end is ֍ (U+058D)
@@ -214,23 +249,113 @@ namespace FellrnrTrainingAnalysis.Model
         //new TagActivities("Delete Power", "⌗Power༶Delete֍"),
         //new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
 
-        private void ProcessTags()
+        public bool ProcessTags()
         {
-            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)this.GetNamedDatum("Description");
+            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)this.GetNamedDatum(Activity.DescriptionTag);
             if (descriptionDatum == null || descriptionDatum.Data == null)
-                return;
+                return false;
             string description = descriptionDatum.Data;
 
 
             TypedDatum<string>? processedDatum = (TypedDatum<string>?)this.GetNamedDatum("Processed Tags");
             string processedTags = (processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
+            bool processedTagsChanged = false;
 
-            while (description.Contains(START))
+            while (description.Contains(START) && description.Contains(END))
             {
-            }
+                int start = description.IndexOf(START, StringComparison.Ordinal);
+                int end = description.IndexOf(END, StringComparison.Ordinal);
+                int len = end - start;
+                string tag = description.Substring(start + 1, len - 1);
 
+                if(!processedTags.Contains(tag))
+                {
+                    Logging.Instance.Debug($"processedTags [{processedTags}] doesn't contain {tag}");
+                    if(!ProcessTag(tag))
+                    {
+                        Logging.Instance.Debug($"ProcessTag failed");
+                        return false;
+                    }
+                    processedTags += tag;
+                    processedTagsChanged = true;
+                }
+
+                description = description.Substring(end + 1);
+            }
+            if (processedTagsChanged)
+            {
+                Logging.Instance.Debug($"processedTags is now {processedTags}");
+                this.AddOrReplaceDatum(new TypedDatum<string>("Processed Tags", true, processedTags)); //set recorded to true as this isn't something we want to recreate all the time
+                return true;
+            }
+            return false;
         }
 
+        private bool ProcessTag(string tag)
+        {
+            Logging.Instance.Debug($"ProcessTag({tag})");
+            bool retval = false;
+            string[] strings = tag.Split(MIDDLE);
+            string stream = strings[0];
+            string command = strings[1];
+            int amount = strings.Length > 2 ? int.Parse(strings[2]) : 0;
+
+            if(command == "Delete")
+            {
+                Logging.Instance.Debug($"ProcessTag command: delete stream:{stream}");
+                this.RemoveNamedDatum(stream);
+                this.RemoveDataStream(stream);
+                retval = true;
+            }
+            else if (command == "CopyBack")
+            {
+                Logging.Instance.Debug($"ProcessTag command: copyback stream:{stream}");
+                if (!this.TimeSeries.ContainsKey(stream))
+                {
+                    Logging.Instance.Debug($"ProcessTag CopyBack missing {stream}");
+                    return retval;
+                }
+                DataStreamBase dataStream = this.TimeSeries[stream];
+                Tuple<uint[], float[]>? data = dataStream.GetData();
+                if (data == null || data.Item1.Length < amount)
+                {
+                    Logging.Instance.Debug($"ProcessTag CopyBack {stream} is too short");
+                    return retval;
+                }
+                float copyback = data.Item2[amount];
+
+                for (int i = 0; i < amount; i++)
+                {
+                    data.Item2[i] = copyback;
+                }
+                Logging.Instance.Debug($"ProcessTag CopyBack {stream} Done");
+                retval = true;
+            }
+            else if (command == "Cap")
+            {
+                Logging.Instance.Debug($"ProcessTag Cap {stream} to {amount}");
+                DataStreamBase dataStream = this.TimeSeries[stream];
+                Tuple<uint[], float[]>? data = dataStream.GetData();
+                if (data == null)
+                {
+                    Logging.Instance.Debug($"ProcessTag Cap {stream} no data");
+                    return retval;
+                }
+                for (int i = 0; i < data.Item2.Length; i++)
+                {
+                    if(data.Item2[i] > amount)
+                        data.Item2[i] = amount;
+                }
+                Logging.Instance.Debug($"ProcessTag Cap {stream} Done");
+                retval = true;
+            }
+            else
+            {
+                Logging.Instance.Debug($"ProcessTag unexpected command {command}");
+                retval = false;
+            }
+            return retval;
+        }
         public void RecalculateHills(List<Hill> hills, bool force, bool fullDebug)
         {
             if (LocationStream == null || LocationStream.Latitudes.Length == 0)
@@ -297,10 +422,17 @@ namespace FellrnrTrainingAnalysis.Model
 
         private const string StravaActivityIDTag = "Strava ID";
         public const string PrimarykeyTag = StravaActivityIDTag;
-        private const string StartDateAndTimeTag = "Start DateTime"; //be explicit about the time part, as sometimes we only want the date component
+        private const string StartDateAndTimeLocalTag = "Start DateTime Local"; //be explicit about the time part, as sometimes we only want the date component
+        private const string StartDateAndTimeUTCTag = "Start DateTime UTC"; //be explicit about the time part, as sometimes we only want the date component
         private const string ActivityTypeTag = "Type";
         private const string FilenameTag = "Filename";
         private const string FileFullPathTag = "Filepath";
+        public const string DescriptionTag = "Description";
+        public const string NameTag = "Name";
+
+        public const string DistanceTag = "Distance";
+        public const string ElapsedTimeTag = "Elapsed Time";
+        public const string MovingTimeTag = "Moving Time";
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";
@@ -311,8 +443,6 @@ namespace FellrnrTrainingAnalysis.Model
         public const string AthleteWeightTag = "Athlete Weight";
         public const string BikeWeightTag = "Bike Weight";
         public const string ElapsedTimeTag = "Elapsed Time";
-        public const string MovingTimeTag = "Moving Time";
-        public const string DistanceTag = "Distance";
         public const string MaxSpeedTag = "Max Speed";
         public const string AverageSpeedTag = "Average Speed";
         public const string ElevationGainTag = "Elevation Gain";
@@ -388,5 +518,21 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackOrder(6)]
         public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches
+
+
+        public bool CheckSportType(List<string> sportsToInclude)
+        {
+            string? activitySportType = this.ActivityType?.Trim(); //had spaces after sport
+            //if (activity.StartDateNoTime == DateTime.Now.AddDays(-1).Date)
+            //{
+            //    MessageBox.Show(activitySportType);
+            //}
+            if (activitySportType == null)
+                return false;
+            if (!sportsToInclude.Contains(activitySportType))
+                return false;
+            return true;
+        }
+
     }
 }

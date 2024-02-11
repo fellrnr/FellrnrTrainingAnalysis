@@ -1,4 +1,4 @@
-﻿namespace FellrnrTrainingAnalysis
+﻿namespace FellrnrTrainingAnalysis.UI
 {
     partial class ActivityFilterDialog
     {
