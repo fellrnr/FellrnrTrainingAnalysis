@@ -11,6 +11,25 @@ namespace FellrnrTrainingAnalysis.Utils
 {
     public class Misc //the class of misfit toys
     {
+
+        public static void RunCommand(string target)
+        {
+            try
+            {
+                //System.Diagnostics.Process.Start(target);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo() { FileName = target, UseShellExecute = true }); //use shell execute is false by default now
+            }
+            catch (System.ComponentModel.Win32Exception noBrowser)
+            {
+                if (noBrowser.ErrorCode == -2147467259)
+                    MessageBox.Show(noBrowser.Message);
+            }
+            catch (System.Exception other)
+            {
+                MessageBox.Show(other.Message);
+            }
+        }
+
         public static Stream DecompressAndOpenFile(string filename)
         {
             //we have to unzip the .gz files strava gives us to a temp file. Using the GZFileStream doesn't work as the FIT toolkit seeks around, which GZ doesn't support

@@ -27,7 +27,8 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (_activities == null)
                 _activities = new List<Activity>();
-            _activities.Add(activity);
+            if(!_activities.Contains(activity))
+                _activities.Add(activity);
         }
 
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)

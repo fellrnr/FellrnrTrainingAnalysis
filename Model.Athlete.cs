@@ -231,8 +231,15 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
             AddActivityToCalenderTree(activity);
-            _activitiesByUTCDateTime.Add(activity.StartDateTimeUTC.Value, activity);
-            _activitiesByLocalDateTime.Add(activity.StartDateTimeLocal!.Value, activity);
+            if(_activitiesByUTCDateTime.ContainsKey(activity.StartDateTimeUTC.Value))
+                _activitiesByUTCDateTime[activity.StartDateTimeUTC.Value] = activity;
+            else
+                _activitiesByUTCDateTime.Add(activity.StartDateTimeUTC.Value, activity);
+
+            if (_activitiesByLocalDateTime.ContainsKey(activity.StartDateTimeLocal.Value))
+                _activitiesByLocalDateTime[activity.StartDateTimeLocal!.Value] = activity; 
+            else
+                _activitiesByLocalDateTime.Add(activity.StartDateTimeLocal!.Value, activity);
             Day day = GetOrAddDay(activity.StartDateTimeLocal.Value.Date);
             day.AddActivity(activity);
 
@@ -281,6 +288,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 day = (CalendarNode)month.Children[dateOnlyOfActivity];
             }
+
 
             day.AddChild(dateTimeOfActivity, activity);
 

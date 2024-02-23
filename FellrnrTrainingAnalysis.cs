@@ -9,6 +9,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using FellrnrTrainingAnalysis.Action;
 using System.ComponentModel;
 using de.schumacher_bw.Strava.Endpoint;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -535,17 +536,19 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
+        SportTracks? SportTracksProcessor = null;
+
         private void verifyAgainstFitlogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Fitlog fitlog = new Fitlog();
+            SportTracksProcessor = new SportTracks();
             //string filePath = @"C:\Users\jfsav\OneDrive\Jonathan\FitLog From SportTracks\Jonathan-2015.fitlog";
             //fitlog.ReadFitlog(filePath);
 
             string filePath = @"C:\Users\jfsav\OneDrive\Jonathan\FitLog From SportTracks";
-            fitlog.ReadFitlogFolder(filePath);
+            SportTracksProcessor.ReadFitlogFolder(filePath);
             
-            fitlog.Verify(Database.CurrentAthlete);
-            LargeTextDialogForm large = new LargeTextDialogForm(fitlog.Results);
+            SportTracksProcessor.Verify(Database.CurrentAthlete);
+            LargeTextDialogForm large = new LargeTextDialogForm(SportTracksProcessor.Results);
             large.ShowDialog();
 
             /*
@@ -574,8 +577,11 @@ namespace FellrnrTrainingAnalysis
 
         private void updateFromFitlogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Fitlog fitlog = new Fitlog();
-            fitlog.FixFromFitlog(Database.CurrentAthlete);
+            if(SportTracksProcessor != null)
+            {
+                SportTracksProcessor.FixFromFitlog(Database, Database.CurrentAthlete);
+                SportTracksProcessor.UpdateFromFitlog(Database, Database.CurrentAthlete, 95);
+            }
         }
 
 

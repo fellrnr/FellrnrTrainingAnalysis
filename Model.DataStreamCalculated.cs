@@ -19,7 +19,7 @@ namespace FellrnrTrainingAnalysis.Model
         public DataStreamCalculated(string name, List<string> requiredFields, Activity activity, Mode calculationMode, List<string> sportsToInclude) : base(name, requiredFields, activity)
         {
             CalculationMode = calculationMode;
-            SportsToInclude = sportsToInclude;
+            SportsToInclude = sportsToInclude; 
         }
 
         public enum Mode { HrPwr}

@@ -10,6 +10,7 @@ using System.Xml.Linq;
 using System.Collections.ObjectModel;
 using Microsoft.VisualBasic;
 using ScottPlot.Plottable;
+using FellrnrTrainingAnalysis.Action;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -51,8 +52,11 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.StartResetTimer("UpdateReport-private");
             Logging.Instance.TraceEntry("UpdateReport");
 
+            IgnoreSelectionChanged = true;
             activityDataGridView.Rows.Clear();
+            IgnoreSelectionChanged = false;
             Logging.Instance.Log(string.Format("ActivityReport.UpdateReport rows.clear took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
+
             //Database.CurrentAthlete.
             //IReadOnlyCollection<string> activityFieldNames = Database.CurrentAthlete.ActivityFieldNames;
             List<ActivityDatumMetadata>? columnMetadata = ActivityDatumMetadata.GetDefinitions();
@@ -282,7 +286,7 @@ namespace FellrnrTrainingAnalysis
 
             if (row != null)
             {
-                var index = activityDataGridView.Columns[Activity.PrimarykeyTag]?.Index;
+                var index = activityDataGridView.Columns[Activity.TagPrimarykey]?.Index;
                 if (index != null && index != -1)
                 {
                     string primarykey = (string)row.Cells[index.Value].Value;
@@ -481,16 +485,17 @@ namespace FellrnrTrainingAnalysis
             AddContextMenu("Edit Name", new EventHandler(toolStripItem1_Click_editName));
             AddContextMenu("Edit Description", new EventHandler(toolStripItem1_Click_editDescription));
             AddContextMenu("Recalculate", new EventHandler(toolStripItem1_Click_recalculate));
+            AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
             AddContextMenu("Recalculate Hills", new EventHandler(toolStripItem1_Click_recalculateHills));
             AddContextMenu("Reread FIT file", new EventHandler(toolStripItem1_Click_rereadFit));
-            AddContextMenu("Open in Strava...", new EventHandler(toolStripItem1_Click_openStrava));
+            AddContextMenu("Open In Strava...", new EventHandler(toolStripItem1_Click_openStrava));
             AddContextMenu("Open File (system viewer)...", new EventHandler(toolStripItem1_Click_openFile));
             AddContextMenu("Copy File path", new EventHandler(toolStripItem1_Click_copyFitFile));
-            AddContextMenu("Open in Garmin...", new EventHandler(toolStripItem1_Click_openGarmin));
+            AddContextMenu("Open In Garmin...", new EventHandler(toolStripItem1_Click_openGarmin));
             AddContextMenu("Scan For Data Quality Issues...", new EventHandler(toolStripItem1_Click_findDataQuality));
             AddContextMenu("Show Data Quality Issues...", new EventHandler(toolStripItem1_Click_showDataQuality));
-            AddContextMenu("Open ALL in Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
-            AddContextMenu("Tag ALL in Strava as...", new EventHandler(toolStripItem1_Click_tagAllStravaAsRace));
+            AddContextMenu("Open ALL In Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
+            AddContextMenu("Tag ALL In Strava As...", new EventHandler(toolStripItem1_Click_tagAllStravaAsInput));
 
             AddFixSubMenus("Fix This Activity", toolStripItem1_Click_tagStrava);
             AddFixSubMenus("Fix ALL Activities", toolStripItem1_Click_tagAllStrava);
@@ -571,7 +576,7 @@ namespace FellrnrTrainingAnalysis
 
             string name = largeTextDialogForm.Value;
 
-            if (!Action.StravaApi.Instance.UpdateActivity(activity, name, null))
+            if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, name, null))
             {
                 MessageBox.Show("Update Failed");
                 return;
@@ -592,7 +597,7 @@ namespace FellrnrTrainingAnalysis
 
 
             string description = largeTextDialogForm.Value;
-            if (!Action.StravaApi.Instance.UpdateActivity(activity, null, description))
+            if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
             {
                 MessageBox.Show("Update Failed");
                 return;
@@ -628,6 +633,22 @@ namespace FellrnrTrainingAnalysis
             //don't muddy things with a recalculation
             //UpdateViews?.Invoke();
 
+            MessageBox.Show("Done");
+        }
+        private void toolStripItem1_Click_refresh(object? sender, EventArgs args)
+        {
+            Model.Activity? activity = GetActivity();
+            if (activity == null || Database == null) return;
+
+            StravaApi.Instance.RefreshActivity(Database, activity);
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
+            activity.Recalculate(true);
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
+            UpdateViews?.Invoke();
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate done");
             MessageBox.Show("Done");
         }
 
@@ -671,7 +692,7 @@ namespace FellrnrTrainingAnalysis
 
             string date = string.Format("{0:D4}-{1:D2}-{2:d2}", start.Value.Year, start.Value.Month, start.Value.Day);
             string target = $"https://connect.garmin.com/modern/activities?startDate={date}&endDate={date}";
-            RunCommand(target);
+            Misc.RunCommand(target);
         }
 
         private void toolStripItem1_Click_openFile(object? sender, EventArgs args)
@@ -697,7 +718,7 @@ namespace FellrnrTrainingAnalysis
                 }
             }
 
-            RunCommand(filepath);
+            Misc.RunCommand(filepath);
 
         }
 
@@ -726,12 +747,10 @@ namespace FellrnrTrainingAnalysis
             Model.Activity? activity = GetActivity();
             if (activity == null) return;
 
-            string key = activity.PrimaryKey();
-
-            string target = "https://www.strava.com/activities/" + key;
-            RunCommand(target);
+            StravaApi.OpenAsStravaWebPage(activity);
 
         }
+
 
         private void toolStripItem1_Click_openAllStrava(object? sender, EventArgs args)
         {
@@ -743,7 +762,7 @@ namespace FellrnrTrainingAnalysis
 
                 string key = activity.PrimaryKey();
                 string target = "https://www.strava.com/activities/" + key;
-                RunCommand(target);
+                Misc.RunCommand(target);
             }
         }
 
@@ -841,9 +860,9 @@ namespace FellrnrTrainingAnalysis
 
         private void TagStravaActivity(string tag, Activity activity)
         {
-            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.DescriptionTag);
+            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagDescription);
             if (descriptionDatum == null)
-                descriptionDatum = new TypedDatum<string>(Activity.DescriptionTag, true, ""); //make this recoreded as we need it to persist
+                descriptionDatum = new TypedDatum<string>(Activity.TagDescription, true, ""); //make this recoreded as we need it to persist
 
             if (tag.Contains(ASKME))
             {
@@ -858,7 +877,7 @@ namespace FellrnrTrainingAnalysis
             if (description != null && !description.Contains(tag))
             {
                 description = description + tag;
-                if (!Action.StravaApi.Instance.UpdateActivity(activity, null, description))
+                if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
                 {
                     MessageBox.Show("Update Failed");
                     return;
@@ -866,7 +885,8 @@ namespace FellrnrTrainingAnalysis
                 descriptionDatum.Data = description;
                 activity.AddOrReplaceDatum(descriptionDatum);
 
-                if (!activity.ProcessTags())
+                Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
+                if (!tags.ProcessTags(activity))
                 {
                     MessageBox.Show("Didn't work");
                 }
@@ -877,7 +897,7 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
-        private void toolStripItem1_Click_tagAllStravaAsRace(object? sender, EventArgs args)
+        private void toolStripItem1_Click_tagAllStravaAsInput(object? sender, EventArgs args)
         {
             string input = Interaction.InputBox("Enter tag to add, including hash");
             if (string.IsNullOrEmpty(input))
@@ -894,7 +914,7 @@ namespace FellrnrTrainingAnalysis
                 if (name != null && !name.Contains(TAG))
                 {
                     name = name + TAG;
-                    if (Action.StravaApi.Instance.UpdateActivity(activity, name))
+                    if (Action.StravaApi.Instance.UpdateActivityDetails(activity, name))
                         success++;
                     else
                         error++;
@@ -913,23 +933,6 @@ namespace FellrnrTrainingAnalysis
 
         }
 
-        private static void RunCommand(string target)
-        {
-            try
-            {
-                //System.Diagnostics.Process.Start(target);
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo() { FileName = target, UseShellExecute = true }); //use shell execute is false by default now
-            }
-            catch (System.ComponentModel.Win32Exception noBrowser)
-            {
-                if (noBrowser.ErrorCode == -2147467259)
-                    MessageBox.Show(noBrowser.Message);
-            }
-            catch (System.Exception other)
-            {
-                MessageBox.Show(other.Message);
-            }
-        }
 
         private void toolStripItem1_Click_showDataQuality(object? sender, EventArgs args)
         {

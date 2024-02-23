@@ -1,4 +1,5 @@
 ﻿using de.schumacher_bw.Strava;
+using de.schumacher_bw.Strava.Endpoint;
 using de.schumacher_bw.Strava.Model;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
@@ -94,30 +95,7 @@ namespace FellrnrTrainingAnalysis.Action
                 } 
                 else
                 {
-                    DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.GetActivityById((long)stravaActivity.Id);
-                    Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
-                    Dictionary<string, Datum> activityDataFromProperties = ActivityDataFromProperties(detailedActivity);
-                    Activity? activity = database!.CurrentAthlete!.InitialAddOrUpdateActivity(activityDataFromProperties);
-                    
-
-                    if (activity != null)
-                    {
-                        database!.CurrentAthlete!.FinalizeAdd(activity);
-
-                        //we had a null error on this call that went away the next morning. The activity had zeros in power, and seemed to be related to the power stream
-                        //https://www.strava.com/activities/9398565924
-                        //also see "Testing Strava API.docx" in OneDrive 
-                        StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams((long)stravaActivity.Id, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.Temp);
-                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
-                        //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
-                        //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                        AddDataStreams(activity, streamSet);
-
-                        List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
-                        activity.PhotoUris= photos;
-
-                    }
+                    GetActivityFromStrava(database!, stravaActivity.Id.Value);
                     counter++;
                     if (counter >= 10)
                         return new Tuple<int, int>(counter, newActivities.Length - counter);
@@ -127,7 +105,41 @@ namespace FellrnrTrainingAnalysis.Action
             return new Tuple<int, int>(counter, 0);
         }
 
-        public bool UpdateActivity(Activity activity, string? name = null, string? description = null)
+        public void RefreshActivity(Database database, Activity activity)
+        {
+            long key = long.Parse(activity.PrimaryKey());
+            GetActivityFromStrava(database, key);
+        }
+
+        private Activity? GetActivityFromStrava(Database database, long stravaId)
+        {
+            DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.GetActivityById(stravaId);
+            Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
+            Dictionary<string, Datum> activityDataFromProperties = ActivityDataFromProperties(detailedActivity);
+            Activity? activity = database!.CurrentAthlete!.InitialAddOrUpdateActivity(activityDataFromProperties);
+
+
+            if (activity != null)
+            {
+                database!.CurrentAthlete!.FinalizeAdd(activity);
+
+                //we had a null error on this call that went away the next morning. The activity had zeros in power, and seemed to be related to the power stream
+                //https://www.strava.com/activities/9398565924
+                //also see "Testing Strava API.docx" in OneDrive 
+                StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams(stravaId, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
+                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.Temp);
+                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
+                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
+                //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
+                AddDataStreams(activity, streamSet);
+
+                List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
+                activity.PhotoUris = photos;
+            }
+            return activity;
+        }
+
+        public bool UpdateActivityDetails(Activity activity, string? name = null, string? description = null)
         {
 
             //public DetailedActivity UpdateActivityById(long id, UpdatableActivity data = null)
@@ -161,7 +173,7 @@ namespace FellrnrTrainingAnalysis.Action
                     {
                         if (detailedActivity.Description != updatableActivity.Description)
                             return false;
-                        TypedDatum<string> typedDatum = new TypedDatum<string>(Activity.DescriptionTag, true, description);
+                        TypedDatum<string> typedDatum = new TypedDatum<string>(Activity.TagDescription, true, description);
                         activity.AddOrReplaceDatum(typedDatum);
                     }
                     return true;
@@ -170,6 +182,81 @@ namespace FellrnrTrainingAnalysis.Action
 
             }
             return false;
+        }
+
+        public class UploadResult
+        {
+            public string? Error;
+            public Activity? Activity;
+            public string Usage = "";
+        }
+        public UploadResult UploadActivityFromFit(Database database, FileInfo file, string? name, string? description, bool? trainer)
+        {
+            Upload upload = StravaApiV3Sharp.Uploads.CreateUpload(file, DataType.Fit, name, description, trainer, false);
+            UploadResult result = new UploadResult();
+
+            result.Usage = $"Used {StravaApiV3Sharp.Limit15Minutes.Usage}/{StravaApiV3Sharp.Limit15Minutes.Limit} & {StravaApiV3Sharp.LimitDaily.Usage}/{StravaApiV3Sharp.LimitDaily.Limit}";
+
+            if (upload.Error != null)
+            {
+                Logging.Instance.Error($"Upload failed on initial send with {upload.Error}, {upload.Status}");
+                result.Error = upload.Error;
+                return result;
+            }
+
+            if (upload.Id == null)
+            {
+                Logging.Instance.Error($"Upload with no id, {upload.Status}");
+                result.Error = "No Id returned";
+                return result;
+            }
+            long uploadId = upload.Id.Value;
+            int sleep = 5 * 1000;
+            int timeout = 10;
+            int counter = 0;
+            while( counter < timeout && upload.Error == null && upload.ActivityId == null)
+            {
+                Thread.Sleep(sleep);
+                Logging.Instance.Debug($"Polling upload status {counter}");
+                upload = StravaApiV3Sharp.Uploads.GetUploadById(uploadId);
+                counter++;
+            }
+
+            if (upload.Error != null)
+            {
+                Logging.Instance.Error($"Upload failed on polling with {upload.Error}, {upload.Status}");
+                result.Error = upload.Error;
+                return result;
+            }
+            if (upload.ActivityId == null)
+            {
+                if (counter == timeout)
+                {
+                    Logging.Instance.Error($"Upload failed with timeout, {upload.Status}");
+                    result.Error = "Timeout occured";
+                }
+                else
+                {
+                    Logging.Instance.Error($"Upload failed with no activity id, {upload.Status}");
+                    result.Error = "No Activity Id returned";
+                }
+                return result;
+            }
+
+            Activity? activity = GetActivityFromStrava(database, upload.ActivityId.Value);
+            if (activity == null)
+            {
+                Logging.Instance.Error($"Upload failed with no activity id, {upload.Status}");
+                result.Error = "No Activity Id returned";
+                return result;
+            }
+            else
+            {
+                Logging.Instance.Log($"Upload of activity id {upload.ActivityId} successful {upload.Status}");
+                result.Error = null;
+                result.Activity = activity;
+                return result;
+            }
         }
 
         //Easier to add streams directly rather than trying reflection 
@@ -405,5 +492,14 @@ namespace FellrnrTrainingAnalysis.Action
             }
             return activityData;
         }
+
+        public static void OpenAsStravaWebPage(Activity activity)
+        {
+            string key = activity.PrimaryKey();
+
+            string target = "https://www.strava.com/activities/" + key;
+            Misc.RunCommand(target);
+        }
+
     }
 }

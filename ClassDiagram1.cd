@@ -17,7 +17,7 @@
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="FellrnrTrainingAnalysis.Model.DataStreamCalculated" Collapsed="true">
-    <Position X="5.75" Y="3.25" Width="1.5" />
+    <Position X="5.75" Y="3.25" Width="2.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAQACAICAABAAAAAACAAAA=</HashCode>
       <FileName>Model.DataStreamCalculated.cs</FileName>
@@ -40,7 +40,7 @@
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.Extensible">
+  <Class Name="FellrnrTrainingAnalysis.Model.Extensible" Collapsed="true">
     <Position X="10" Y="0.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>QAACAAAgAAAEAAAABCAAAAAAEAERABEAAAAAFIAAQAQ=</HashCode>
@@ -48,21 +48,56 @@
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.Activity">
-    <Position X="8.5" Y="5.75" Width="1.5" />
+  <Class Name="FellrnrTrainingAnalysis.Model.Activity" Collapsed="true">
+    <Position X="9.5" Y="2" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>BgACgEQBACAgQhEGCQAQQAyBwAIBABEAEBAgBhgA0EA=</HashCode>
+      <HashCode>AgACgEQBwCAgQgEECQASQAyBUAIFMAEAEgAABAgA2AE=</HashCode>
       <FileName>Model.Activity.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.CalendarNode">
-    <Position X="12" Y="5.5" Width="1.5" />
+  <Class Name="FellrnrTrainingAnalysis.Model.CalendarNode" Collapsed="true">
+    <Position X="13" Y="1.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAgSAAAAAAAAEAAAAAAEAAAAAAAAAAEAAAQAAAAAAAA=</HashCode>
       <FileName>Model.CalendarNode.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateFieldBase" Collapsed="true">
+    <Position X="9.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAQAAEAAAAAAAAAAAA=</HashCode>
+      <FileName>Model.CalculateFieldBase.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamBase" Collapsed="true">
+    <Position X="7.75" Y="5.75" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>ABBAADAAAAAAAAAAAAAAAAAAAAEAAAEBAAAAAgAAAAA=</HashCode>
+      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamSimple" Collapsed="true">
+    <Position X="7.75" Y="7.25" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA=</HashCode>
+      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamThreashold" Collapsed="true">
+    <Position X="3" Y="7.25" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACI=</HashCode>
+      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamAUC" Collapsed="true">
+    <Position X="11.25" Y="7.25" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAABAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAA=</HashCode>
+      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+    </TypeIdentifier>
   </Class>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>

@@ -17,7 +17,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         private Database? _database;
         private FilterActivities? _filterActivities;
-        private Dictionary<string, FilterRow> Filters = new Dictionary<string, FilterRow>();
+        private Dictionary<string, GraphLineSelection> Filters = new Dictionary<string, GraphLineSelection>();
         private int Row = 1; //row zero is the headers
         private delegate void DoRefresh();
 
@@ -65,7 +65,7 @@ namespace FellrnrTrainingAnalysis.UI
                     {
                         if (!Filters.ContainsKey(name))
                         {
-                            Filters.Add(name, new FilterRow(tableLayoutPanel1, name, Row++, RefreshGraph));
+                            Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, Row++, RefreshGraph));
                         }
                     }
                 }
@@ -79,7 +79,7 @@ namespace FellrnrTrainingAnalysis.UI
                     string key = s + name;
                     if (!Filters.ContainsKey(key))
                     {
-                        Filters.Add(key, new FilterRow(tableLayoutPanel1, key, Row++, RefreshGraph));
+                        Filters.Add(key, new GraphLineSelection(tableLayoutPanel1, key, Row++, RefreshGraph));
                     }
                 }
             }
@@ -99,18 +99,18 @@ namespace FellrnrTrainingAnalysis.UI
             axisIndex = 0;
             if (_database == null || _database.CurrentAthlete == null || _database.CurrentAthlete.ActivitiesByLocalDateTime.Count == 0 || _filterActivities == null) { return; }
 
-            foreach (KeyValuePair<string, FilterRow> kvp in Filters)
+
+            List<Activity> activities = _filterActivities.GetActivities(_database);
+
+            foreach (KeyValuePair<string, GraphLineSelection> kvp in Filters)
             {
-                FilterRow filterRow = kvp.Value;
+                GraphLineSelection filterRow = kvp.Value;
                 string name = kvp.Key;
                 if (!filterRow.IsChecked)
                     continue;
 
                 List<DateTime> dateTimes = new List<DateTime>();
                 List<double> values = new List<double>();
-
-                List<Activity> activities = _filterActivities.GetActivities(_database);
-
 
                 //foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
                 foreach(Activity activity in activities)
@@ -218,7 +218,7 @@ namespace FellrnrTrainingAnalysis.UI
             return null;
         }
 
-        private class FilterRow
+        private class GraphLineSelection
         {
             protected CheckBox FieldName;
             protected CheckBox? BarGraph;
@@ -226,7 +226,7 @@ namespace FellrnrTrainingAnalysis.UI
             protected int Row;
             private DoRefresh DoRefresh;
             private TableLayoutPanel TableLayoutPanel;
-            public FilterRow(TableLayoutPanel tableLayoutPanel, string name, int row, DoRefresh doRefresh)
+            public GraphLineSelection(TableLayoutPanel tableLayoutPanel, string name, int row, DoRefresh doRefresh)
             {
                 Row = row;
                 TableLayoutPanel = tableLayoutPanel;

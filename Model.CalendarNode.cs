@@ -34,11 +34,11 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public IReadOnlyDictionary<DateTime, Extensible> Children { get { return _children; } }
 
-        public void AddChild(DateTime date, Extensible child)
+        public void AddChild(DateTime dateAndTime, Extensible child)
         {
-            if (!_children.ContainsKey(date))
+            if (!_children.ContainsKey(dateAndTime))
             {
-                _children.Add(date, child);
+                _children.Add(dateAndTime, child);
             }
         }
 

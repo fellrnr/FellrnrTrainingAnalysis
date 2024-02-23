@@ -21,7 +21,6 @@ namespace FellrnrTrainingAnalysis.Model
 
         public int? ColumnSize { get; set; } //null for resize dynamically
 
-
         public int? DecimalPlaces { get; set; } //Only for floating point numbers, obviously
 
         public bool? Invisible { get; set; } //for hidden columns like Strava ID

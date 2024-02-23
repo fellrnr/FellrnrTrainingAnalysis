@@ -34,15 +34,15 @@ namespace FellrnrTrainingAnalysis.Model
         //[MemoryPackOrder(0)]
         [MemoryPackIgnore]
         public DateTime? StartDateTimeLocal { 
-            get { return GetNamedDateTimeDatum(StartDateAndTimeLocalTag); }
-            set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeLocalTag, true, (DateTime)value)); } //used by fit reader
+            get { return GetNamedDateTimeDatum(TagStartDateAndTimeLocal); }
+            set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(TagStartDateAndTimeLocal, true, (DateTime)value)); } //used by fit reader
         }
 
         [MemoryPackIgnore]
         public DateTime? StartDateTimeUTC
         {
-            get { return GetNamedDateTimeDatum(StartDateAndTimeUTCTag); }
-            set { if (value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(StartDateAndTimeUTCTag, true, (DateTime)value)); } //used by fit reader
+            get { return GetNamedDateTimeDatum(TagStartDateAndTimeUTC); }
+            set { if (value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(TagStartDateAndTimeUTC, true, (DateTime)value)); } //used by fit reader
         }
 
 
@@ -58,26 +58,26 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public string? Filename { get { return GetNamedStringDatum(FilenameTag); } }
         [MemoryPackIgnore]
-        public string? FileFullPath { get { return GetNamedStringDatum(FileFullPathTag); } set { if(value != null) AddOrReplaceDatum(new TypedDatum<string>(FileFullPathTag, true, value)); } }
+        public string? FileFullPath { get { return GetNamedStringDatum(TagFileFullPath); } set { if(value != null) AddOrReplaceDatum(new TypedDatum<string>(TagFileFullPath, true, value)); } }
         [MemoryPackIgnore]
-        public string? ActivityType { get { return GetNamedStringDatum(ActivityTypeTag); } }
+        public string? ActivityType { get { return GetNamedStringDatum(TagActivityType); } }
 
         [MemoryPackIgnore]
-        public string Description { get { return GetNamedStringDatum(DescriptionTag) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.DescriptionTag, true, value)); } }
+        public string Description { get { return GetNamedStringDatum(TagDescription) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.TagDescription, true, value)); } }
 
         [MemoryPackIgnore]
-        public string Name { get { return GetNamedStringDatum(NameTag) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.NameTag, true, value)); } }
+        public string Name { get { return GetNamedStringDatum(TagName) ?? ""; } set { AddOrReplaceDatum(new TypedDatum<string>(Activity.TagName, true, value)); } }
         //This needs to be static so callers can validate and find an activity given a dictionary of string/Datum by primary keys
-        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(StravaActivityIDTag); } //was  && activityData.ContainsKey(StartDateAndTimeLocalTag);
+        public static bool WillBeValid(Dictionary<string, Datum> activityData) { return activityData.ContainsKey(TagStravaActivityID); } //was  && activityData.ContainsKey(StartDateAndTimeLocalTag);
 
         //This needs to be static so callers can find an activity given a dictionary of string/Datum by primary keys
-        public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[StravaActivityIDTag]).Data; }
+        public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[TagStravaActivityID]).Data; }
 
-        public string PrimaryKey() { return ((TypedDatum<string>)Data[StravaActivityIDTag]).Data; }
+        public string PrimaryKey() { return ((TypedDatum<string>)Data[TagStravaActivityID]).Data; }
 
 
         //This needs to be static so callers can find the date to check if it's after the loading date. Has to be UTC as that's all we have from the Strava CSV file
-        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[StartDateAndTimeUTCTag]).Data; }
+        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[TagStartDateAndTimeUTC]).Data; }
 
         //TimeSeries
         //    _______ _                   _____           _           
@@ -203,7 +203,8 @@ namespace FellrnrTrainingAnalysis.Model
             }
             foreach(string s in toDelete) { timeSeries.Remove(s); }
 
-            if (ProcessTags())
+            Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
+            if (tags.ProcessTags(this))
                 force = true;
 
             List<DataStreamBase> dataStreams = DataStreamFactory.Instance.DataStreams(this);
@@ -237,125 +238,6 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-
-        private const string START = "⌗";
-        private const string END = "֍";
-        private const char MIDDLE = '༶';
-        //start char is ⌗ U+2317
-        //middle markers are ༶ (U+0F36)
-        //end is ֍ (U+058D)
-        //new TagActivities("Delete Altitude", "⌗Altitude༶Delete֍"),
-        //new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
-        //new TagActivities("Delete Power", "⌗Power༶Delete֍"),
-        //new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
-
-        public bool ProcessTags()
-        {
-            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)this.GetNamedDatum(Activity.DescriptionTag);
-            if (descriptionDatum == null || descriptionDatum.Data == null)
-                return false;
-            string description = descriptionDatum.Data;
-
-
-            TypedDatum<string>? processedDatum = (TypedDatum<string>?)this.GetNamedDatum("Processed Tags");
-            string processedTags = (processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
-            bool processedTagsChanged = false;
-
-            while (description.Contains(START) && description.Contains(END))
-            {
-                int start = description.IndexOf(START, StringComparison.Ordinal);
-                int end = description.IndexOf(END, StringComparison.Ordinal);
-                int len = end - start;
-                string tag = description.Substring(start + 1, len - 1);
-
-                if(!processedTags.Contains(tag))
-                {
-                    Logging.Instance.Debug($"processedTags [{processedTags}] doesn't contain {tag}");
-                    if(!ProcessTag(tag))
-                    {
-                        Logging.Instance.Debug($"ProcessTag failed");
-                        return false;
-                    }
-                    processedTags += tag;
-                    processedTagsChanged = true;
-                }
-
-                description = description.Substring(end + 1);
-            }
-            if (processedTagsChanged)
-            {
-                Logging.Instance.Debug($"processedTags is now {processedTags}");
-                this.AddOrReplaceDatum(new TypedDatum<string>("Processed Tags", true, processedTags)); //set recorded to true as this isn't something we want to recreate all the time
-                return true;
-            }
-            return false;
-        }
-
-        private bool ProcessTag(string tag)
-        {
-            Logging.Instance.Debug($"ProcessTag({tag})");
-            bool retval = false;
-            string[] strings = tag.Split(MIDDLE);
-            string stream = strings[0];
-            string command = strings[1];
-            int amount = strings.Length > 2 ? int.Parse(strings[2]) : 0;
-
-            if(command == "Delete")
-            {
-                Logging.Instance.Debug($"ProcessTag command: delete stream:{stream}");
-                this.RemoveNamedDatum(stream);
-                this.RemoveDataStream(stream);
-                retval = true;
-            }
-            else if (command == "CopyBack")
-            {
-                Logging.Instance.Debug($"ProcessTag command: copyback stream:{stream}");
-                if (!this.TimeSeries.ContainsKey(stream))
-                {
-                    Logging.Instance.Debug($"ProcessTag CopyBack missing {stream}");
-                    return retval;
-                }
-                DataStreamBase dataStream = this.TimeSeries[stream];
-                Tuple<uint[], float[]>? data = dataStream.GetData();
-                if (data == null || data.Item1.Length < amount)
-                {
-                    Logging.Instance.Debug($"ProcessTag CopyBack {stream} is too short");
-                    return retval;
-                }
-                float copyback = data.Item2[amount];
-
-                for (int i = 0; i < amount; i++)
-                {
-                    data.Item2[i] = copyback;
-                }
-                Logging.Instance.Debug($"ProcessTag CopyBack {stream} Done");
-                retval = true;
-            }
-            else if (command == "Cap")
-            {
-                Logging.Instance.Debug($"ProcessTag Cap {stream} to {amount}");
-                DataStreamBase dataStream = this.TimeSeries[stream];
-                Tuple<uint[], float[]>? data = dataStream.GetData();
-                if (data == null)
-                {
-                    Logging.Instance.Debug($"ProcessTag Cap {stream} no data");
-                    return retval;
-                }
-                for (int i = 0; i < data.Item2.Length; i++)
-                {
-                    if(data.Item2[i] > amount)
-                        data.Item2[i] = amount;
-                }
-                Logging.Instance.Debug($"ProcessTag Cap {stream} Done");
-                retval = true;
-            }
-            else
-            {
-                Logging.Instance.Debug($"ProcessTag unexpected command {command}");
-                retval = false;
-            }
-            return retval;
-        }
         public void RecalculateHills(List<Hill> hills, bool force, bool fullDebug)
         {
             if (LocationStream == null || LocationStream.Latitudes.Length == 0)
@@ -420,19 +302,20 @@ namespace FellrnrTrainingAnalysis.Model
             //    Logging.Instance.Debug($"Hill matching took {Logging.Instance.GetAndResetTime("hills")}, {nochecked} checked, {nomatched} matched");
         }
 
-        private const string StravaActivityIDTag = "Strava ID";
-        public const string PrimarykeyTag = StravaActivityIDTag;
-        private const string StartDateAndTimeLocalTag = "Start DateTime Local"; //be explicit about the time part, as sometimes we only want the date component
-        private const string StartDateAndTimeUTCTag = "Start DateTime UTC"; //be explicit about the time part, as sometimes we only want the date component
-        private const string ActivityTypeTag = "Type";
+        private const string TagStravaActivityID = "Strava ID";
+        public const string TagPrimarykey = TagStravaActivityID;
+        private const string TagStartDateAndTimeLocal = "Start DateTime Local"; //be explicit about the time part, as sometimes we only want the date component
+        private const string TagStartDateAndTimeUTC = "Start DateTime UTC"; //be explicit about the time part, as sometimes we only want the date component
+        private const string TagActivityType = "Type";
         private const string FilenameTag = "Filename";
-        private const string FileFullPathTag = "Filepath";
-        public const string DescriptionTag = "Description";
-        public const string NameTag = "Name";
+        private const string TagFileFullPath = "Filepath";
+        public const string TagDescription = "Description";
+        public const string TagName = "Name";
 
-        public const string DistanceTag = "Distance";
-        public const string ElapsedTimeTag = "Elapsed Time";
-        public const string MovingTimeTag = "Moving Time";
+        public const string TagDistance = "Distance";
+        public const string TagElapsedTime = "Elapsed Time";
+        public const string TagMovingTime = "Moving Time";
+        public const string TagTreadmillAngle = "Treadmill Angle";
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";

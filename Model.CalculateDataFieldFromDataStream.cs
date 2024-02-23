@@ -1,23 +1,19 @@
 ﻿using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace FellrnrTrainingAnalysis.Model
 {
     public abstract class CalculateDataFieldFromDataStreamBase : CalculateFieldBase
     {
-        public CalculateDataFieldFromDataStreamBase(string activityFieldname, DataStreamBase ds)
-        {
-            SourceDataStream = ds;
-            SourceStreamName = ds.Name;
-            ActivityFieldname = activityFieldname;
-        }
-
-        public CalculateDataFieldFromDataStreamBase(string activityFieldname, string sourceStreamName)
+        public CalculateDataFieldFromDataStreamBase(string activityFieldname, string sourceStreamName, List<string>? sportsToInclude = null)
         {
             SourceStreamName = sourceStreamName;
             SourceDataStream = null;
             ActivityFieldname = activityFieldname;
+            SportsToInclude = sportsToInclude;
         }
 
+        List<string>? SportsToInclude;
         private string SourceStreamName;
         private DataStreamBase? SourceDataStream = null;
 
@@ -57,19 +53,24 @@ namespace FellrnrTrainingAnalysis.Model
 
             Activity activity = (Activity)extensible;
 
+            if (activity.HasNamedDatum(ActivityFieldname) && !force)
+                return;
+
+            //always remove if we're recalculating
+            activity.RemoveNamedDatum(ActivityFieldname);
+
+            if (SportsToInclude != null && !activity.CheckSportType(SportsToInclude))
+                return;
 
             if (DataStream(activity) == null)
                 return;
 
             DataStream(activity)!.Recalculate(forceCount, false);
 
-            if (activity.HasNamedDatum(ActivityFieldname) && !force)
-                return;
 
             Tuple<uint[], float[]>? data = GetUnderlyingDataStream(activity);
             if (data == null)
             {
-                activity.RemoveNamedDatum(ActivityFieldname);
                 return;
             }
 
@@ -84,11 +85,8 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromDataStreamSimple : CalculateDataFieldFromDataStreamBase
     {
-        public CalculateDataFieldFromDataStreamSimple(string activityFieldname, Mode extractionMode, DataStreamBase ds) : base(activityFieldname, ds)
-        {
-            ExtractionMode = extractionMode;
-        }
-        public CalculateDataFieldFromDataStreamSimple(string activityFieldname, Mode extractionMode, string sourceStreamName) : base(activityFieldname, sourceStreamName)
+        public CalculateDataFieldFromDataStreamSimple(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
         }
@@ -119,12 +117,8 @@ namespace FellrnrTrainingAnalysis.Model
     }
     public class CalculateDataFieldFromDataStreamThreashold : CalculateDataFieldFromDataStreamBase
     {
-        public CalculateDataFieldFromDataStreamThreashold(string activityFieldname, Mode extractionMode, float threashold, DataStreamBase ds) : base(activityFieldname, ds)
-        {
-            ExtractionMode = extractionMode;
-            Threashold = threashold;
-        }
-        public CalculateDataFieldFromDataStreamThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName) : base(activityFieldname, sourceStreamName)
+        public CalculateDataFieldFromDataStreamThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
             Threashold = threashold;
@@ -176,11 +170,8 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromDataStreamAUC : CalculateDataFieldFromDataStreamBase
     {
-        public CalculateDataFieldFromDataStreamAUC(string activityFieldname, bool negate, float min, float? max, DataStreamBase ds) : base(activityFieldname, ds)
-        {
-            Negate = negate; Min = min; Max = max;
-        }
-        public CalculateDataFieldFromDataStreamAUC(string activityFieldname, bool negate, float min, float? max, string sourceStreamName) : base(activityFieldname, sourceStreamName)
+        public CalculateDataFieldFromDataStreamAUC(string activityFieldname, bool negate, float min, float? max, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             Negate = negate; Min = min; Max = max;
         }

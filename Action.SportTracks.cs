@@ -6,7 +6,9 @@ using System.Security.Policy;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using de.schumacher_bw.Strava.Endpoint;
 using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using GMap.NET.MapProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.VisualBasic.Logging;
@@ -15,11 +17,12 @@ using Microsoft.VisualBasic.Logging;
 
 namespace FellrnrTrainingAnalysis.Action
 {
-    public class Fitlog
+    public class SportTracks
     {
-        public Fitlog() { }
+        public SportTracks() { }
 
 
+        //CAUTION: The process to create new activities is to parse the Fitlog, verify, write a new Fitlog, manually import to Golden Cheetah, manually export to FIT files, then run the upload step.
 
         //Caution: fitlog and strava may be from different devices. The fitlog is "master", but doesn't have the name/description right
 
@@ -39,8 +42,9 @@ namespace FellrnrTrainingAnalysis.Action
         //
         // 1. Create missing activities. fitlog - parse - fitlog - gc - fit - strava? 
         // 2. Tag all descents with descent and grade
-        // 3. Tag missmatched distance/time with override tags (only counts for goals, not even GAD, let alone other statistics
+        // 3. Tag missmatched distance/time with override tags (only counts for goals, not even GAD, let alone other statistics)
         //
+        // Accept the GPS error? Everyone has them, but the greenway was especially bad
         // 
         // 4. To adjust for wrong distance, we'd have to drop GPS data AND rework the distance feed
 
@@ -49,24 +53,126 @@ namespace FellrnrTrainingAnalysis.Action
 
 
 
-
-
-        public void FixFromFitlog(Model.Athlete athlete)
+        public void FixFromFitlog(Database database, Athlete athlete)
         {
-            string PrimaryKey = "";
-            if (athlete == null) { return; }
-            if(!athlete.Activities.ContainsKey(PrimaryKey))
+            AddFromFitlog(database, athlete);
+
+        }
+
+        public void UpdateFromFitlog(Database database, Athlete athlete, int limit)
+        {
+            int count = 0;
+            foreach (SportTracksActivity act in AllActivitesParsed)
             {
-                Utils.Logging.Instance.Log($"Couldn't find {PrimaryKey}");
-                return;
+                if (act.matchingActivity != null)
+                {
+                    Activity activity = act.matchingActivity;
+                    string description = activity.Description;
+                    float? distance = act.matchingActivity.GetNamedFloatDatum(Activity.TagDistance);
+                    float? time = act.matchingActivity.GetNamedFloatDatum(Activity.TagElapsedTime);
+                    string addOn = "";
+                    string dtag = $"{Tags.START}{Activity.TagDistance}{Tags.MIDDLE}Override{Tags.MIDDLE}";
+                    if (act._totalDistance != 0 && (distance == null || distance == 0 || !WithinMargin(distance, act._totalDistance, 500.0)) && !description.Contains(dtag))
+                    {
+                        addOn += $" {dtag}{act._totalDistance}{Tags.END} \n";
+                    }
+
+                    //the time in fitlog seems to be moving time
+                    //string ttag = $"{Tags.START}{Activity.TagElapsedTime}{Tags.MIDDLE}Override{Tags.MIDDLE}";
+                    //if (act._totalDuration != 0 && (time == null || time == 0 || !WithinMargin(time, act._totalDuration, 60.0)) && !description.Contains(ttag))
+                    //{
+                    //    addOn += $" {ttag}{act._totalDuration}{Tags.END} \n";
+                    //}
+
+                    string tmtag = $"{Tags.START}{Activity.TagTreadmillAngle}{Tags.MIDDLE}Override{Tags.MIDDLE}";
+                    if (act._name.ToLower().Contains("descent") && !description.Contains(tmtag))
+                    {
+                        double defaultAngle = -10.0; //this seems to be our normal descent
+                        double angle = act._treadmillAngle ?? defaultAngle;
+                        addOn += $" {tmtag}{angle}{Tags.END} \n";
+                    }
+                    if (!string.IsNullOrEmpty(addOn))
+                    {
+                        Logging.Instance.Debug($"Update #{++count}, [{activity}], {distance}m, {time}s  description to add {addOn} to [{description}]");
+                        if (count < limit)
+                        {
+                            if (!string.IsNullOrEmpty(description))
+                                description += "\n";
+                            description += addOn;
+                            //if (!StravaApi.Instance.UpdateActivityDetails(activity, null, description))
+                            //{
+                            //    if (MessageBox.Show($"Update of {activity} failed, continue?", "oops", MessageBoxButtons.YesNoCancel) == DialogResult.No)
+                            //        return;
+                            //}
+                        }
+                    }
+                }
             }
+            MessageBox.Show($"Hit limit {limit} of {count}");
+        }
 
-            Activity activity = athlete.Activities[PrimaryKey];
+        public void AddFromFitlog(Database database, Athlete athlete)
+        {
+            foreach(SportTracksActivity act in ActivitiesToUpload)
+            {
+                DateTime start = act._startTime;
+                //2002_07_08_12_40_40.fit
+                string filenameGuess = start.ToString("yyyy_MM_dd_HH_mm_ss") + ".fit";
+                string folder = @"C:\Users\jfsav\OneDrive\Jonathan\Fellrnr Export Missing Workouts";
+                string path = Path.Combine(folder, filenameGuess);
+                if(File.Exists(path))
+                {
+                    Logging.Instance.Log($"Trying filename [{path}]");
 
+                    FileInfo fileInfo = new FileInfo(path);
 
+                    //activity has been added to athlete by upload
+                    StravaApi.UploadResult result = StravaApi.Instance.UploadActivityFromFit(database, fileInfo, act._name, act._notes, act._treadmill);
+                    if(result.Activity != null)
+                    {
+                        DialogResult dialogResult = MessageBox.Show($"Uploaded activity {result.Activity.PrimaryKey()} for {start}. {result.Usage}. Open or cancel?", "Continue, open, or quit?", MessageBoxButtons.YesNoCancel);
+                        if (dialogResult != DialogResult.No) //open on cancel
+                        {
+                            StravaApi.OpenAsStravaWebPage(result.Activity);
+                        }
 
+                        if (dialogResult == DialogResult.Cancel)
+                        {
+                            return;
+                        }
+                    }
+                    else if(result.Error != null)
+                    {
+                        if(result.Error.ToLower().Contains("duplicate of "))
+                        {
+                            DialogResult dialogResult = MessageBox.Show($"We got a duplicate, error {result.Error}. Continue?", "Do More?", MessageBoxButtons.YesNo);
+                            if (dialogResult == DialogResult.No)
+                            {
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            if(MessageBox.Show($"We got an error {result.Error}. Continue?", "Do More?", MessageBoxButtons.YesNo) == DialogResult.No)
+                            {
+                                return;
+                            }
+                        }
 
-
+                    } 
+                    else
+                    {
+                        if (MessageBox.Show($"No error, but no activity. Huh. Continue?", "Do More?", MessageBoxButtons.YesNo) == DialogResult.No)
+                        {
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    Logging.Instance.Log($"Can't find [{path}]");
+                }
+            }
         }
 
         public void ReadFitlogFolder(string folder)
@@ -107,9 +213,9 @@ namespace FellrnrTrainingAnalysis.Action
                     {
                         if (node.Name == "Activity")
                         {
-                            FitLogActivity act = new FitLogActivity();
-                            act.ParseXML(node, stringBuilder);
-                            list.Add(act);
+                            SportTracksActivity act = new SportTracksActivity();
+                            if(act.ParseXML(node, stringBuilder))
+                                AllActivitesParsed.Add(act);
                         }
                     }
                 }
@@ -117,11 +223,124 @@ namespace FellrnrTrainingAnalysis.Action
             stringBuilderResults.Append(stringBuilder.ToString());
         }
 
+
+        string FitLogPreamble = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <FitnessWorkbook xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.zonefivesoftware.com/xmlschemas/FitnessLogbook/v3">
+                <AthleteLog>
+            """;
+
+        string FitLogPostamble = """
+             </AthleteLog>
+            </FitnessWorkbook>
+            """;
+
+
+
+        string[] RunningCategories = { "Pace", "Intervals", "Easy", "Tempo", "Strides", "Long" };
+        string[] ValidCategories = { "biking", "cycling", "running", "hiking", "walking", "swimming" };
+        string[] GuidsToSkip = { "6f02d5d0-23c8-4399-9265-8b09fe147d79", "c97ba0d1-28c0-43e0-9e3f-2cda88d8e7bf", "a74b0685-580d-4d4d-b9b5-e9a2a483e1b3", "ccd47de4-641c-4205-9ac6-078f780f6b8d", "961a363b-5f60-4117-979c-8327c433e369", "d1f41890-05fe-4e05-b069-6456d95585f4", "a1795d94-9b10-4d9f-a4a3-6781e04d80ff", "56331c57-4d91-4dff-b0c5-07466eed8900", "fa61f4a9-e25b-4f07-a895-6bfc9b110027", "a9096001-6d2a-4567-80d2-249922f4da55", "b7cf3dba-7e05-45d5-a171-93210e89eaab", "9592f875-2823-4c1f-b56b-7b8e8914a7c8" }; //prior problems, such as activity in strava, but not exported into archive
+        public void WriteMissingFitlog(StringBuilder stringBuilder)
+        {
+            //windows 11 protected folders blocks access to documents folder
+            string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string AppDataSubFolder = "FellrnrTrainingData";
+            string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
+
+            string fullpath = Path.Combine(AppDataPath, "MissingWorkouts.fitlog");
+            //using (StreamWriter outputFile = new StreamWriter(fullpath))
+            //using (Stream stream = new FileStream(fullpath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (StreamWriter stream = new StreamWriter(fullpath))
+            using (XmlTextWriter writer = new XmlTextWriter(stream))
+            {
+                writer.Formatting = Formatting.Indented;
+                writer.WriteRaw(FitLogPreamble);
+                int count = 0;
+                foreach (SportTracksActivity act in AllActivitesParsed)
+                {
+                    //filter out tiny activities, ignore problems
+                    if (act.matchingActivity == null && act._xml != null)
+                    {
+                        XmlNode node = act._xml;
+                        bool found = false;
+
+                        string InnerText = $"\nRecreatedFromSportTracks {act._guid}\n ";
+                        string sport = act._name;
+                        if (RunningCategories.Contains(sport))
+                        {
+                            InnerText += $" SportTracksSportWas:{sport}\n";
+                            sport = "Running";
+                        }
+                        if (act._totalDistance != act._lastDistance)
+                        {
+                            InnerText += $" {Tags.START}{Activity.TagDistance}{Tags.MIDDLE}Override{Tags.MIDDLE}{act._totalDistance}{Tags.END} \n";
+                        }
+                        if (act._totalDuration != act._lastTime && act._lastTime != 0) //only if they're different
+                        {
+                            InnerText += $" {Tags.START}{Activity.TagElapsedTime}{Tags.MIDDLE}Override{Tags.MIDDLE}{act._totalDuration}{Tags.END} \n";
+                        }
+
+                        if (act._name.ToLower().Contains("descent"))
+                        {
+                            double defaultAngle = -10.0; //this seems to be our normal descent
+                            double angle = act._treadmillAngle ?? defaultAngle;
+                            InnerText += $" {Tags.START}{Activity.TagTreadmillAngle}{Tags.MIDDLE}Override{Tags.MIDDLE}{defaultAngle}{Tags.END} \n";
+                            act._treadmill = true;
+                            act._treadmillAngle = angle;
+                        }
+
+                        if(act._notes.ToLower().StartsWith("treadmill") && !act._hasGps)
+                        {
+                            act._treadmill = true;
+                        }
+
+                        foreach (XmlNode curNode in node.ChildNodes)
+                        {
+                            if (curNode.Name == "Notes")
+                            {
+                                found = true;
+                                curNode.InnerText += InnerText;
+                            }
+                            if (curNode.Name == "Category")
+                            {
+                                curNode.Attributes!["Name"]!.Value = sport;
+                            }
+                        }
+                        if (!found)
+                        {
+                            if (node.OwnerDocument != null)
+                            {
+                                XmlDocument doc = node.OwnerDocument;
+                                XmlNode notesNode = doc.CreateNode(XmlNodeType.Element, "Notes", "http://www.zonefivesoftware.com/xmlschemas/FitnessLogbook/v3");
+                                notesNode.InnerText = " #RecreatedFromSportTracks";
+                                node.AppendChild(notesNode);
+                            }
+                            else
+                            {
+                                stringBuilder.AppendLine("Oops, no XmlDocument");
+                            }
+                        }
+                        act._notes += InnerText;
+                        act._name = sport;
+                        //Activity type is detected from <Activity Sport="*"> where ‘biking’, ‘running’, ‘hiking’, ‘walking’ and ‘swimming’ 
+                        if (ValidCategories.Contains(sport.ToLower()) && !GuidsToSkip.Contains(act._guid))
+                        {
+                            act._xml.WriteTo(writer);
+                            ActivitiesToUpload.Add(act);
+                            count++;
+                        }
+                    }
+                }
+                writer.WriteRaw(FitLogPostamble);
+                stringBuilder.AppendLine($"Wrote XML for {count} activities");
+            }
+        }
+
         public void Verify(Model.Athlete athlete)
         {
             StringBuilder stringBuilder = new StringBuilder();
 
-            foreach (FitLogActivity act in list)
+            foreach (SportTracksActivity act in AllActivitesParsed)
             {
                 Verify(athlete, act, stringBuilder);
                 if(act._startTime > lastInFitlog)
@@ -129,8 +348,12 @@ namespace FellrnrTrainingAnalysis.Action
 
                 totalCount++;
             }
+            
+            WriteMissingFitlog(stringBuilder); //do this after verify or the activities won't be updated!
+
             stringBuilder.AppendLine($"Total {totalCount}");
             stringBuilder.AppendLine($"All good                 {goodCount}");
+            stringBuilder.AppendLine($"To upload to strava      {ActivitiesToUpload.Count}");
             stringBuilder.AppendLine($"Missing from strava      {missingCount}");
             stringBuilder.AppendLine($"Missing with HR          {missingCountWHR}");
             stringBuilder.AppendLine($"Missing with distance    {missingCountWDis}");
@@ -138,7 +361,7 @@ namespace FellrnrTrainingAnalysis.Action
             stringBuilder.AppendLine($"missingEmptyDay          {missingEmptyDay}");
             stringBuilder.AppendLine($"missingOnlyMatched       {missingOnlyMatched}");
             stringBuilder.AppendLine($"missingUnmatchedExist    {missingUnmatchedExist}");
-            stringBuilder.AppendLine($"Distances don't match    {distanceDoesntMatchAtAll}");
+            stringBuilder.AppendLine($"Distances no match any   {distanceDoesntMatchAtAll}");
             stringBuilder.AppendLine($"Matching last distance   {lastDistanceCount}");
             stringBuilder.AppendLine($"Matching last dist/HR    {badCountWHR}");
             stringBuilder.AppendLine($"Matching last dis/Dist   {badCountWDis}");
@@ -147,7 +370,7 @@ namespace FellrnrTrainingAnalysis.Action
             //stringBuilder.AppendLine($"nameCount                {nameCount}");
             stringBuilder.AppendLine($"durationCount            {durationCount}");
             stringBuilder.AppendLine($"No Distance in fitlog    {noDistanceFit}");
-            stringBuilder.AppendLine($"Distance fit not strava  {noDistanceStrava}");
+            stringBuilder.AppendLine($"Dist in fit, strava zero {noDistanceStrava}");
             stringBuilder.AppendLine($"Missing distance         {Math.Round(distanceMissing / 1000, 0)} Km");
             stringBuilder.AppendLine($"Extra distance           {Math.Round(distanceExtra / 1000, 0)} Km");
             stringBuilder.AppendLine($"Short distance           {Math.Round(distanceShort / 1000, 0)} Km");
@@ -163,7 +386,7 @@ namespace FellrnrTrainingAnalysis.Action
                 stringBuilder.AppendLine();
                 stringBuilder.AppendLine("==========Unmatched Descents==========");
                 stringBuilder.AppendLine();
-                foreach (FitLogActivity act in list)
+                foreach (SportTracksActivity act in AllActivitesParsed)
                 {
                     if (act._name.ToLower().Contains("descent") && act.matchingActivity == null)
                     {
@@ -174,7 +397,7 @@ namespace FellrnrTrainingAnalysis.Action
                 stringBuilder.AppendLine();
                 stringBuilder.AppendLine("==========Matched Descents==========");
                 stringBuilder.AppendLine();
-                foreach (FitLogActivity act in list)
+                foreach (SportTracksActivity act in AllActivitesParsed)
                 {
                     if (act._name.ToLower().Contains("descent") && act.matchingActivity != null)
                     {
@@ -190,7 +413,7 @@ namespace FellrnrTrainingAnalysis.Action
                     if (activity.StartDateTimeUTC < lastInFitlog && !MatchedStravaIds.Contains(stravaid))
                     {
                         bool foundSurroundingFitlog = false;
-                        foreach (FitLogActivity act in list)
+                        foreach (SportTracksActivity act in AllActivitesParsed)
                         {
                             DateTime endTime = act._startTime.AddSeconds(act._totalDuration);
                             if (activity.StartDateTimeUTC > act._startTime && activity.StartDateTimeUTC < endTime)
@@ -228,7 +451,8 @@ namespace FellrnrTrainingAnalysis.Action
             stringBuilderResults = stringBuilder;
         }
         DateTime lastInFitlog = DateTime.MinValue;
-        List<FitLogActivity> list = new List<FitLogActivity>();
+        List<SportTracksActivity> AllActivitesParsed = new List<SportTracksActivity>();
+        List<SportTracksActivity> ActivitiesToUpload = new List<SportTracksActivity>();
         //StringBuilder stringBuilderDeclinesGPS = new StringBuilder();
         //StringBuilder stringBuilderDeclinesNoGPS = new StringBuilder();
 
@@ -263,7 +487,7 @@ namespace FellrnrTrainingAnalysis.Action
 
         public bool UnmatchedDetails = false;
 
-        private Activity? FindActivity(Model.Athlete athlete, FitLogActivity act, StringBuilder stringBuilder)
+        private Activity? FindActivity(Model.Athlete athlete, SportTracksActivity act, StringBuilder stringBuilder)
         {
             if (act._guid == "ce91d28f-1ee6-4689-b05c-bde09d0444c9")
             {
@@ -342,7 +566,7 @@ namespace FellrnrTrainingAnalysis.Action
             return null;
         }
 
-        public void Verify(Model.Athlete athlete, FitLogActivity act, StringBuilder stringBuilderAddTo)
+        public void Verify(Model.Athlete athlete, SportTracksActivity act, StringBuilder stringBuilderAddTo)
         {
             StringBuilder stringBuilder = new StringBuilder();
             Activity? activity = FindActivity(athlete, act, stringBuilder);
@@ -368,7 +592,7 @@ namespace FellrnrTrainingAnalysis.Action
                 //}
 
 
-                string? stravaDescription = activity.GetNamedStringDatum(Activity.DescriptionTag);
+                string? stravaDescription = activity.GetNamedStringDatum(Activity.TagDescription);
                 if (stravaDescription == null && !string.IsNullOrEmpty(act._notes))
                 {
                     stringBuilder.Append($"Description Strava Null! Fitlog [{act._notes}] ");
@@ -382,7 +606,7 @@ namespace FellrnrTrainingAnalysis.Action
 
 
                 //moving or ElapsedTimeTag
-                float? stravaDuration = activity.GetNamedFloatDatum(Activity.ElapsedTimeTag);
+                float? stravaDuration = activity.GetNamedFloatDatum(Activity.TagElapsedTime);
                 if (!WithinMargin(stravaDuration, act._totalDuration, 60.0))
                 {
                     if (WithinMargin(stravaDuration, act._lastTime, 60.0))
@@ -398,7 +622,7 @@ namespace FellrnrTrainingAnalysis.Action
                 }
 
 
-                float? stravaDistance = activity.GetNamedFloatDatum(Activity.DistanceTag);
+                float? stravaDistance = activity.GetNamedFloatDatum(Activity.TagDistance);
                 if (act._totalDistance == 0)
                 {
                     noDistanceFit++;
@@ -476,11 +700,11 @@ namespace FellrnrTrainingAnalysis.Action
                     bool allmatched = true;
                     foreach (Activity activitySearch in day.Activities!)
                     {
-                        string stravaName = activitySearch.GetNamedStringDatum(Activity.NameTag) ?? "NO NAME";
+                        string stravaName = activitySearch.GetNamedStringDatum(Activity.TagName) ?? "NO NAME";
 
                         if (!MatchedStravaIds.Contains(activitySearch.PrimaryKey()))
                         {
-                            float? stravaDuration = activitySearch.GetNamedFloatDatum(Activity.ElapsedTimeTag);
+                            float? stravaDuration = activitySearch.GetNamedFloatDatum(Activity.TagElapsedTime);
 
                             stringBuilder.AppendLine($"    strava {activitySearch.PrimaryKey()} {activitySearch.StartDateTimeLocal} {stravaName}");
                             allmatched = false;
@@ -508,7 +732,7 @@ namespace FellrnrTrainingAnalysis.Action
             ExtractDecline(act);
         }
 
-        private void ExtractDecline(FitLogActivity act)
+        private void ExtractDecline(SportTracksActivity act)
         {
             string notes = act._notes;
             //string key = "% decline";
@@ -535,6 +759,7 @@ namespace FellrnrTrainingAnalysis.Action
                     percent = Math.Abs(percent);
                     if (percent > 3 && percent < 20) //limits of treadmill descents
                     {
+                        act._treadmillAngle = 0.0 - percent;
                         act._decline += $"Decline of {percent}% [{act._name}] has GPS {act._guid} {act._startTime} {act._notes} ";
                     }
                 }
@@ -547,8 +772,11 @@ namespace FellrnrTrainingAnalysis.Action
         public string Results { get { return stringBuilderResults.ToString(); } }
 
 
-        public class FitLogActivity : MyBase
+        public class SportTracksActivity : MyBase
         {
+            static string[] IgnoreGuids = { "cafee3c6-882e-45f1-b471-44e537907126" };
+            static string[] IgnoreNames = { "Intermittent Hypoxia", "Aerobics", "My Activities" };
+
             public string? _guid;
             public double _totalDuration = 0;  // seconds
             public double _totalDistance = 0;  // meters
@@ -567,11 +795,13 @@ namespace FellrnrTrainingAnalysis.Action
             public double _lastTime = 0;
             public double _lapDistance = 0;
             public int _lapCountOver300 = 0;
-            public string _xml = "";
+            public string _xmlAsText = "";
+            public XmlNode? _xml;
             public Activity? matchingActivity = null;
             private List<Lap> _laps = new List<Lap>();
             public string _decline = "";
-
+            public double? _treadmillAngle = null;
+            public bool _treadmill = false;
             /*
      <Activity StartTime="2015-03-09T21:00:00Z" Id="5914f59b-fbfb-44ca-8331-d3dc90d30cdf">
        <Metadata Source="" Created="2015-03-09T21:53:31Z" Modified="2015-03-10T14:08:41Z" />
@@ -582,50 +812,50 @@ namespace FellrnrTrainingAnalysis.Action
       </Activity>
             */
 
-            public void ParseXML(XmlNode node, StringBuilder stringBuilder)
+            public bool ParseXML(XmlNode node, StringBuilder stringBuilder)
             {
-                if (node.Attributes == null) { stringBuilder.AppendLine("No Attributes"); return; }
-                if (node.Attributes["StartTime"] == null) { stringBuilder.AppendLine("No StartTime"); return; }
+                if (node.Attributes == null) { stringBuilder.AppendLine("No Attributes"); return false; }
+                if (node.Attributes["StartTime"] == null) { stringBuilder.AppendLine("No StartTime"); return false; }
                 _startTime = DateTime.Parse(node.Attributes["StartTime"]!.Value);
                 //_startTime = DateTime.SpecifyKind(_startTime, DateTimeKind.Unspecified);
                 _startTime = _startTime.AddMilliseconds(-_startTime.Millisecond); //get rid of milliseconds or they won't match
-                if (node.Attributes["Id"] == null) { stringBuilder.AppendLine("No Id"); return; }
+                if (node.Attributes["Id"] == null) { stringBuilder.AppendLine("No Id"); return false; }
                 //_guid = new Guid(node.Attributes["Id"]!.Value);
                 _guid = node.Attributes["Id"]!.Value;
-                _xml = node.OuterXml;
-
+                _xmlAsText = node.OuterXml;
+                _xml = node;
                 // Loop through child nodes
                 foreach (XmlNode curNode in node.ChildNodes)
                 {
-                    if (curNode.Attributes == null) { stringBuilder.AppendLine("No Attributes in curNode"); return; }
+                    if (curNode.Attributes == null) { stringBuilder.AppendLine("No Attributes in curNode"); return false; }
                     switch (curNode.Name)
                     {
                         case "Notes":
-                            if (curNode.InnerText == null) { stringBuilder.AppendLine("No Name Value"); return; }
+                            if (curNode.InnerText == null) { stringBuilder.AppendLine("No Name Value"); return false; }
                             _notes = curNode.InnerText;
                             break;
                         case "Duration":
-                            if (curNode.Attributes["TotalSeconds"] == null) { stringBuilder.AppendLine("No TotalSeconds"); return; }
+                            if (curNode.Attributes["TotalSeconds"] == null) { stringBuilder.AppendLine("No TotalSeconds"); return false; }
                             _totalDuration = ParseDoubleAttribute(curNode.Attributes["TotalSeconds"]!);
                             break;
                         case "Distance":
-                            if (curNode.Attributes["TotalMeters"] == null) { stringBuilder.AppendLine("No TotalMeters"); return; }
+                            if (curNode.Attributes["TotalMeters"] == null) { stringBuilder.AppendLine("No TotalMeters"); return false; }
                             _totalDistance = ParseDoubleAttribute(curNode.Attributes["TotalMeters"]!);
                             break;
                         case "Calories":
-                            if (curNode.Attributes["TotalCal"] == null) { stringBuilder.AppendLine("No TotalCal"); return; }
+                            if (curNode.Attributes["TotalCal"] == null) { stringBuilder.AppendLine("No TotalCal"); return false; }
                             _totalCalories = ParseDoubleAttribute(curNode.Attributes["TotalCal"]!);
                             break;
                         case "Category":
-                            if (curNode.Attributes["Name"] == null) { stringBuilder.AppendLine("No Name"); return; }
+                            if (curNode.Attributes["Name"] == null) { stringBuilder.AppendLine("No Name"); return false; }
                             _name = curNode.Attributes!["Name"]!.Value;
                             break;
                         case "Track":
                             {
-                                if (curNode.Attributes["StartTime"] == null) { stringBuilder.AppendLine("No StartTime"); return; }
+                                if (curNode.Attributes["StartTime"] == null) { stringBuilder.AppendLine("No StartTime"); return false; }
                                 _trackStartTime = DateTime.Parse(curNode.Attributes["StartTime"]!.Value);
                                 _hasTracks = true;
-                                
+
                                 foreach (XmlNode tpNode in curNode.ChildNodes)
                                 {
                                     if (tpNode.Attributes != null && tpNode.Attributes["dist"] != null)
@@ -682,6 +912,17 @@ namespace FellrnrTrainingAnalysis.Action
                     }
                 }
                 //Debug.WriteLine("Distance: " + _totalDistance.ToString() + " m");
+
+
+
+                //don't load crap
+                if ((_totalDuration == 0 || _totalDuration > 900) &&
+                    !IgnoreGuids.Contains(_guid) &&
+                    !IgnoreNames.Contains(_name))
+                {
+                    return true;
+                }
+                return false;
             }
         }
 

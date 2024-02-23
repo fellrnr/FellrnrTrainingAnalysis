@@ -113,6 +113,8 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
+        
+
         public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target)
         {
             if (target.StartDateNoTimeLocal == null)
