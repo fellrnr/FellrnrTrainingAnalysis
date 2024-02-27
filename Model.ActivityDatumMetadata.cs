@@ -9,9 +9,13 @@ namespace FellrnrTrainingAnalysis.Model
         public ActivityDatumMetadata() { }
         //public string FellrnrName { get; set; } //our internal name
 
+        public enum LevelType { Activity, Day };
+
+        public LevelType Level { get; set; } = LevelType.Activity;
+
         public string Name { get; set; } = "";
         public string Title { get; set; } = "";
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, Percent, None }; //Integer is misc value
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, Float, Percent, None }; //Integer is misc value
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 

@@ -34,6 +34,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         //look for the given date and work backwards to find one with a datum with the name provided
+        //Another n^2 problem if there are no days with the value
         public Day? FindRecentDayWithDatum(DateTime date, string name)
         {
             DateTime dateNoTime = date.Date; //just in case
@@ -159,12 +160,19 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
+
+
+        [MemoryPackIgnore]
+        private List<string>? activityFieldNames = null;
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> ActivityFieldNames
         {
             get
             {
-                List<string> activityFieldNames = new List<string>();
+                if (activityFieldNames != null)
+                    return activityFieldNames;
+
+                activityFieldNames = new List<string>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
                 {
                     Activity activity = kvp.Value;
@@ -178,6 +186,33 @@ namespace FellrnrTrainingAnalysis.Model
                 }
                 activityFieldNames.Sort();
                 return activityFieldNames.AsReadOnly();
+            }
+        }
+
+        [MemoryPackIgnore]
+        private List<string>? dayFieldNames = null;
+        [MemoryPackIgnore]
+        public IReadOnlyCollection<String> DayFieldNames
+        {
+            get
+            {
+                if (dayFieldNames != null)
+                    return dayFieldNames;
+
+                dayFieldNames = new List<string>();
+                foreach (KeyValuePair<DateTime, Day> kvp in _days)
+                {
+                    Day day = kvp.Value;
+                    foreach (string s in day.DataNames)
+                    {
+                        if (!dayFieldNames.Contains(s))
+                        {
+                            dayFieldNames.Add(s);
+                        }
+                    }
+                }
+                dayFieldNames.Sort();
+                return dayFieldNames.AsReadOnly();
             }
         }
 
@@ -201,7 +236,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                Activity activity = new Activity();
+                Activity activity = new Activity(this);
                 foreach (KeyValuePair<string, Datum> kvp in activityData)
                 {
                     activity.AddOrReplaceDatum(kvp.Value);
@@ -389,6 +424,8 @@ namespace FellrnrTrainingAnalysis.Model
             if (force)
             {
                 base.Clean();
+                dayFieldNames = null;
+                activityFieldNames = null;
             }
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
             int i = 0;

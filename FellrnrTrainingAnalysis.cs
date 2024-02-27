@@ -5,11 +5,13 @@ using FellrnrTrainingAnalysis.Utils;
 using System.Collections.ObjectModel;
 using CsvHelper;
 using System.Globalization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using FellrnrTrainingAnalysis.Action;
 using System.ComponentModel;
 using de.schumacher_bw.Strava.Endpoint;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using System.Windows.Forms;
+using System;
+using System.Linq;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -19,7 +21,11 @@ namespace FellrnrTrainingAnalysis
 
         UI.Goals GoalsUI { get; set; }
 
-        FilterActivities FilterActivities = new FilterActivities(); //the default filter
+
+        FilterString? CurrentTypeFilter = null;
+        FilterActivities DialogFilterActivities = new FilterActivities(); //the default filter
+        FilterBadData? CurrentFilterBadData = null;
+        FilterActivities CurrentFilterActivities = new FilterActivities(); //the default filter
 
         private UI.ProgressDialog ProgressDialog = new UI.ProgressDialog();
 
@@ -79,7 +85,7 @@ namespace FellrnrTrainingAnalysis
         private void FellrnrTrainingAnalysisForm_Load(object sender, EventArgs e)
         {
             Logging.Instance.Log("Entering FellrnrTrainingAnalysisForm_Load");
-            Logging.Instance.StartResetTimer("FellrnrTrainingAnalysisForm_Load");
+            Logging.Instance.ResetAndStartTimer("FellrnrTrainingAnalysisForm_Load");
             SetMenuAvailability();
 
             UpdateViews(false);
@@ -90,8 +96,22 @@ namespace FellrnrTrainingAnalysis
 
         public void CallbackEventHandler(FilterActivities filterActivities)
         {
-            FilterActivities = filterActivities;
+            CurrentFilterActivities = filterActivities;
             UpdateViews(false);
+        }
+
+        private void UpdateFilters()
+        {
+            CurrentFilterActivities.Filters.AddRange(DialogFilterActivities.Filters);
+            if (CurrentFilterBadData != null)
+                CurrentFilterActivities.Filters.Add(CurrentFilterBadData);
+
+            if (!string.IsNullOrEmpty(Options.Instance.OnlyShowActivityTypes))
+            {
+                CurrentTypeFilter = new FilterString(Activity.TagType, "in", Options.Instance.OnlyShowActivityTypes);
+                CurrentFilterActivities.Filters.Add(CurrentTypeFilter);
+            }
+
         }
 
         private void UpdateViews(bool force)
@@ -100,15 +120,17 @@ namespace FellrnrTrainingAnalysis
             //if(force) { progressBar1.Minimum = 0; progressBar1.Maximum = Database.CurrentAthlete.Activities.Count; }
             Database.MasterRecalculate(force);
 
+            UpdateFilters();
+            UpdateShowOnlyMenu();
             UpdateSummary();
             UpdateGoals();
 
-            activityReport1.UpdateReport(Database, FilterActivities);
+            activityReport1.UpdateReport(Database, CurrentFilterActivities);
             activityTree1.Display(Database);
 
-            progressGraph1.Display(Database, FilterActivities);
+            progressGraph1.Display(Database, CurrentFilterActivities);
 
-            overviewMap1.Display(Database, FilterActivities);
+            overviewMap1.Display(Database, CurrentFilterActivities);
 
             if (Logging.Instance.HasErrors)
             {
@@ -116,6 +138,33 @@ namespace FellrnrTrainingAnalysis
                 showErrorsToolStripMenuItem.ForeColor = Color.Red;
             }
             Logging.Instance.TraceLeave();
+        }
+
+
+        Dictionary<string, ToolStripMenuItem> showOnlyStripMenuItems = new Dictionary<string, ToolStripMenuItem>();
+
+        private void UpdateShowOnlyMenu()
+        {
+            IReadOnlyCollection<String> types = Database.CurrentAthlete.AllActivityTypes;
+            AddShowOnlyMeny("All");
+            foreach (string s in types)
+            {
+                AddShowOnlyMeny(s);
+            }
+            showOnlyToolStripMenuItem.DropDownItems.AddRange(showOnlyStripMenuItems.Values.ToArray());
+        }
+
+        private void AddShowOnlyMeny(string type)
+        {
+            if (!showOnlyStripMenuItems.ContainsKey(type))
+            {
+                ToolStripMenuItem toolStripItem3 = new ToolStripMenuItem();
+                toolStripItem3.Tag = type;
+                toolStripItem3.Text = type;
+                toolStripItem3.CheckOnClick = true;
+                toolStripItem3.Click += showOnlyToolStripMenuItem_Click;
+                showOnlyStripMenuItems.Add(type, toolStripItem3);
+            }
         }
 
         private void UpdateGoals()
@@ -289,6 +338,12 @@ namespace FellrnrTrainingAnalysis
             MessageBox.Show("Recalculation complete");
         }
 
+
+        private void recalculateHillsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
         private void showErrorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string errorText = Logging.Instance.Error();
@@ -310,6 +365,15 @@ namespace FellrnrTrainingAnalysis
             string logText = Logging.Instance.Debug();
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(logText);
             largeTextDialogForm.ShowDialog();
+        }
+
+        private void showAccumulatedTimeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Logging.Instance.DumpAndResetAccumulators();
+            string logText = Logging.Instance.Debug();
+            LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(logText);
+            largeTextDialogForm.ShowDialog();
+
         }
 
         private void logToolStripMenuItem_Click(object sender, EventArgs e)
@@ -343,9 +407,6 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
-
-
-
         public void DataStreamEditEventHandler(DataStreamDefinitionEditor sender) //a callback from clients
         {
             List<Model.DataStreamDefinition>? definitions = sender.Definitions;
@@ -367,12 +428,11 @@ namespace FellrnrTrainingAnalysis
         }
 
 
-        private FilterBadData aFilterBadData = new FilterBadData(FilterBadData.HasBadValueTag);
         private void ClearDataQualityIssues()
         {
             if (Database == null || Database.CurrentAthlete == null) { return; }
 
-            FilterActivities.Filters.Remove(aFilterBadData);
+            CurrentFilterBadData = null;
 
             foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByLocalDateTime)
             {
@@ -392,8 +452,7 @@ namespace FellrnrTrainingAnalysis
             rescanForDataQualityIssues(dataQualityCheck);
 
             //TODO: this doesn't add the bad data filter to the filter dialog
-            FilterActivities.Filters.Clear();
-            FilterActivities.Filters.Add(aFilterBadData);
+            CurrentFilterBadData = new FilterBadData(FilterBadData.HasBadValueTag);
             UpdateViews(false);
         }
 
@@ -405,20 +464,12 @@ namespace FellrnrTrainingAnalysis
             DataQualityCheck dataQualityCheck = (DataQualityCheck)toolStripMenuItem.Tag;
             rescanForDataQualityIssues(dataQualityCheck, true);
 
-            FilterActivities.Filters.Clear();
-            FilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
+            CurrentFilterActivities.Filters.Clear();
+            CurrentFilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
             UpdateViews(false);
         }
 
         ActivityFilterDialog? activityFilterDialog;
-        private void filterToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (activityFilterDialog == null)
-                activityFilterDialog = new ActivityFilterDialog();
-            activityFilterDialog.UpdatedHandler += CallbackEventHandler;
-            activityFilterDialog.Display(Database);
-            activityFilterDialog.Show();
-        }
 
         private void rescanForDataQualityIssuesToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -546,7 +597,7 @@ namespace FellrnrTrainingAnalysis
 
             string filePath = @"C:\Users\jfsav\OneDrive\Jonathan\FitLog From SportTracks";
             SportTracksProcessor.ReadFitlogFolder(filePath);
-            
+
             SportTracksProcessor.Verify(Database.CurrentAthlete);
             LargeTextDialogForm large = new LargeTextDialogForm(SportTracksProcessor.Results);
             large.ShowDialog();
@@ -577,7 +628,7 @@ namespace FellrnrTrainingAnalysis
 
         private void updateFromFitlogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if(SportTracksProcessor != null)
+            if (SportTracksProcessor != null)
             {
                 SportTracksProcessor.FixFromFitlog(Database, Database.CurrentAthlete);
                 SportTracksProcessor.UpdateFromFitlog(Database, Database.CurrentAthlete, 95);
@@ -615,7 +666,7 @@ namespace FellrnrTrainingAnalysis
 
         private void loadStravaCsvBackgroundWorker_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
         {
-            if(e.UserState != null && e.UserState is Misc.ProgressReport)
+            if (e.UserState != null && e.UserState is Misc.ProgressReport)
             {
                 Misc.ProgressReport progress = (Misc.ProgressReport)e.UserState;
                 ProgressDialog.TaskName = progress.TaskName;
@@ -657,6 +708,33 @@ namespace FellrnrTrainingAnalysis
             //MessageBox.Show($"Loaded {count} activities from archive");
         }
 
+        private void filterToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (activityFilterDialog == null)
+                activityFilterDialog = new ActivityFilterDialog();
+            activityFilterDialog.UpdatedHandler += CallbackEventHandler;
+            activityFilterDialog.Display(Database);
+            activityFilterDialog.Show();
+
+        }
+
+        private void showOnlyToolStripMenuItem_Click(object? sender, EventArgs e)
+        {
+            List<string> includedTypes = new List<string>();
+            foreach (KeyValuePair<string, ToolStripMenuItem> kvp in showOnlyStripMenuItems)
+            {
+                if (kvp.Value != null && kvp.Value.Checked)
+                {
+                    includedTypes.Add(kvp.Key);
+                }
+            }
+            if (includedTypes.Count > 0)
+            {
+                string csv = string.Join(',', includedTypes);
+                Options.Instance.OnlyShowActivityTypes = csv;
+                UpdateViews(false);
+            }
+        }
     }
 
 }

@@ -36,6 +36,7 @@
             saveDatabaseAsToolStripMenuItem = new ToolStripMenuItem();
             clearDatabaseToolStripMenuItem = new ToolStripMenuItem();
             forceRecalculationToolStripMenuItem = new ToolStripMenuItem();
+            recalculateHillsToolStripMenuItem = new ToolStripMenuItem();
             openBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
             saveBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
             exitToolStripMenuItem = new ToolStripMenuItem();
@@ -51,6 +52,7 @@
             normalLogToolStripMenuItem = new ToolStripMenuItem();
             errorLogToolStripMenuItem = new ToolStripMenuItem();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
+            showAccumulatedTimeToolStripMenuItem = new ToolStripMenuItem();
             configureToolStripMenuItem = new ToolStripMenuItem();
             optionsToolStripMenuItem1 = new ToolStripMenuItem();
             dataStreamDefinitionsToolStripMenuItem = new ToolStripMenuItem();
@@ -62,6 +64,8 @@
             fixDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
             emailGoalsToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
+            filterToolStripMenuItem1 = new ToolStripMenuItem();
+            showOnlyToolStripMenuItem = new ToolStripMenuItem();
             stravaToolStripMenuItem = new ToolStripMenuItem();
             graphTabPage = new TabPage();
             progressGraph1 = new UI.ProgressGraph();
@@ -112,7 +116,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, recalculateHillsToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(102, 35);
             fileToolStripMenuItem.Text = "Database";
@@ -151,6 +155,13 @@
             forceRecalculationToolStripMenuItem.Size = new Size(296, 34);
             forceRecalculationToolStripMenuItem.Text = "Force Recalculation";
             forceRecalculationToolStripMenuItem.Click += forceRecalculationToolStripMenuItem_Click;
+            // 
+            // recalculateHillsToolStripMenuItem
+            // 
+            recalculateHillsToolStripMenuItem.Name = "recalculateHillsToolStripMenuItem";
+            recalculateHillsToolStripMenuItem.Size = new Size(296, 34);
+            recalculateHillsToolStripMenuItem.Text = "Recalculate Hills";
+            recalculateHillsToolStripMenuItem.Click += recalculateHillsToolStripMenuItem_Click;
             // 
             // openBinDatabaseToolStripMenuItem
             // 
@@ -226,7 +237,7 @@
             // 
             // viewToolStripMenuItem
             // 
-            viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { logToolStripMenuItem, normalLogToolStripMenuItem, errorLogToolStripMenuItem, clearLogsToolStripMenuItem });
+            viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { logToolStripMenuItem, normalLogToolStripMenuItem, errorLogToolStripMenuItem, clearLogsToolStripMenuItem, showAccumulatedTimeToolStripMenuItem });
             viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             viewToolStripMenuItem.Size = new Size(65, 35);
             viewToolStripMenuItem.Text = "View";
@@ -234,30 +245,37 @@
             // logToolStripMenuItem
             // 
             logToolStripMenuItem.Name = "logToolStripMenuItem";
-            logToolStripMenuItem.Size = new Size(220, 34);
+            logToolStripMenuItem.Size = new Size(321, 34);
             logToolStripMenuItem.Text = "Debug Log...";
             logToolStripMenuItem.Click += debugLogToolStripMenuItem_Click;
             // 
             // normalLogToolStripMenuItem
             // 
             normalLogToolStripMenuItem.Name = "normalLogToolStripMenuItem";
-            normalLogToolStripMenuItem.Size = new Size(220, 34);
+            normalLogToolStripMenuItem.Size = new Size(321, 34);
             normalLogToolStripMenuItem.Text = "Normal Log...";
             normalLogToolStripMenuItem.Click += logToolStripMenuItem_Click;
             // 
             // errorLogToolStripMenuItem
             // 
             errorLogToolStripMenuItem.Name = "errorLogToolStripMenuItem";
-            errorLogToolStripMenuItem.Size = new Size(220, 34);
+            errorLogToolStripMenuItem.Size = new Size(321, 34);
             errorLogToolStripMenuItem.Text = "Error Log...";
             errorLogToolStripMenuItem.Click += errorLogToolStripMenuItem_Click;
             // 
             // clearLogsToolStripMenuItem
             // 
             clearLogsToolStripMenuItem.Name = "clearLogsToolStripMenuItem";
-            clearLogsToolStripMenuItem.Size = new Size(220, 34);
+            clearLogsToolStripMenuItem.Size = new Size(321, 34);
             clearLogsToolStripMenuItem.Text = "Clear Logs";
             clearLogsToolStripMenuItem.Click += clearLogsToolStripMenuItem_Click;
+            // 
+            // showAccumulatedTimeToolStripMenuItem
+            // 
+            showAccumulatedTimeToolStripMenuItem.Name = "showAccumulatedTimeToolStripMenuItem";
+            showAccumulatedTimeToolStripMenuItem.Size = new Size(321, 34);
+            showAccumulatedTimeToolStripMenuItem.Text = "Show Accumulated Time...";
+            showAccumulatedTimeToolStripMenuItem.Click += showAccumulatedTimeToolStripMenuItem_Click;
             // 
             // configureToolStripMenuItem
             // 
@@ -329,10 +347,23 @@
             // 
             // filterToolStripMenuItem
             // 
+            filterToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { filterToolStripMenuItem1, showOnlyToolStripMenuItem });
             filterToolStripMenuItem.Name = "filterToolStripMenuItem";
-            filterToolStripMenuItem.Size = new Size(78, 35);
-            filterToolStripMenuItem.Text = "Filter...";
-            filterToolStripMenuItem.Click += filterToolStripMenuItem_Click;
+            filterToolStripMenuItem.Size = new Size(66, 35);
+            filterToolStripMenuItem.Text = "Filter";
+            // 
+            // filterToolStripMenuItem1
+            // 
+            filterToolStripMenuItem1.Name = "filterToolStripMenuItem1";
+            filterToolStripMenuItem1.Size = new Size(200, 34);
+            filterToolStripMenuItem1.Text = "Filter...";
+            filterToolStripMenuItem1.Click += filterToolStripMenuItem1_Click;
+            // 
+            // showOnlyToolStripMenuItem
+            // 
+            showOnlyToolStripMenuItem.Name = "showOnlyToolStripMenuItem";
+            showOnlyToolStripMenuItem.Size = new Size(200, 34);
+            showOnlyToolStripMenuItem.Text = "Show Only";
             // 
             // stravaToolStripMenuItem
             // 
@@ -545,6 +576,7 @@
             ClientSize = new Size(1831, 1197);
             Controls.Add(tabControl1);
             Controls.Add(menuStrip1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MainMenuStrip = menuStrip1;
             Name = "FellrnrTrainingAnalysisForm";
             Text = "Fellrnr Training Analytics";
@@ -629,5 +661,9 @@
         private ToolStripMenuItem verifyAgainstFitlogToolStripMenuItem;
         private ToolStripMenuItem updateFromFitlogToolStripMenuItem;
         private System.ComponentModel.BackgroundWorker loadStravaCsvBackgroundWorker;
+        private ToolStripMenuItem showAccumulatedTimeToolStripMenuItem;
+        private ToolStripMenuItem recalculateHillsToolStripMenuItem;
+        private ToolStripMenuItem filterToolStripMenuItem1;
+        private ToolStripMenuItem showOnlyToolStripMenuItem;
     }
 }

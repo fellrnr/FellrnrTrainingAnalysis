@@ -334,7 +334,7 @@
 
     public class FilterString : FilterBase
     {
-        public static readonly string[] filterCommands = new string[] { "", "contains", "doesn't contain", "has", "missing" };
+        public static readonly string[] filterCommands = new string[] { "", "=", "contains", "doesn't contain", "has", "missing", "in" };
 
 
         public FilterString(string fieldName, string command, string? value)
@@ -372,9 +372,26 @@
                         if (value != null && Value1 != null && value.ToLower().Contains(Value1.ToLower()))
                             addIt = true;
                         break;
+                    case "=":
+                        if (value != null && Value1 != null && value.ToLower() == Value1.ToLower())
+                            addIt = true;
+                        break;
                     case "doesn't contain":
                         if (value != null && Value1 != null && !value.ToLower().Contains(Value1.ToLower()))
                             addIt = true;
+                        break;
+                    case "in":
+                        if (Value1 != null && value != null)
+                        {
+                            string[] inList = Value1.Split(',');
+                            foreach(string s in inList)
+                            {
+                                if (value.ToLower() == s.ToLower())
+                                {
+                                    addIt = true;
+                                }
+                            }
+                        }
                         break;
                     default:
                         break;

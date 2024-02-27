@@ -49,7 +49,7 @@ namespace FellrnrTrainingAnalysis
         private void UpdateReport()
         {
             if (Database == null || FilterActivities == null) { return; }
-            Logging.Instance.StartResetTimer("UpdateReport-private");
+            Logging.Instance.ResetAndStartTimer("UpdateReport-private");
             Logging.Instance.TraceEntry("UpdateReport");
 
             IgnoreSelectionChanged = true;
@@ -145,16 +145,21 @@ namespace FellrnrTrainingAnalysis
                     if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
                     {
                         int positionInReport = (int)activityDatumMetadata.PositionInReport;
-                        if (activity.HasNamedDatum(activityDatumMetadata.Name))
+                        string formated = "";
+                        Extensible extensible = activity;
+
+                        if (activityDatumMetadata.Level == ActivityDatumMetadata.LevelType.Day)
+                        {
+                            extensible = Database.CurrentAthlete.Days[activity.StartDateNoTimeLocal!.Value];
+                        }
+                        if (extensible.HasNamedDatum(activityDatumMetadata.Name))
                         {
                             //row[activityDatumMetadata.PositionInReport] = activity.GetNamedDatumForDisplay(fieldname);
-                            string s = UI.DatumFormatter.FormatForGrid(activity.GetNamedDatum(activityDatumMetadata.Name), activityDatumMetadata);
-                            row[positionInReport] = s;
+                            formated = UI.DatumFormatter.FormatForGrid(extensible.GetNamedDatum(activityDatumMetadata.Name), activityDatumMetadata);
+
                         }
-                        else
-                        {
-                            row[positionInReport] = "";
-                        }
+                        row[positionInReport] = formated;
+
                     }
                 }
                 activityDataGridView.Rows.Add(row);
@@ -487,7 +492,7 @@ namespace FellrnrTrainingAnalysis
             AddContextMenu("Recalculate", new EventHandler(toolStripItem1_Click_recalculate));
             AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
             AddContextMenu("Recalculate Hills", new EventHandler(toolStripItem1_Click_recalculateHills));
-            AddContextMenu("Reread FIT file", new EventHandler(toolStripItem1_Click_rereadFit));
+            AddContextMenu("Reread FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadDataFile));
             AddContextMenu("Open In Strava...", new EventHandler(toolStripItem1_Click_openStrava));
             AddContextMenu("Open File (system viewer)...", new EventHandler(toolStripItem1_Click_openFile));
             AddContextMenu("Copy File path", new EventHandler(toolStripItem1_Click_copyFitFile));
@@ -652,7 +657,7 @@ namespace FellrnrTrainingAnalysis
             MessageBox.Show("Done");
         }
 
-        private void toolStripItem1_Click_rereadFit(object? sender, EventArgs args)
+        private void toolStripItem1_Click_rereadDataFile(object? sender, EventArgs args)
         {
             Model.Activity? activity = GetActivity();
             if (activity == null) return;
@@ -664,11 +669,33 @@ namespace FellrnrTrainingAnalysis
                 return;
             }
 
-            Action.FitReader fitReader = new Action.FitReader(activity);
+            if (filepath.ToLower().EndsWith(".fit") || filepath.ToLower().EndsWith(".fit.gz"))
+            {
+                FitReader fitReader = new FitReader(activity);
+                try
+                {
+                    fitReader.ReadFitFromStravaArchive();
+                }
+                catch (Exception e) 
+                {
+                    MessageBox.Show($"Exception thrown reading FIT file {filepath}, {e}");
+                    return;
+                }
+                MessageBox.Show("Completed FIT Reread");
+            }
+            else if (filepath.ToLower().EndsWith(".gpx") || filepath.ToLower().EndsWith(".gpx.gz"))
+            {
+                GpxProcessor gpxProcessor = new GpxProcessor(activity);
 
-            fitReader.ReadFitFromStravaArchive();
+                gpxProcessor.ProcessGpx();
 
-            MessageBox.Show("Compelted Reread");
+                MessageBox.Show("Completed GPX Reread");
+            }
+            else
+            {
+                MessageBox.Show("Activity file is not recognized type " + filepath);
+            }
+            UpdateViews?.Invoke();
         }
 
         private void toolStripItem1_Click_openGarmin(object? sender, EventArgs args)

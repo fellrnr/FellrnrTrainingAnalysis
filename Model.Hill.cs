@@ -110,15 +110,15 @@ namespace FellrnrTrainingAnalysis.Model
                         string hillkey = hill.Name + classCsv;
                         if(!sortedList.ContainsKey(hillkey))
                             sortedList.Add(hillkey, hill); //duplicate hill names, even with the classification added
-                        if (Utils.Options.Instance.LogLevel == Utils.Options.Level.Debug)
+                        if (Utils.Options.Instance.DebugHills)
                             Utils.Logging.Instance.Debug($"{record.Name}, #{record.Number}, {record.Latitude}/{record.Longitude}/{record.Elevation}m, {classCsv}");
                     }
                 }
             }
             List<Hill> retval = sortedList.Values.ToList();
 
-            //if (Utils.Options.Instance.LogLevel == Utils.Options.Level.Debug)
-                //Dump(retval);
+            if (Utils.Options.Instance.DebugHills)
+                Dump(retval);
 
             return retval;
         }

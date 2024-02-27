@@ -114,7 +114,8 @@ namespace FellrnrTrainingAnalysis.Action
         private Activity? GetActivityFromStrava(Database database, long stravaId)
         {
             DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.GetActivityById(stravaId);
-            Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
+            if(Options.Instance.DebugStravaAPI)
+                Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
             Dictionary<string, Datum> activityDataFromProperties = ActivityDataFromProperties(detailedActivity);
             Activity? activity = database!.CurrentAthlete!.InitialAddOrUpdateActivity(activityDataFromProperties);
 
@@ -350,7 +351,7 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 if (!activity.TimeSeries.ContainsKey(activityDatumMapping.InternalName) || Options.Instance.StravaApiOveridesData)
                 {
-                    activity.AddDataStream(activityDatumMapping.InternalName, time, data, activity);
+                    activity.AddDataStream(activityDatumMapping.InternalName, time, data);
                 }
             }
         }
@@ -381,42 +382,47 @@ namespace FellrnrTrainingAnalysis.Action
             Type type = stravaActivity.GetType();
             var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-            Logging.Instance.Debug(string.Format("Type is: {0}, underlying {1}", type.Name, underlyingType.Name ));
+            if (Options.Instance.DebugStravaAPI)
+                Logging.Instance.Debug(string.Format("Type is: {0}, underlying {1}", type.Name, underlyingType.Name ));
             PropertyInfo[] props = type.GetProperties();
-            Logging.Instance.Debug(string.Format("Properties (N = {0}):", props.Length));
+            if (Options.Instance.DebugStravaAPI)
+                Logging.Instance.Debug(string.Format("Properties (N = {0}):", props.Length));
             foreach (var prop in props)
             {
                 var underlyingPropertyType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
                 if(prop == null)
                 {
-                    Logging.Instance.Debug(string.Format("   got a null property"));
+                    if (Options.Instance.DebugStravaAPI)
+                        Logging.Instance.Debug(string.Format("   got a null property"));
                 }
                 else if (prop.GetIndexParameters().Length == 0)
                 {
-                    Logging.Instance.Debug(string.Format("   {0} ({1} underlying {3}): {2}", prop.Name, prop.PropertyType.Name, prop.GetValue(stravaActivity), underlyingPropertyType));
+                    if (Options.Instance.DebugStravaAPI)
+                        Logging.Instance.Debug(string.Format("   {0} ({1} underlying {3}): {2}", prop.Name, prop.PropertyType.Name, prop.GetValue(stravaActivity), underlyingPropertyType));
 
                     string fieldName = prop.Name;
                     object propertyValue = prop.GetValue(stravaActivity)!;
                     ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaAPI, LevelType.Activity, fieldName);
                     if (propertyValue == null)
                     {
-                        Logging.Instance.Debug(string.Format("       propertyValue is null"));
+                        if (Options.Instance.DebugStravaAPI) Logging.Instance.Debug(string.Format("       propertyValue is null"));
                     }
                     else if (activityDatumMapping == null)
                     {
-                        Logging.Instance.Debug(string.Format("       activityDataMapping is null"));
+                        if (Options.Instance.DebugStravaAPI) Logging.Instance.Debug(string.Format("       activityDataMapping is null"));
                     }
                     else if (!activityDatumMapping.Import)
                     {
-                        Logging.Instance.Debug(string.Format("       import is false"));
+                        if (Options.Instance.DebugStravaAPI) Logging.Instance.Debug(string.Format("       import is false"));
                     }
                     else if (activityData.ContainsKey(fieldName))//ignore duplicate columns
                     {
-                        Logging.Instance.Debug(string.Format("       duplicate column (ignored)"));
+                        if (Options.Instance.DebugStravaAPI) Logging.Instance.Debug(string.Format("       duplicate column (ignored)"));
                     }
                     else
                     {
-                        Logging.Instance.Debug(string.Format("   Mapping data type {0}, external name {1}, internal name {2}, import {3}",
+                        if (Options.Instance.DebugStravaAPI) 
+                            Logging.Instance.Debug(string.Format("   Mapping data type {0}, external name {1}, internal name {2}, import {3}",
                             activityDatumMapping.DataType, activityDatumMapping.ExternalName, activityDatumMapping.InternalName, activityDatumMapping.Import));
 
                         switch (activityDatumMapping.DataType)
@@ -487,7 +493,7 @@ namespace FellrnrTrainingAnalysis.Action
                 }
                 else
                 {
-                    Logging.Instance.Debug(string.Format("   {0} ({1}): <Indexed>", prop.Name, prop.PropertyType.Name));
+                    if (Options.Instance.DebugStravaAPI) Logging.Instance.Debug(string.Format("   {0} ({1}): <Indexed>", prop.Name, prop.PropertyType.Name));
                 }
             }
             return activityData;

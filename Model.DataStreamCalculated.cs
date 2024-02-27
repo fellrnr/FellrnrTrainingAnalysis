@@ -69,6 +69,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         private Tuple<uint[], float[]>? GetHrPwr(List<Tuple<uint[], float[]>> requiredTimeSeries)
         {
+            Logging.Instance.ContinueAccumulator("GetHrPwr");
             Tuple<uint[], float[]> hrData = requiredTimeSeries[0];
             Tuple<uint[], float[]> pwrData = requiredTimeSeries[1];
             
@@ -100,6 +101,8 @@ namespace FellrnrTrainingAnalysis.Model
                 retval.Item1[i] = alignedTimeSeries.Time[i];
                 retval.Item2[i] = hrpwr;
             }
+
+            Logging.Instance.PauseAccumulator("GetHrPwr");
 
             return retval;
         }

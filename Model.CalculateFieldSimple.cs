@@ -61,7 +61,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (value != null)
             {
                 Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
-                //activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value.Value));
+                activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value.Value));
             }
         }
         protected abstract float? ExtractValue(Activity activity);

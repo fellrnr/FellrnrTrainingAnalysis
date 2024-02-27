@@ -78,10 +78,13 @@ namespace FellrnrTrainingAnalysis.Action
         private void ProcessGpxPoints()
         {
             List<uint>? LocationTimes = new List<uint>();
+            List<float> LocationDistance = new List<float>();
             List<float> LocationLats = new List<float>();
             List<float> LocationLons = new List<float>();
+            List<float>? LocationElev = new List<float>();
             DateTime start = DateTime.MinValue;
 
+            GpxPoint? previous = null;
             foreach (GpxPoint gpxPoint in gpxPoints)
             {
                 if(gpxPoint.Time == null)
@@ -99,14 +102,39 @@ namespace FellrnrTrainingAnalysis.Action
                         uint offset = (uint)timeSpan.TotalSeconds;
                         LocationTimes.Add(offset);
                     }
+                    if(previous != null)
+                    {
+                        double distance = gpxPoint.GetDistanceFrom(previous);
+                        LocationDistance.Add((float)distance);
+                    }
+                    previous = gpxPoint;
+
+                    if(gpxPoint.Elevation == null)
+                    {
+                        LocationElev = null; //kill the stream
+                    }
+                    else
+                    {
+                        if(LocationElev != null)
+                            LocationElev.Add((float)gpxPoint.Elevation);
+                    }
                 }
                 LocationLats.Add((float)gpxPoint.Latitude);
                 LocationLons.Add((float)gpxPoint.Longitude);
             }
             if (LocationTimes != null)
+            {
                 Activity.LocationStream = new LocationStream(LocationTimes.ToArray(), LocationLats.ToArray(), LocationLons.ToArray());
+                Activity.AddDataStream(Activity.TagDistance, LocationTimes.ToArray(), LocationDistance.ToArray());
+                if (LocationElev != null && LocationElev.Count > 0)
+                {
+                    Activity.AddDataStream(Activity.TagAltitude, LocationTimes.ToArray(), LocationElev.ToArray());
+                }
+            }
             else
+            {
                 Activity.LocationStream = new LocationStream(null, LocationLats.ToArray(), LocationLons.ToArray());
+            }
 
         }
     }

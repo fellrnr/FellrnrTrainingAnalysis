@@ -239,6 +239,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 lastTime = elapsedTime[i];
             }
             Tuple<uint[], float[]> newData = new Tuple<uint[], float[]>(elapsedTime, deltas);
+
             return newData;
         }
 
@@ -325,17 +326,19 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public static AlignedTimeSeries? Align(Tuple<uint[], float[]> primary, Tuple<uint[], float[]> secondary)
         {
+            Logging.Instance.ContinueAccumulator("Utils.TimeSeries.AlignedTimeSeries");
 
             uint[] ptimes = primary.Item1;
             float[] pvalues = primary.Item2;
             uint[] stimes = secondary.Item1;
             float[] svalues = secondary.Item2;
 
+
+            AlignedTimeSeries? aligned = null;
             if (ptimes.Length == stimes.Length)
             {
                 //let's assume they match
-                AlignedTimeSeries aligned = new AlignedTimeSeries(ptimes, pvalues, svalues);
-                return aligned;
+                aligned = new AlignedTimeSeries(ptimes, pvalues, svalues);
             }
             else
             {
@@ -351,24 +354,33 @@ namespace FellrnrTrainingAnalysis.Utils
                         pi++;
                     }
 
-                    while (si < stimes.Length && ptimes[pi] > stimes[si])
+                    while (si < stimes.Length && ptimes[pi] > stimes[si] && pi < ptimes.Length) //we incremented pi above, so could be over
                     {
                         si++;
                     }
 
-                    if (ptimes[pi] == stimes[si])
+                    if (ptimes[pi] == stimes[si]) // pi < ptimes.Length && si < stimes.Length
                     {
                         //all good
                         newTimes.Add(ptimes[pi]);
                         newPrimary.Add(pvalues[pi]);
-                        newSecondary.Add(svalues[pi]);
+                        newSecondary.Add(svalues[si]);
                         if (si < stimes.Length)
                             si++;
                     }
                 }
-                AlignedTimeSeries aligned = new AlignedTimeSeries(newTimes.ToArray(), newPrimary.ToArray(), newSecondary.ToArray());
-                return aligned;
+
+                if (newTimes.Count != newPrimary.Count || newTimes.Count != newSecondary.Count)
+                {
+                    throw new Exception($"AlignedTimeSeries times {newTimes.Count} and primary {newPrimary.Count} secondary {newSecondary.Count} don't match counts");
+                }
+
+
+                aligned = new AlignedTimeSeries(newTimes.ToArray(), newPrimary.ToArray(), newSecondary.ToArray());
             }
+
+            Logging.Instance.PauseAccumulator("Utils.TimeSeries.AlignedTimeSeries");
+            return aligned;
         }
 
         public class AlignedTimeSeries
@@ -440,6 +452,8 @@ namespace FellrnrTrainingAnalysis.Utils
                             si++;
                     }
                 }
+
+
                 AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(newTimes.ToArray(), newLats.ToArray(), newLons.ToArray(), newSecondary.ToArray());
                 return aligned;
             }

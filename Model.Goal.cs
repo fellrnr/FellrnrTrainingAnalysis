@@ -23,9 +23,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public abstract string FormatResult(KeyValuePair<Model.Period, float> kvp);
 
-        public abstract Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target);
-         
-
+        public abstract Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Day target);
 
     }
 
@@ -52,7 +50,15 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override string FormatResult(KeyValuePair<Model.Period, float> kvp)
         {
-            return string.Format("{0} ({1})", FormatResult(kvp.Value), AsPercentTarget(kvp.Value, kvp.Key.ApproxDays));
+            int? days = kvp.Key.ApproxDays;
+            if(days.HasValue)
+            {
+                return string.Format("{0} ({1})", FormatResult(kvp.Value), AsPercentTarget(kvp.Value, days.Value));
+            }
+            else
+            {
+                return FormatResult(kvp.Value);
+            }
         }
 
 
@@ -78,12 +84,11 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string, Athlete> kvp1 in database.Athletes)
             {
                 Athlete athlete = kvp1.Value;
-                foreach (KeyValuePair<string, Activity> kvp2 in athlete.Activities)
-                {
-                    Activity target = kvp2.Value;
+                //foreach (KeyValuePair<string, Activity> kvp2 in athlete.Activities)
 
-                    if (!target.CheckSportType(SportsToInclude))
-                        continue;
+                foreach (KeyValuePair<DateTime, Day> kvp2 in athlete.Days)
+                {
+                    Day target = kvp2.Value;
 
                     bool alreadyDone = true;
                     foreach (Period p in periods)
@@ -115,12 +120,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         
 
-        public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target)
+        public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Day target)
         {
-            if (target.StartDateNoTimeLocal == null)
-                return null;
-
-            DateTime targetDateTime = (DateTime)target.StartDateNoTimeLocal;
+            DateTime targetDate = target.Date;
 
             Dictionary<Model.Period, float> rolling = new Dictionary<Model.Period, float>();
             foreach (Period period in periods)
@@ -136,113 +138,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                 DateTime activityDateTime = (DateTime)activity.StartDateNoTimeLocal;
 
-                if (activityDateTime > targetDateTime)
-                    continue; //this is after our target
-
-
-                if (!target.CheckSportType(SportsToInclude))
-                    continue;
-
-                if (activity.HasNamedDatum(TargetColumn))
-                {
-                    Datum valueDatum = activity.GetNamedDatum(TargetColumn)!;
-                    if (valueDatum is not TypedDatum<float>)
-                        continue;
-                    TypedDatum<float> valueDatumFloat = (TypedDatum<float>)valueDatum;
-
-                    float targetValue = valueDatumFloat.Data;
-
-                    //double daysFromToday = (targetDateTime - activityDateTime).TotalDays;
-                    foreach (Period period in periods)
-                    {
-                        if (period.IsWithinPeriod(activityDateTime, targetDateTime))
-                        {
-                            rolling[period] += targetValue;
-                        }
-                    }
-                }
-            }
-            return rolling;
-        }
-
-    }
-    public class EddingtonGoal : Goal
-    {
-        public EddingtonGoal(List<string> sportsToInclude, string sportDescription, string targetColumn, string activityFieldname)
-            : base(sportsToInclude, sportDescription, targetColumn, activityFieldname)
-        {
-        }
-
-
-        public override string FormatResult(KeyValuePair<Model.Period, float> kvp)
-        {
-            return string.Format("{0}", kvp.Value);
-        }
-
-
-        //TODO: doing all goals for all activities is taking n^2 time for activities. It would be much faster to have a queue for the periods and queue/dequeue each activity, keeping a set of sums
-        public override void UpdateActivityGoals(Database database, List<Model.Period> periods, bool force)
-        {
-            foreach (KeyValuePair<string, Athlete> kvp1 in database.Athletes)
-            {
-                Athlete athlete = kvp1.Value;
-                foreach (KeyValuePair<string, Activity> kvp2 in athlete.Activities)
-                {
-                    Activity target = kvp2.Value;
-
-                    if (!target.CheckSportType(SportsToInclude))
-                        continue;
-
-                    bool alreadyDone = true;
-                    foreach (Period p in periods)
-                    {
-                        string goalActivityFieldname = string.Format("{0} {1}", ActivityFieldname, p.ShortName);
-                        if (!target.HasNamedDatum(goalActivityFieldname))
-                            alreadyDone = false;
-                    }
-
-
-                    if (alreadyDone && !force) { continue; }
-
-
-                    Dictionary<Model.Period, float>? goals = GetGoalUpdate(database, periods, target);
-                    if (goals == null)
-                        return;
-                    foreach (KeyValuePair<Model.Period, float> goal in goals)
-                    {
-                        string goalActivityFieldname = string.Format("{0} {1}", ActivityFieldname, goal.Key.ShortName);
-                        if (!force && target.HasNamedDatum(goalActivityFieldname))
-                            return;
-
-                        target.AddOrReplaceDatum(new TypedDatum<float>(goalActivityFieldname, false, goal.Value));
-                    }
-
-                }
-            }
-        }
-
-        public override Dictionary<Model.Period, float>? GetGoalUpdate(Database database, List<Model.Period> periods, Activity target)
-        {
-            if (target.StartDateNoTimeLocal == null)
-                return null;
-
-            DateTime targetDateTime = (DateTime)target.StartDateNoTimeLocal;
-
-            Dictionary<Model.Period, float> rolling = new Dictionary<Model.Period, float>();
-            foreach (Period period in periods)
-            {
-                rolling.Add(period, 0);
-            }
-
-            foreach (KeyValuePair<string, Activity> kvpActivity in database.CurrentAthlete.Activities)
-            {
-                Activity activity = kvpActivity.Value;
-                if (activity.StartDateNoTimeLocal == null)
-                    continue;
-
-                DateTime activityDateTime = (DateTime)activity.StartDateNoTimeLocal;
-
-                if (activityDateTime > targetDateTime)
+                if (activityDateTime > targetDate)
                     continue; //this is after our target
 
 
@@ -261,7 +157,7 @@ namespace FellrnrTrainingAnalysis.Model
                     //double daysFromToday = (targetDateTime - activityDateTime).TotalDays;
                     foreach (Period period in periods)
                     {
-                        if (period.IsWithinPeriod(activityDateTime, targetDateTime))
+                        if (period.IsWithinPeriod(activityDateTime, targetDate))
                         {
                             rolling[period] += targetValue;
                         }
@@ -282,10 +178,6 @@ namespace FellrnrTrainingAnalysis.Model
                 new VolumeGoal(new List<string> { "Run" }, "Run", "Distance", 1.0f / 1000f, "0,0.0", "Km", 4000 * 1000, "Σ🏃→"),
                 new VolumeGoal(new List<string> { "Run" }, "Run", "Elevation Gain", 1.0f, "N0", "m", 130 * 1000, "Σ🏃⬆"),
                 new VolumeGoal(new List<string> { "Run" }, "Run", "Grade Adjusted Distance", 1.0f / 1000f, "0,0", "Km", 5000 * 1000, "Σ🏃📐"),
-
-                new VolumeGoal(new List<string> { "Walk", "Hike" }, "Walk", "Distance", 1.0f / 1000f, "0,0.0", "Km", 500 * 1000, "Σ🚶→"),
-                new VolumeGoal(new List<string> { "Walk", "Hike" }, "Walk", "Elevation Gain", 1.0f, "N0", "m", 15 * 1000, "Σ🚶⬆"),
-                new VolumeGoal(new List<string> { "Walk", "Hike" }, "Walk", "Grade Adjusted Distance", 1.0f / 1000f, "0,0", "Km", 600 * 1000, "Σ🚶📐"),
 
                 new VolumeGoal(new List<string> { "Run", "Walk", "Hike" }, "On Foot", "Distance", 1.0f / 1000f, "0,0.0", "Km", 5000 * 1000, "Σ🦶→"),
                 new VolumeGoal(new List<string> { "Run", "Walk", "Hike" }, "On Foot", "Elevation Gain", 1.0f, "0,0", "m", 161 * 1000, "Σ🦶⬆"),

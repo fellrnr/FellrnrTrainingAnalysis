@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
 using System.IO;
 using System.ComponentModel;
+using de.schumacher_bw.Strava.Endpoint;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -10,8 +11,13 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackable(GenerateType.CircularReference)]
     public partial class Activity : Extensible
     {
+        [MemoryPackConstructor]
         public Activity()
         {
+        }
+        public Activity(Athlete parent)
+        {
+            PostDeserialize(parent);
         }
 
         public override string ToString()
@@ -106,10 +112,15 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         [MemoryPackIgnore]
-        public Athlete? Parent { get { return parent_; } }
+        public Athlete? Parent { get { return parent_; } } //set using the PostDeserialize cleanup
         //[MemoryPackInclude]
         [MemoryPackIgnore]
         private Athlete? parent_ = null;
+
+        [MemoryPackIgnore]
+
+        public Model.Day Day { get { return parent_!.Days[this.StartDateNoTimeLocal!.Value]; } }
+
 
         public void PostDeserialize(Athlete parent)
         {
@@ -138,18 +149,18 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     else
                     {
-                        AddDataStream(name, times.ToArray(), values.ToArray(), activity);
+                        AddDataStream(name, times.ToArray(), values.ToArray());
                     }
                 }
 
             }
         }
 
-        public void AddDataStream(string name, uint[] times, float[] values, Activity activity)
+        public void AddDataStream(string name, uint[] times, float[] values)
         {
             if (!timeSeries.ContainsKey(name))
             {
-                DataStreamRecorded activityDataStream = new DataStreamRecorded(name, new Tuple<uint[], float[]>(times, values), activity);
+                DataStreamRecorded activityDataStream = new DataStreamRecorded(name, new Tuple<uint[], float[]>(times, values), this);
                 timeSeries.Add(name, activityDataStream);
             }
         }
@@ -311,6 +322,8 @@ namespace FellrnrTrainingAnalysis.Model
         private const string TagFileFullPath = "Filepath";
         public const string TagDescription = "Description";
         public const string TagName = "Name";
+        public const string TagType = "Type";
+        public const string TagAltitude = "Altitude";
 
         public const string TagDistance = "Distance";
         public const string TagElapsedTime = "Elapsed Time";

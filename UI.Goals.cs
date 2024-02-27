@@ -75,7 +75,7 @@ namespace FellrnrTrainingAnalysis.UI
                 table.StartBody();
                 foreach (Goal goal in goals)
                 {
-                    Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
+                    Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
                     Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                     if (rolling == null)
                         continue;
@@ -128,7 +128,7 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (Goal goal in goals)
             {
                 string[] row = new string[periods.Count + extraColumns];
-                Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
+                Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
                 Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                 if (rolling == null)
                     continue;
@@ -173,7 +173,7 @@ namespace FellrnrTrainingAnalysis.UI
             //List<int> periods = new List<int>() { 7 };
             foreach (Goal goal in goals)
             {
-                Activity latestActivity = Database.CurrentAthlete.Activities.Last().Value;
+                Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
                 Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
                 if (rolling == null)
                     continue;

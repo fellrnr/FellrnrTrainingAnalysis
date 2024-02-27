@@ -41,9 +41,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override Tuple<uint[], float[]>? GetData()
         {
-            if(CachedData != null)
-                return CachedData;
-            return CalculateData();
+            if(CachedData == null)
+                CachedData = CalculateData();
+            return CachedData;
         }
 
         [MemoryPackInclude]

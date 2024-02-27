@@ -51,7 +51,7 @@ namespace FellrnrTrainingAnalysis.Utils
         //http://patorjk.com/software/taag/#p=display&f=Big&t=Debug
         //http://patorjk.com/software/taag/#p=display&c=c%2B%2B&f=Big&t=Debug
 
-
+        //Import
         //    _____                            _   
         //   |_   _|                          | |  
         //     | |  _ __ ___  _ __   ___  _ __| |_ 
@@ -65,7 +65,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public bool ImportUnknownFitFields { get; set; } = false; //May only save a tiny amount of time and space, but reduces the noise of extra fields
         public bool ImportDeveloperFitFields { get; set; } = false;
 
-
+        //Strava
         //     _____ _                        
         //    / ____| |                       
         //   | (___ | |_ _ __ __ ___   ____ _ 
@@ -80,6 +80,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public bool StravaApiOveridesData { get; set; } = false;
 
+        //Stream numbers...
         //Time = 1,
         //Distance = 2,
         //Latlng = 4,
@@ -101,6 +102,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
 
 
+        //Grade adjusted pace
         //     _____               _                    _ _           _           _   _____               
         //    / ____|             | |          /\      | (_)         | |         | | |  __ \              
         //   | |  __ _ __ __ _  __| | ___     /  \   __| |_ _   _ ___| |_ ___  __| | | |__) |_ _  ___ ___ 
@@ -126,12 +128,12 @@ namespace FellrnrTrainingAnalysis.Utils
         public double MaxSlope { get; set; } = 0.5;
 
         [Description("How to do the elevation smoothing")]
-        public SmoothingOptions SmoothingType { get; set; } = SmoothingOptions.SimpleExponential;
+        public SmoothingOptions GADSmoothingType { get; set; } = SmoothingOptions.SimpleExponential;
 
         [Description("How big should the smoothing window be (in meters)")]
-        public int SmoothingWindow { get; set; } = 50;
+        public int GADSmoothingWindow { get; set; } = 50;
 
-
+        //Debug
         //    _____       _                 
         //   |  __ \     | |                
         //   | |  | | ___| |__  _   _  __ _ 
@@ -164,9 +166,14 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Disable time axis in graphs and display raw data")]
         public bool DebugDisableTimeAxis { get; set; } = false;
 
+        [Description("Debug the hills")]
+        public bool DebugHills { get; set; } = false;
+
+        [Description("Debug strava API")]
+        public bool DebugStravaAPI { get; set; } = false;
 
 
-
+        //Email
         //    ______                 _ _ 
         //   |  ____|               (_) |
         //   | |__   _ __ ___   __ _ _| |
@@ -191,6 +198,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public string EmailDestination { get; set; } = "";
 
 
+        //Physiological Metrics
         //    _____  _               _       _             _           _   __  __      _        _          
         //   |  __ \| |             (_)     | |           (_)         | | |  \/  |    | |      (_)         
         //   | |__) | |__  _   _ ___ _  ___ | | ___   __ _ _  ___ __ _| | | \  / | ___| |_ _ __ _  ___ ___ 
@@ -223,5 +231,10 @@ namespace FellrnrTrainingAnalysis.Utils
 
         [Description("Seperate Activity Graphs rather than overlaying them")]
         public bool SpaceOutActivityGraphs { get; set; } = false;
+
+        [Description("The activity types to show")]
+        public string OnlyShowActivityTypes { get; set; } = "";
+
+
     }
 }

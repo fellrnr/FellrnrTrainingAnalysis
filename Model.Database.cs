@@ -30,9 +30,6 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackInclude]
         public List<Hill>? Hills { get; set; } = null;
 
-
-        static bool ForceHillsOnce = false; //useful for debugging hill problems
-
         [MemoryPackIgnore]
         protected int LastForceCount = 0;
 
@@ -40,45 +37,23 @@ namespace FellrnrTrainingAnalysis.Model
         //reapply the dynamic components, currently dyanamic data streams and goals
         public void MasterRecalculate(bool force, BackgroundWorker? worker = null)
         {
-            Logging.Instance.StartResetTimer("MasterRecalculate");
-            bool forceHills = (ForceHillsOnce || force);
-            ForceHillsOnce = false;
-            int forceCount = force ? LastForceCount +1 : LastForceCount;
+            Logging.Instance.ResetAndStartTimer("MasterRecalculate");
+            Logging.Instance.ResetAndStartTimer("Recalcualte");
 
-            if (Hills == null || Hills.Count == 0 || forceHills)
-            {
-                Hills = Hill.Reload();
-            }
+
+            int forceCount = force ? LastForceCount +1 : LastForceCount;
 
 
             foreach (KeyValuePair<string,Athlete> kvp in Athletes)
             {
                 Athlete athlete = kvp.Value;
                 athlete.Recalculate(forceCount, false);
-
-                Logging.Instance.StartResetTimer();
             }
 
+            Logging.Instance.Log($"Recalculate athlete recalculate {Logging.Instance.GetAndResetTime("Recalculate")}");
 
-            //forceHills will reload the hills, resetting the climbed. Calling RecalculateHills will also clear the climbed field
-            //if (forceHills)
-            //{
-            //    foreach (Hill hill in Hills)
-            //    {
-            //        hill.Climbed = new List<Activity>();
-            //    }
-            //}
-            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
-            int i = 0;
-            foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
-            {
-                Activity activity = kvp.Value;
-                activity.RecalculateHills(Hills, forceHills, false);
-                if (worker != null) worker.ReportProgress(++i);
-            }
-
-            if (forceHills && Options.Instance.LogLevel == Options.Level.Debug)
-                Hill.Dump(Hills, Hill.WAINWRIGHT);
+            //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
+                //if (worker != null) worker.ReportProgress(++i);
 
 
             //TODO: the order is unclear here; the goals rely on the data fields, but the calendar node accumulation relies on the goals. 
@@ -90,9 +65,34 @@ namespace FellrnrTrainingAnalysis.Model
                 goal.UpdateActivityGoals(this, periods, force);
             }
 
+            Logging.Instance.Log($"Recalculate update goals {Logging.Instance.GetAndResetTime("Recalculate")}");
 
             Logging.Instance.Log(string.Format("MasterRecalculate took {0}", Logging.Instance.GetAndResetTime("MasterRecalculate")));
         }
+
+        public void RecalculateHills()
+        {
+            Logging.Instance.ResetAndStartTimer("RecalculateHills");
+            Logging.Instance.ResetAndStartTimer("Recalcualte");
+
+            Hills = Hill.Reload();
+
+            Logging.Instance.Log($"Recalculate load hills took {Logging.Instance.GetAndResetTime("Recalculate")}");
+
+            foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
+            {
+                Activity activity = kvp.Value;
+                activity.RecalculateHills(Hills, true, false);
+            }
+
+            Logging.Instance.Log($"Recalculate recalculate hills {Logging.Instance.GetAndResetTime("Recalculate")}");
+
+            if (Options.Instance.DebugHills)
+                Hill.Dump(Hills, Hill.WAINWRIGHT);
+
+            Logging.Instance.Log(string.Format("MasterRecalculate took {0}", Logging.Instance.GetAndResetTime("MasterRecalculate")));
+        }
+
 
         [MemoryPackIgnore]
         public Athlete CurrentAthlete { get { return Athletes.First().Value; } }

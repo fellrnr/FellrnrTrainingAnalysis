@@ -3,6 +3,7 @@ using FellrnrTrainingAnalysis.Utils;
 using ScottPlot;
 using ScottPlot.Plottable;
 using ScottPlot.Renderable;
+using System.Collections.ObjectModel;
 using System.Data;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -24,6 +25,8 @@ namespace FellrnrTrainingAnalysis.UI
         private const string MIN = "Ts.Min ";
         private const string AVG = "Ts.Avg ";
         private const string MAX = "Ts.Max ";
+        private const string ACTIVITY_DOT = "Activity.";
+        private const string DAY_DOT = "Day.";
         private int OP_LENGTH = MIN.Length; //not const to prevent compiler objection
 
         private string[] TimeSeriesOperations = { MIN, AVG, MAX };
@@ -56,25 +59,37 @@ namespace FellrnrTrainingAnalysis.UI
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute));
             Row++;
 
-            foreach (string name in athlete.ActivityFieldNames)
+            foreach (string key in athlete.ActivityFieldNames)
             {
-                ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name);
+                string name = ACTIVITY_DOT + key;
+                ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(key); //NB, look up without the prefix
                 if (activityDatumMetadata != null && activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
                 {
-                    if (!IsTimeSeriesOperations(name)) //just in case a datum contains a time series (the "Ts." should prevent this)
+                    if (!Filters.ContainsKey(name))
                     {
-                        if (!Filters.ContainsKey(name))
-                        {
-                            Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, Row++, RefreshGraph));
-                        }
+                        Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, Row++, RefreshGraph));
                     }
                 }
             }
 
+            foreach (string key in athlete.DayFieldNames)
+            {
+                string name = DAY_DOT + key;
+                ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(key);
+                if (activityDatumMetadata != null && activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                {
+                    if (!Filters.ContainsKey(name))
+                    {
+                        Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, Row++, RefreshGraph));
+                    }
+                }
+            }
+
+
             IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.AllTimeSeriesNames;
             foreach (string name in timeSeriesNames)
             {
-                foreach (string s in TimeSeriesOperations)
+                foreach (string s in TimeSeriesOperations) //"Ts.Min", etc
                 {
                     string key = s + name;
                     if (!Filters.ContainsKey(key))
@@ -101,6 +116,7 @@ namespace FellrnrTrainingAnalysis.UI
 
 
             List<Activity> activities = _filterActivities.GetActivities(_database);
+            ReadOnlyDictionary<DateTime, Model.Day> days = _database.CurrentAthlete.Days;
 
             foreach (KeyValuePair<string, GraphLineSelection> kvp in Filters)
             {
@@ -174,10 +190,11 @@ namespace FellrnrTrainingAnalysis.UI
             formsPlotProgress.Refresh();
         }
 
-        private float? GetValue(string name, Activity activity)
+        private float? GetValue(string key, Activity activity)
         {
-            if (!IsTimeSeriesOperations(name)) //just in case a datum contains a time series (the "Ts." should prevent this)
+            if(key.StartsWith(ACTIVITY_DOT))
             {
+                string name = key.Substring(ACTIVITY_DOT.Length);
                 if (activity.HasNamedDatum(name))
                 {
                     Datum? datum = activity.GetNamedDatum(name);
@@ -188,9 +205,23 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                 }
             }
-            else
+            else if (key.StartsWith(DAY_DOT))
             {
-                string tsName = TimeSeriesFromOperation(name);
+                string name = key.Substring(DAY_DOT.Length);
+                Model.Day day = activity.Day;
+                if (day.HasNamedDatum(name))
+                {
+                    Datum? datum = day.GetNamedDatum(name);
+                    if (datum != null && datum is TypedDatum<float>)
+                    {
+                        TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
+                        return floatDatum.Data;
+                    }
+                }
+            }
+            else if (IsTimeSeriesOperations(key)) //just in case a datum contains a time series (the "Ts." should prevent this)
+            {
+                string tsName = TimeSeriesFromOperation(key);
                 if (activity.TimeSeries.ContainsKey(tsName))
                 {
                     DataStreamBase dataStream = activity.TimeSeries[tsName];
@@ -198,15 +229,15 @@ namespace FellrnrTrainingAnalysis.UI
                     if (dataStream != null && dataStream.GetData() != null)
                     {
                         float[] valuesFromStream = dataStream.GetData()!.Item2;
-                        if (Operation(name) == MIN)
+                        if (Operation(key) == MIN)
                         {
                             value = valuesFromStream.Min();
                         }
-                        else if (Operation(name) == AVG)
+                        else if (Operation(key) == AVG)
                         {
                             value = valuesFromStream.Average();
                         }
-                        else if (Operation(name) == MAX)
+                        else if (Operation(key) == MAX)
                         {
                             value = valuesFromStream.Max();
                         }

@@ -12,14 +12,16 @@
                 //TODO: removed ", limit: 120" from climb calculation to let data quality sort out the issues
                 //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
-                new CalculateDataFieldFromDataStreamSimple("Calc.Climb", CalculateDataFieldFromDataStreamSimple.Mode.Max, "Max Climb", new List<string> { "Run" }),
+                new CalculateDataFieldFromDataStreamSimple("Max Climb", CalculateDataFieldFromDataStreamSimple.Mode.Max, "Calc.Climb", new List<string> { "Run" }),
 
-                new CalculateDataFieldFromDataStreamSimple("Calc.Climb", CalculateDataFieldFromDataStreamSimple.Mode.Min, "Min Climb", new List < string > { "Run" }),
+                new CalculateDataFieldFromDataStreamSimple("Min Climb", CalculateDataFieldFromDataStreamSimple.Mode.Min, "Calc.Climb", new List < string > { "Run" }),
                 new CalculateDataFieldFromDataStreamSimple("Grade Adjusted Distance", CalculateDataFieldFromDataStreamSimple.Mode.LastValue, "Grade Adjusted Distance", new List<string> { "Run" }),
 
                 new CalculateDataFieldFromDataStreamSimple("Avg GAP", CalculateDataFieldFromDataStreamSimple.Mode.Average, DataStreamFactory.GRADE_ADUJUSTED_PACE, new List<string> { "Run" }), //meters per second
 
                 new CalculateDataFieldFromDataStreamSimple("Max HR", CalculateDataFieldFromDataStreamSimple.Mode.Max, "Heart Rate"),
+
+                new CalculateDataFieldFromDataStreamSimple("Avg HrPwr", CalculateDataFieldFromDataStreamSimple.Mode.Average, "HrPwr"),
 
                 new CalculateDataFieldFromDataStreamAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
 

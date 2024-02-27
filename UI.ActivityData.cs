@@ -14,8 +14,9 @@ namespace FellrnrTrainingAnalysis.UI
             InitializeComponent();
         }
 
-        const string DATUM_POSTFIX = " (d)";
-        const string TIMESERIES_POSTFIX = " (ts)";
+        const string DATUM_POSTFIX = "(activity)";
+        const string TIMESERIES_POSTFIX = "(time series)";
+        const string DAY_POSTFIX = "(day)";
 
         private class Row
         {
@@ -36,31 +37,51 @@ namespace FellrnrTrainingAnalysis.UI
             }
         }
 
+        private int RowCount = 0;
         private Dictionary<string, Row> Rows = new Dictionary<string, Row>();
+        private bool AddedHeaders = false;
         private void Initialize(Model.Athlete athlete)
         {
-            Logging.Instance.StartResetTimer("ActivityData.Initialize");
+            Logging.Instance.ResetAndStartTimer("ActivityData.Initialize");
             tableLayoutPanel1.SuspendLayout();
             IReadOnlyCollection<string> dataNames = athlete.ActivityFieldNames; //we want the fields for the activies, not the athlete
 
             AddRows(dataNames, DATUM_POSTFIX);
 
+            IReadOnlyCollection<string> dayNames = athlete.DayFieldNames; //we want the fields for the activies, not the athlete
+
+            AddRows(dayNames, DAY_POSTFIX);
+
             IReadOnlyCollection<string> timeSeriesNames = athlete.AllTimeSeriesNames; //we want the fields for the activies, not the athlete
 
             AddRows(timeSeriesNames, TIMESERIES_POSTFIX);
+
+            AddedHeaders = true;
 
             tableLayoutPanel1.ResumeLayout(true);
             //tableLayoutPanel1.PerformLayout();
             Logging.Instance.Log(string.Format("ActivityData.Initialize took {0}", Logging.Instance.GetAndResetTime("ActivityData.Initialize")));
         }
 
+        private void AddHeaderRow(string postfix)
+        {
+            int row = RowCount + 1; //zero is the header
+            for (int i = 0; i < 5; i++)
+            {
+                string text = (i == 3 ? postfix : "*****");
+                Label header = new Label { Text = text, Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                tableLayoutPanel1.Controls.Add(header, i, row);
+            }
+            RowCount++;
+        }
         private void AddRows(IReadOnlyCollection<string> dataNames, string postfix)
         {
+            if(!AddedHeaders)
+                AddHeaderRow(postfix);
             IReadOnlyCollection<string> dataNamesSorted = dataNames.ToImmutableSortedSet();
-
             foreach (string fieldName in dataNamesSorted)
             {
-                int row = Rows.Count + 1; //zero is the header
+                int row = RowCount + 1; //zero is the header
                 if (!Rows.ContainsKey(fieldName + postfix))
                 {
                     Label name = new Label { Text = fieldName, Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
@@ -76,6 +97,7 @@ namespace FellrnrTrainingAnalysis.UI
 
                     Rows.Add(fieldName + postfix, new Row(name, value, min, avg, max));
                 }
+                RowCount++;
             }
         }
 
@@ -99,7 +121,10 @@ namespace FellrnrTrainingAnalysis.UI
                 return;
             }
 
-            DisplayActivityDatum(activity);
+            DisplayData(activity, DATUM_POSTFIX);
+
+            Model.Day day = athlete.Days[activity.StartDateNoTimeLocal!.Value];
+            DisplayData(day, DAY_POSTFIX);
 
             DisplayActivityTimeSeries(activity);
 
@@ -134,7 +159,7 @@ namespace FellrnrTrainingAnalysis.UI
             Logging.Instance.TraceLeave();
         }
 
-        private void DisplayActivityDatum(Activity? activity)
+        private void DisplayData(Extensible activity, string postfix)
         {
             Logging.Instance.TraceEntry("ActivityData.DisplayActivityDatum");
             IReadOnlyCollection<Datum> data = activity!.DataValues;
@@ -142,7 +167,7 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (Datum datum in data)
             {
                 string fieldName = datum.Name;
-                string entryName = fieldName + DATUM_POSTFIX;
+                string entryName = fieldName + postfix;
                 if (Rows.ContainsKey(entryName))
                 {
 
@@ -150,7 +175,11 @@ namespace FellrnrTrainingAnalysis.UI
                     ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldName);
                     if (activityDatumMetadata != null)
                     {
-                        row.Value.Text = DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldName), activityDatumMetadata);
+                        const int ArbitraryWrapLiength = 50;
+
+                        string s = DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldName), activityDatumMetadata);
+                        s = Utils.Misc.WordWrap(s, ArbitraryWrapLiength, " ".ToCharArray());
+                        row.Value.Text = s;
                         //row.Value.BackColor = Color.White;
                     }
                     else

@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using System.Collections.ObjectModel;
 using FellrnrTrainingAnalysis.Utils;
+using static FellrnrTrainingAnalysis.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -33,8 +34,25 @@ namespace FellrnrTrainingAnalysis.Model
             string altitudeField = RequiredFields[1];
             DataStreamBase altitudeStream = timeSeries[altitudeField];
             Tuple<uint[], float[]>? altitudeData = altitudeStream.GetData();
-            if (altitudeData == null) { return distanceData; }
+            if (altitudeData == null) 
+            { 
+                return distanceData; 
+            }
 
+            AlignedTimeSeries? aligned = TimeSeries.Align(distanceData, altitudeData);
+
+            if (aligned == null)
+            {
+                return distanceData;
+            }
+
+
+            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(aligned);
+
+            return gradeAdjustedDistance.GetGradeAdjustedDistance();
+
+
+            /*
             if (distanceData.Item1.Length != altitudeData.Item1.Length)
             {
                 //it's fairly common to have altitude data miss the first one or two data points
@@ -75,12 +93,12 @@ namespace FellrnrTrainingAnalysis.Model
 
                 return gradeAdjustedDistance.GetGradeAdjustedDistance();
             }
-
+            */
 
 
         }
 
-        
+
 
     }
 }

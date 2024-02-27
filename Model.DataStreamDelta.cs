@@ -56,6 +56,8 @@ namespace FellrnrTrainingAnalysis.Model
 
             Tuple<uint[], float[]>? newData;
 
+            
+
             if(Period == null || Period == 1)
             {
                 newData = TimeSeries.SimpleDeltas(data, ScalingFactor, Numerator, Limit);
