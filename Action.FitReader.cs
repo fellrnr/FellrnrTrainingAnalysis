@@ -29,7 +29,7 @@ namespace FellrnrTrainingAnalysis.Action
             public AccumulationData(FellrnrTrainingAnalysis.Model.Activity activity) { this.activity = activity; }
             public FellrnrTrainingAnalysis.Model.Activity activity; 
 
-            public Dictionary<string, KeyValuePair<List<uint>, List<float>>> dataStreams = new Dictionary<string, KeyValuePair<List<uint>, List<float>>>();
+            public Dictionary<string, KeyValuePair<List<uint>, List<float>>> timeSeriesSet = new Dictionary<string, KeyValuePair<List<uint>, List<float>>>();
             public Dictionary<string, uint> lastElapsedTime = new Dictionary<string, uint>();
 
             public List<uint> LocationTimes = new List<uint>();
@@ -110,7 +110,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             }
 
-            Accumulation.activity.AddDataStreams(Accumulation.dataStreams, Accumulation.activity);
+            Accumulation.activity.AddTimeSeriesSet(Accumulation.timeSeriesSet);
 
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
@@ -258,7 +258,7 @@ namespace FellrnrTrainingAnalysis.Action
                     return;
                 }
             }
-            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.DataStream, fieldName);
+            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.TimeSeries, fieldName);
             if (activityDatumMapping == null || !activityDatumMapping.Import)
             {
                 return;
@@ -293,13 +293,13 @@ namespace FellrnrTrainingAnalysis.Action
 
         private void AddTimeSeriesDatum(string name, uint elapsedTime, float data)
         {
-            if (!Accumulation.dataStreams.ContainsKey(name))
+            if (!Accumulation.timeSeriesSet.ContainsKey(name))
             {
-                Accumulation.dataStreams.Add(name, new KeyValuePair<List<uint>, List<float>>(new List<uint>(), new List<float>()));
+                Accumulation.timeSeriesSet.Add(name, new KeyValuePair<List<uint>, List<float>>(new List<uint>(), new List<float>()));
             }
 
-            List<uint> times = Accumulation.dataStreams[name].Key;
-            List<float> values = Accumulation.dataStreams[name].Value;
+            List<uint> times = Accumulation.timeSeriesSet[name].Key;
+            List<float> values = Accumulation.timeSeriesSet[name].Value;
             if (!Accumulation.lastElapsedTime.ContainsKey(name))
                 Accumulation.lastElapsedTime.Add(name, uint.MaxValue);
             uint lastElapsedTime = Accumulation.lastElapsedTime[name];

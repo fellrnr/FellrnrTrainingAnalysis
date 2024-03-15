@@ -1,8 +1,9 @@
-﻿using FellrnrTrainingAnalysis.Model;
-using pi.science.smoothing;
+﻿using pi.science.smoothing;
 using pi.science.statistic;
+using System.Text;
 using static pi.science.smoothing.PIMovingAverageSmoothing;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using FellrnrTrainingAnalysis.Model;
+
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -210,104 +211,6 @@ namespace FellrnrTrainingAnalysis.Utils
             return smoothed;
         }
 
-        //calculate a simple delta, scaled by time. So change of 10 in a time of 1 is 10, a change of 10 in a time of 2 is 5
-        //supports scaling and inverting the values
-        public static Tuple<uint[], float[]>? SimpleDeltas(Tuple<uint[], float[]> data, float ScalingFactor, float? Numerator, float? Limit)
-        {
-            uint[] elapsedTime = data.Item1;
-            float[] values = data.Item2;
-            float[] deltas = new float[elapsedTime.Length];
-            float lastValue = values[0];
-            float lastTime = 0;
-
-
-            for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
-            {
-                float deltaTime = elapsedTime[i] - lastTime;
-                float deltasValue = (values[i] - lastValue) / deltaTime;
-                deltas[i] = deltasValue;
-
-                //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
-                if (i == 1)
-                    deltas[0] = deltasValue;
-                if (Numerator != null && deltas[i] != 0)
-                    deltas[i] = Numerator.Value / deltas[i];
-                deltas[i] = deltas[i] * ScalingFactor;
-                if (Limit != null && Math.Abs(deltas[i]) > Limit)
-                    return null;
-                lastValue = values[i];
-                lastTime = elapsedTime[i];
-            }
-            Tuple<uint[], float[]> newData = new Tuple<uint[], float[]>(elapsedTime, deltas);
-
-            return newData;
-        }
-
-        //A more complex delta, using a time span for the change. Used for averaging over 60 seconds for instance. 
-        public static Tuple<uint[], float[]>? SpanDeltas(Tuple<uint[], float[]> data, float scalingFactor, float? numerator, float? limit, float period, bool extraDebug)
-        {
-            uint[] elapsedTime = data.Item1;
-            float[] values = data.Item2;
-            float[] deltas = new float[elapsedTime.Length];
-            float lastValue = values[0];
-            uint lastTime = 0;
-            deltas[0] = 0; //first value has no predecessor, so it has to be zero
-                           //List<uint> absoluteTimeStack = new List<uint>();
-            List<uint> incrementTimeStack = new List<uint>();
-            List<float> deltaStack = new List<float>();
-
-            float deltaSum = 0;
-            uint timeSum = 0;
-            for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
-            {
-                uint currentTime = elapsedTime[i];
-                uint timeIncrement = currentTime - lastTime;
-                float currentValue = values[i];
-                float valueIncrement = currentValue - lastValue;
-
-                //absoluteTimeStack.Add(currentTime);
-                incrementTimeStack.Add(timeIncrement);
-                deltaStack.Add(valueIncrement);
-                deltaSum += valueIncrement;
-                timeSum += timeIncrement;
-
-
-                //if the time sum is less than the period, all the delta applies. For instance, in the first 2 seconds we climb 2 meters, then our climb rate is 2 meters/minute, not 2/60 meters/minute
-                float timeProRata = timeSum > period ? timeSum / period : 1.0f;
-                float currentDelta = deltaSum / timeProRata;
-                if (numerator != null && currentDelta != 0)
-                    currentDelta = numerator.Value / currentDelta;
-                currentDelta = currentDelta * scalingFactor;
-                deltas[i] = currentDelta;
-
-                if(extraDebug)
-                {
-                    Logging.Instance.Log($"delta[{i}]: {currentDelta}, deltaSum {deltaSum}, timeProRata {timeProRata}, timeSum {timeSum}, currentValue {currentValue}, valueIncrement {valueIncrement} ");
-                }
-
-                if (limit != null && Math.Abs(deltas[i]) > limit)
-                    return null;
-
-                //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
-                if (i == 1)
-                    deltas[0] = currentDelta;
-
-                //mop up
-                while (incrementTimeStack.Count > 0 && timeSum > period)
-                {
-                    deltaSum -= deltaStack.First();
-                    timeSum -= incrementTimeStack.First();
-                    incrementTimeStack.RemoveAt(0);
-                    deltaStack.RemoveAt(0);
-                }
-
-                lastValue = currentValue;
-                lastTime = currentTime;
-            }
-            Tuple<uint[], float[]> newData = new Tuple<uint[], float[]>(elapsedTime, deltas);
-            return newData;
-        }
-
         public static float Percentile(List<float> sortedSequence, float percentile)
         {
             //Array.Sort(sortedSequence);
@@ -324,157 +227,10 @@ namespace FellrnrTrainingAnalysis.Utils
             }
         }
 
-        public static AlignedTimeSeries? Align(Tuple<uint[], float[]> primary, Tuple<uint[], float[]> secondary)
-        {
-            Logging.Instance.ContinueAccumulator("Utils.TimeSeries.AlignedTimeSeries");
-
-            uint[] ptimes = primary.Item1;
-            float[] pvalues = primary.Item2;
-            uint[] stimes = secondary.Item1;
-            float[] svalues = secondary.Item2;
-
-
-            AlignedTimeSeries? aligned = null;
-            if (ptimes.Length == stimes.Length)
-            {
-                //let's assume they match
-                aligned = new AlignedTimeSeries(ptimes, pvalues, svalues);
-            }
-            else
-            {
-                List<uint> newTimes = new List<uint>();
-                List<float> newPrimary = new List<float>();
-                List<float> newSecondary = new List<float>();
-
-                int si = 0;
-                for (int pi = 0; pi < ptimes.Length && si < stimes.Length; pi++)
-                {
-                    while (pi < ptimes.Length && ptimes[pi] < stimes[si])
-                    {
-                        pi++;
-                    }
-
-                    while (si < stimes.Length && ptimes[pi] > stimes[si] && pi < ptimes.Length) //we incremented pi above, so could be over
-                    {
-                        si++;
-                    }
-
-                    if (ptimes[pi] == stimes[si]) // pi < ptimes.Length && si < stimes.Length
-                    {
-                        //all good
-                        newTimes.Add(ptimes[pi]);
-                        newPrimary.Add(pvalues[pi]);
-                        newSecondary.Add(svalues[si]);
-                        if (si < stimes.Length)
-                            si++;
-                    }
-                }
-
-                if (newTimes.Count != newPrimary.Count || newTimes.Count != newSecondary.Count)
-                {
-                    throw new Exception($"AlignedTimeSeries times {newTimes.Count} and primary {newPrimary.Count} secondary {newSecondary.Count} don't match counts");
-                }
-
-
-                aligned = new AlignedTimeSeries(newTimes.ToArray(), newPrimary.ToArray(), newSecondary.ToArray());
-            }
-
-            Logging.Instance.PauseAccumulator("Utils.TimeSeries.AlignedTimeSeries");
-            return aligned;
-        }
-
-        public class AlignedTimeSeries
-        {
-            public AlignedTimeSeries(uint[] time, float[] primary, float[] secondary)
-            {
-                Time = time;
-                Primary = primary;
-                Secondary = secondary;
-            }
-
-            public uint[] Time { get; set; }
-            public float[] Primary { get; set; }
-            public float[] Secondary { get; set; }
-        }
 
 
 
-        public static AlignedTimeLocationSeries? Align(LocationStream primary, DataStreamBase secondary)
-        {
-            if(primary.Times == null)
-                return null; //can't aling without time
 
-            Tuple<uint[], float[]>? sdata = secondary.GetData();
-            if(sdata == null) return null;
-
-            uint[] ptimes = primary.Times;
-            float[] latvalues = primary.Latitudes;
-            float[] lonvalues = primary.Longitudes;
-            uint[] stimes = sdata.Item1;
-            float[] svalues = sdata.Item2;
-
-            if (ptimes.Length == stimes.Length)
-            {
-                //let's assume they match
-                AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(ptimes, latvalues, lonvalues, svalues);
-                return aligned;
-            }
-            else
-            {
-                List<uint> newTimes = new List<uint>();
-                List<float> newLats = new List<float>();
-                List<float> newLons = new List<float>();
-                List<float> newSecondary = new List<float>();
-
-
-
-                int si = 0;
-                for (int pi = 0; pi < ptimes.Length && si < stimes.Length; pi++)
-                {
-                    while (pi < ptimes.Length && ptimes[pi] < stimes[si])
-                    {
-                        pi++;
-                    }
-
-                    while (si < stimes.Length && ptimes[pi] > stimes[si])
-                    {
-                        si++;
-                    }
-
-                    if (ptimes[pi] == stimes[si])
-                    {
-                        //all good
-                        newTimes.Add(ptimes[pi]);
-                        newLats.Add(latvalues[pi]);
-                        newLons.Add(lonvalues[pi]);
-                        newSecondary.Add(svalues[pi]);
-                        if (si < stimes.Length)
-                            si++;
-                    }
-                }
-
-
-                AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(newTimes.ToArray(), newLats.ToArray(), newLons.ToArray(), newSecondary.ToArray());
-                return aligned;
-            }
-        }
-
-        public class AlignedTimeLocationSeries
-        {
-            public AlignedTimeLocationSeries(uint[] time, float[] lats, float[] lons, float[] secondary)
-            {
-                Time = time;
-                Lats = lats;
-                Lons = lons;
-                Secondary = secondary;
-            }
-
-            public uint[] Time { get; set; }
-            public float[] Lats { get; set; }
-            public float[] Lons { get; set; }
-            public float[] Secondary { get; set; }
-        }
- 
     
     }
 }

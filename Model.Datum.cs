@@ -20,7 +20,9 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackInclude]
         public bool Recorded { get; set; }
 
-        public abstract string ToDebugString();
+        public abstract string DataAsString();
+
+        public override string ToString() { return "";  }
     }
 
     [MemoryPackable]
@@ -35,10 +37,13 @@ namespace FellrnrTrainingAnalysis.Model
         /// Override ToString() for display
         public override string ToString()
         {
-            return Data == null ? "null" : Data.ToString()!;
+            return $"Name {Name.Replace("\n", "⏎")}, Value {Data}, type {typeof(T).Name}"; 
         }
 
-        public override string ToDebugString() { return $"Name {Name.Replace("\n", "⏎")}, Value {this}"; }
+        public override string DataAsString()
+        {
+            return Data == null ? "null" : Data.ToString()!;
+        }
 
 
         [MemoryPackInclude]

@@ -1,4 +1,4 @@
-﻿using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Model;
 using static FellrnrTrainingAnalysis.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Utils
@@ -8,6 +8,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public GradeAdjustedDistance(AlignedTimeSeries aligned)
         {
+            Logging.Instance.ContinueAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
             Aligned = aligned;
             if (Aligned.Time.Length < 2)
                 throw new ArgumentException("need at least two distances to calculate GAP");
@@ -33,11 +34,13 @@ namespace FellrnrTrainingAnalysis.Utils
             _costs = CalculateCost(_smoothedGrades);
 
             _gradeAdjustedDistance = CalculateGradeAdjustedDistance(_distanceDeltas, _costs);
+
+            Logging.Instance.PauseAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
         }
 
 
         /*
-        public GradeAdjustedDistance(Tuple<uint[], float[]> distanceOrSpeed, Tuple<uint[], float[]> altitudes) 
+        public GradeAdjustedDistance(TimeDataTuple distanceOrSpeed, TimeDataTuple altitudes) 
         { 
             this.DistanceOrSpeed = distanceOrSpeed;
             this.Altitudes = altitudes;
@@ -69,8 +72,8 @@ namespace FellrnrTrainingAnalysis.Utils
             _gradeAdjustedDistance = CalculateGradeAdjustedDistance(_distanceDeltas, _costs);
         }
         */
-        //private Tuple<uint[], float[]> DistanceOrSpeed { get; set; }
-        //private Tuple<uint[], float[]> Altitudes { get; set; }
+        //private TimeDataTuple DistanceOrSpeed { get; set; }
+        //private TimeDataTuple Altitudes { get; set; }
         private AlignedTimeSeries Aligned { get; set; }
         private float[] _distanceDeltas;
         private float[] _altitudeDeltas;
@@ -79,13 +82,13 @@ namespace FellrnrTrainingAnalysis.Utils
         private float[] _costs;
         private float[] _gradeAdjustedDistance;
 
-        public Tuple<uint[], float[]> GetGradeAdjustedDistance()
+        public TimeValueList GetGradeAdjustedDistance()
         {
-            Tuple<uint[], float[]> gradeAdjustedDistance = new Tuple<uint[], float[]>(Aligned.Time, _gradeAdjustedDistance);
+            TimeValueList gradeAdjustedDistance = new TimeValueList(Aligned.Time, _gradeAdjustedDistance);
 
-            if(gradeAdjustedDistance.Item1.Length != gradeAdjustedDistance.Item2.Length)
+            if(gradeAdjustedDistance.Times.Length != gradeAdjustedDistance.Values.Length)
             {
-                throw new Exception($"GetGradeAdjustedDistance times {gradeAdjustedDistance.Item1.Length} and values {gradeAdjustedDistance.Item2.Length} don't match counts");
+                throw new Exception($"GetGradeAdjustedDistance times {gradeAdjustedDistance.Times.Length} and values {gradeAdjustedDistance.Values.Length} don't match counts");
             }
 
             return gradeAdjustedDistance; 

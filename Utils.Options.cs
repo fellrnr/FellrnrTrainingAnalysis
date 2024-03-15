@@ -214,11 +214,13 @@ namespace FellrnrTrainingAnalysis.Utils
         public int StartingMaxHeartRate { get; set; } = 174;
 
         [Description("Starting point (in the absense of daily values) for Resting Heart Rate")]
-        public int StartingRestingHeartRate { get; set; } = 40;
+        public int StartingRestingHeartRate { get; set; } = 45;
 
         [Description("Starting point (in the absense of daily values) for Weight (Kg)")]
         public float StartingWeight { get; set; } = 60.0f;
 
+        [Description("Offset from Resting Heart Rate to Standing Heart Rate, normally 26")]
+        public int RestingHeartRateToStanding { get; set; } = 26;
 
         //    _____  _           _             
         //   |  __ \(_)         | |            

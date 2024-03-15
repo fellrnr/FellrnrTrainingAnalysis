@@ -11,6 +11,9 @@ using System.Collections.ObjectModel;
 using Microsoft.VisualBasic;
 using ScottPlot.Plottable;
 using FellrnrTrainingAnalysis.Action;
+using System.Windows.Forms;
+using CsvHelper;
+using System.Globalization;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -239,16 +242,16 @@ namespace FellrnrTrainingAnalysis
         public void UpdateSelectedRow()
         {
             Logging.Instance.TraceEntry("UpdateSelectedRow");
-            UpdateDataStreamGraph();
+            UpdateTimeSeriesGraph();
             UpdateActivityDisplay();
             Logging.Instance.TraceLeave();
         }
 
 
         private Activity? CurrentlyDisplayedActivity = null;
-        private void UpdateDataStreamGraph()
+        private void UpdateTimeSeriesGraph()
         {
-            Logging.Instance.TraceEntry("UpdateDataStreamGraph");
+            Logging.Instance.TraceEntry("UpdateTimeSeriesGraph");
             if (Database == null)
                 return;
 
@@ -269,7 +272,7 @@ namespace FellrnrTrainingAnalysis
                 if (activity != null)
                 {
                     CurrentlyDisplayedActivity = activity;
-                    foreach (KeyValuePair<string, DataStreamBase> kvp in activity.TimeSeries)
+                    foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
                     {
                         DisplayTimeSeries(activity, kvp);
                     }
@@ -309,16 +312,16 @@ namespace FellrnrTrainingAnalysis
         }
 
         const double MINPACE = 0.3; //0.3 is 55:30 min/km. Anything slower can be considered not moving to make the graph work, otherwise min/km values tend towards infinity
-        private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, DataStreamBase> kvp)
+        private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, TimeSeriesBase> kvp)
         {
             string timeSeriesName = kvp.Key;
 
-            DataStreamDefinition? dataStreamDefinition = DataStreamDefinition.FindDataStreamDefinition(timeSeriesName);
+            TimeSeriesDefinition? dataStreamDefinition = TimeSeriesDefinition.FindTimeSeriesDefinition(timeSeriesName);
             if (dataStreamDefinition == null || !dataStreamDefinition.ShowReportGraph)
                 return;
 
             double[] xArray, yArraySmoothed;
-            Tuple<double[], double[]>? xyData = GetDataStreamForDisplay(activity, kvp, dataStreamDefinition);
+            Tuple<double[], double[]>? xyData = GetTimeSeriesForDisplay(activity, kvp, dataStreamDefinition);
             if (xyData == null)
                 return;
             xArray = xyData.Item1;
@@ -346,7 +349,7 @@ namespace FellrnrTrainingAnalysis
             }
             AxisNames.Add(dataStreamDefinition.DisplayTitle);
 
-            if (dataStreamDefinition.DisplayUnits == DataStreamDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
+            if (dataStreamDefinition.DisplayUnits == TimeSeriesDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
             {
                 yAxis.TickLabelFormat(customTickFormatterForPace);
             }
@@ -360,20 +363,20 @@ namespace FellrnrTrainingAnalysis
             return;
         }
 
-        private Tuple<double[], double[]>? GetDataStreamForDisplay(Activity activity, KeyValuePair<string, DataStreamBase> kvp, DataStreamDefinition dataStreamDefinition)
+        private Tuple<double[], double[]>? GetTimeSeriesForDisplay(Activity activity, KeyValuePair<string, TimeSeriesBase> kvp, TimeSeriesDefinition dataStreamDefinition)
         {
             string timeSeriesName = kvp.Key;
             double[] xArray;
             double[] yArraySmoothed;
 
-            Model.DataStreamBase activityDataStreamdataStream = kvp.Value;
-            Tuple<uint[], float[]>? dataStream = activityDataStreamdataStream.GetData();
+            Model.TimeSeriesBase activityTimeSeriesdataStream = kvp.Value;
+            TimeValueList? dataStream = activityTimeSeriesdataStream.GetData();
             if (dataStream == null)
             {
                 return null;
             }
-            xArray = Array.ConvertAll(dataStream.Item1, x => (double)x);
-            double[] yArrayRaw = Array.ConvertAll(dataStream.Item2, x => (double)x);
+            xArray = Array.ConvertAll(dataStream.Times, x => (double)x);
+            double[] yArrayRaw = Array.ConvertAll(dataStream.Values, x => (double)x);
 
             yArraySmoothed = Smooth(yArrayRaw, dataStreamDefinition);
             for (int i = 0; i < xArray.Length; i++)
@@ -455,12 +458,12 @@ namespace FellrnrTrainingAnalysis
             return $"{dateTime2:H:mm:ss}";
         }
 
-        private double[] Smooth(double[] input, DataStreamDefinition dataStreamDefinition)
+        private double[] Smooth(double[] input, TimeSeriesDefinition dataStreamDefinition)
         {
             double[] smoothedData;
-            if (dataStreamDefinition.Smoothing == DataStreamDefinition.SmoothingType.AverageWindow)
+            if (dataStreamDefinition.Smoothing == TimeSeriesDefinition.SmoothingType.AverageWindow)
                 smoothedData = TimeSeries.WindowSmoothed(input, dataStreamDefinition.SmoothingWindow);
-            else if (dataStreamDefinition.Smoothing == DataStreamDefinition.SmoothingType.SimpleExponential)
+            else if (dataStreamDefinition.Smoothing == TimeSeriesDefinition.SmoothingType.SimpleExponential)
                 smoothedData = TimeSeries.SimpleExponentialSmoothed(input, dataStreamDefinition.SmoothingWindow);
             else
                 smoothedData = input;
@@ -505,6 +508,7 @@ namespace FellrnrTrainingAnalysis
             AddFixSubMenus("Fix This Activity", toolStripItem1_Click_tagStrava);
             AddFixSubMenus("Fix ALL Activities", toolStripItem1_Click_tagAllStrava);
 
+            AddContextMenu("Write table to CSV...", new EventHandler(toolStripItem1_Click_writeCsv));
             AddContextMenu("Debug Activity...", new EventHandler(toolStripItem1_Click_debugActivity));
         }
 
@@ -676,7 +680,7 @@ namespace FellrnrTrainingAnalysis
                 {
                     fitReader.ReadFitFromStravaArchive();
                 }
-                catch (Exception e) 
+                catch (Exception e)
                 {
                     MessageBox.Show($"Exception thrown reading FIT file {filepath}, {e}");
                     return;
@@ -805,6 +809,66 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
+        private void toolStripItem1_Click_writeCsv(object? sender, EventArgs args)
+        {
+
+            if (activityDataGridView.Rows.Count > 0)
+            {
+                SaveFileDialog sfd = new SaveFileDialog();
+                sfd.Filter = "CSV (*.csv)|*.csv";
+                sfd.FileName = "Output.csv";
+                bool fileError = false;
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    if (File.Exists(sfd.FileName))
+                    {
+                        try
+                        {
+                            File.Delete(sfd.FileName);
+                        }
+                        catch (IOException ex)
+                        {
+                            fileError = true;
+                            MessageBox.Show("It wasn't possible to write the data to the disk." + ex.Message);
+                        }
+                    }
+                    if (!fileError)
+                    {
+                        try
+                        {
+                            int columnCount = activityDataGridView.Columns.Count;
+                            string columnNames = "";
+                            string[] outputCsv = new string[activityDataGridView.Rows.Count + 1];
+                            for (int i = 0; i < columnCount; i++)
+                            {
+                                columnNames += activityDataGridView.Columns[i].HeaderText.ToString() + ",";
+                            }
+                            outputCsv[0] += columnNames;
+
+                            for (int i = 1; (i - 1) < activityDataGridView.Rows.Count; i++)
+                            {
+                                for (int j = 0; j < columnCount; j++)
+                                {
+                                    outputCsv[i] += Utils.Misc.EscapeForCsv(activityDataGridView.Rows[i - 1].Cells[j].Value.ToString()!) + ",";
+                                }
+                            }
+
+                            File.WriteAllLines(sfd.FileName, outputCsv, Encoding.UTF8);
+                            MessageBox.Show("Data Exported Successfully", "Info");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Error :" + ex.Message);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("No Record To Export !!!", "Info");
+            }
+
+        }
         private void toolStripItem1_Click_debugActivity(object? sender, EventArgs args)
         {
             Model.Activity? activity = GetActivity();
@@ -815,11 +879,11 @@ namespace FellrnrTrainingAnalysis
             sb.AppendLine("Datums");
             foreach (Datum d in activity.DataValues)
             {
-                sb.AppendLine(d.ToDebugString());
+                sb.AppendLine(d.ToString());
             }
 
             sb.AppendLine("TimeSeries");
-            foreach (KeyValuePair<string, DataStreamBase> kvp in activity.TimeSeries)
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
             {
                 sb.AppendLine(kvp.Value.ToString());
             }
@@ -913,7 +977,7 @@ namespace FellrnrTrainingAnalysis
                 activity.AddOrReplaceDatum(descriptionDatum);
 
                 Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
-                if (!tags.ProcessTags(activity))
+                if (!tags.ProcessTags(activity, true))
                 {
                     MessageBox.Show("Didn't work");
                 }
@@ -999,7 +1063,7 @@ namespace FellrnrTrainingAnalysis
             }
 
             DataQuality dataQuality = new DataQuality();
-            dataQuality.FindBadDataStreams(activity);
+            dataQuality.FindBadTimeSeriess(activity);
 
             if (activity.DataQualityIssues == null || activity.DataQualityIssues.Count == 0)
             {
@@ -1054,23 +1118,23 @@ namespace FellrnrTrainingAnalysis
                 stringBuilder.Append($"Position {dateTime.ToShortTimeString()}");
 
 
-                foreach (KeyValuePair<string, DataStreamBase> kvp in CurrentlyDisplayedActivity.TimeSeries)
+                foreach (KeyValuePair<string, TimeSeriesBase> kvp in CurrentlyDisplayedActivity.TimeSeries)
                 {
-                    DataStreamDefinition? dataStreamDefinition = DataStreamDefinition.FindDataStreamDefinition(kvp.Key);
+                    TimeSeriesDefinition? dataStreamDefinition = TimeSeriesDefinition.FindTimeSeriesDefinition(kvp.Key);
                     if (dataStreamDefinition != null && dataStreamDefinition.ShowReportGraph)
                     {
-                        DataStreamBase dataStreamBase = kvp.Value;
-                        Tuple<uint[], float[]>? data = dataStreamBase.GetData();
+                        TimeSeriesBase dataStreamBase = kvp.Value;
+                        TimeValueList? data = dataStreamBase.GetData();
                         if (data != null)
                         {
-                            uint[] times = data.Item1;
+                            uint[] times = data.Times;
                             int offset = Array.BinarySearch(times, time);
                             if (offset < 0)
                                 offset = ~offset;
-                            if (offset >= data.Item2.Length)
-                                offset = data.Item2.Length - 1;
+                            if (offset >= data.Values.Length)
+                                offset = data.Values.Length - 1;
 
-                            float value = data.Item2[offset];
+                            float value = data.Values[offset];
                             string representation = dataStreamDefinition.Format(value);
                             stringBuilder.Append($", {kvp.Key}: {representation}");
                         }

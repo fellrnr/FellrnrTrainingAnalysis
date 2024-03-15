@@ -99,20 +99,20 @@ namespace FellrnrTrainingAnalysis.Model
         //set of time series, one for HR, speed, etc. 
         [MemoryPackInclude]
         [MemoryPackOrder(2)]
-        private Dictionary<string, DataStreamBase> timeSeries = new Dictionary<string, DataStreamBase>();
+        private Dictionary<string, TimeSeriesBase> timeSeries = new Dictionary<string, TimeSeriesBase>();
         [MemoryPackInclude]
         [MemoryPackOrder(3)]
-        private Dictionary<string, DataStreamBase>? removedTimeSeries;
+        private Dictionary<string, TimeSeriesBase>? removedTimeSeries;
 
         [MemoryPackIgnore]
-        public ReadOnlyDictionary<string, DataStreamBase> TimeSeries { get { return timeSeries.AsReadOnly(); } }
+        public ReadOnlyDictionary<string, TimeSeriesBase> TimeSeries { get { return timeSeries.AsReadOnly(); } }
 
         [MemoryPackIgnore]
         public List<String> TimeSeriesNames { get { return TimeSeries.Keys.ToList(); } }
 
 
         [MemoryPackIgnore]
-        public Athlete? Parent { get { return parent_; } } //set using the PostDeserialize cleanup
+        public Athlete? ParentAthlete { get { return parent_; } } //set using the PostDeserialize cleanup
         //[MemoryPackInclude]
         [MemoryPackIgnore]
         private Athlete? parent_ = null;
@@ -125,7 +125,7 @@ namespace FellrnrTrainingAnalysis.Model
         public void PostDeserialize(Athlete parent)
         {
             this.parent_ = parent;
-            foreach (KeyValuePair<string, DataStreamBase> kvp in TimeSeries)
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp in TimeSeries)
             {
                 //kvp.Value.PostDeserialize(kvp.Key, this); //we had to repair names when memory pack didn't have a public setter
                 kvp.Value.PostDeserialize(this);
@@ -133,9 +133,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public void AddDataStreams(Dictionary<string, KeyValuePair<List<uint>, List<float>>> dataStreams, Activity activity)
+        public void AddTimeSeriesSet(Dictionary<string, KeyValuePair<List<uint>, List<float>>> timeSeriesSet)
         {
-            foreach (KeyValuePair<string, KeyValuePair<List<uint>, List<float>>> kvp in dataStreams)
+            foreach (KeyValuePair<string, KeyValuePair<List<uint>, List<float>>> kvp in timeSeriesSet)
             {
                 string name = kvp.Key;
                 if (!TimeSeries.ContainsKey(name))
@@ -149,23 +149,27 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     else
                     {
-                        AddDataStream(name, times.ToArray(), values.ToArray());
+                        AddTimeSeries(name, times.ToArray(), values.ToArray());
                     }
                 }
 
             }
         }
 
-        public void AddDataStream(string name, uint[] times, float[] values)
+        public void AddTimeSeries(string name, uint[] times, float[] values)
         {
+            TimeSeriesRecorded activityTimeSeries = new TimeSeriesRecorded(name, new TimeValueList(times, values), this);
             if (!timeSeries.ContainsKey(name))
             {
-                DataStreamRecorded activityDataStream = new DataStreamRecorded(name, new Tuple<uint[], float[]>(times, values), this);
-                timeSeries.Add(name, activityDataStream);
+                timeSeries.Add(name, activityTimeSeries);
+            }
+            else
+            {
+                timeSeries[name] = activityTimeSeries;
             }
         }
 
-        public void AddDataStream(DataStreamBase dataStream)
+        public void AddTimeSeries(TimeSeriesBase dataStream)
         {
             if (!timeSeries.ContainsKey(dataStream.Name))
             {
@@ -177,12 +181,12 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public void RemoveDataStream(string name)
+        public void RemoveTimeSeries(string name)
         {
             if (timeSeries.ContainsKey(name))
             {
                 if(removedTimeSeries == null)
-                    removedTimeSeries = new Dictionary<string, DataStreamBase>();
+                    removedTimeSeries = new Dictionary<string, TimeSeriesBase>();
                 removedTimeSeries.Add(name, timeSeries[name]);
                 timeSeries.Remove(name);
             }
@@ -199,54 +203,72 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
+            Logging.Instance.ContinueAccumulator("Activity.Recalculate");
+
             bool force = false;
             if(forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
+            Logging.Instance.ContinueAccumulator("Activity.Recalculate(clean)");
             if (force)
                 base.Clean();
 
-            //clear all existing virtual data streams - only an issue of they change names, but keeps things tidy
-            List<string> toDelete = new List<string>();  
-            foreach(KeyValuePair<string, DataStreamBase> kvp in TimeSeries)
+            //prepare to delete any unused or invalid time series
+            if (force)
             {
-                if(kvp.Value.IsVirtual())
-                    toDelete.Add(kvp.Key);
-            }
-            foreach(string s in toDelete) { timeSeries.Remove(s); }
-
-            Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
-            if (tags.ProcessTags(this))
-                force = true;
-
-            List<DataStreamBase> dataStreams = DataStreamFactory.Instance.DataStreams(this);
-
-            foreach (DataStreamBase dataStream in dataStreams)
-            {
-                if (dataStream.IsValid())
+                List<string> toDelete = new List<string>();
+                foreach (KeyValuePair<string, TimeSeriesBase> kvp in TimeSeries)
                 {
-                    try
+                    if (kvp.Value.IsVirtual())
+                        toDelete.Add(kvp.Key);
+                }
+
+                foreach (string s in toDelete) { timeSeries.Remove(s); }
+            }
+
+            Logging.Instance.PauseAccumulator("Activity.Recalculate(clean)");
+
+            Action.Tags tags = new Action.Tags();
+            if (tags.ProcessTags(this, force))
+                forceJustMe = true;
+
+            List<TimeSeriesBase> ephemeralTimeSeries = TimeSeriesFactory.Instance.TimeSeries(this);
+
+            Logging.Instance.ContinueAccumulator("Activity.Recalculate(time series)");
+            foreach (TimeSeriesBase ts in ephemeralTimeSeries)
+            {
+                if (this.timeSeries.ContainsKey(ts.Name))
+                {
+                    //the activity has the time series, so use the one on the activity, not the new one from the factory
+                    TimeSeriesBase existingTimeSeries = this.timeSeries[ts.Name];
+                    if (existingTimeSeries.IsValid() && existingTimeSeries.GetData() != null)
                     {
-                        dataStream.Recalculate(forceCount, forceJustMe); //if this object is forced, force dependent objects
-                        this.AddDataStream(dataStream);
+                        existingTimeSeries.Recalculate(forceCount, forceJustMe);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Logging.Instance.Error(string.Format("Failed to process activity {0} from {1} for data stream {2} due to {3}", 
-                            this.PrimaryKey(), this.StartDateTimeLocal, dataStream.Name, ex));
+                        if (forceJustMe) Logging.Instance.Debug("No data from {dataStream.Name}");
+                        this.timeSeries.Remove(ts.Name);
                     }
                 }
-                //TODO: extra debug on recalculate
-                //else 
-                //{
-                //    Logging.Instance.Debug($"activity.recalculate datastream {dataStream.Name} is not valid for activity {this}");
-                //}
+                else //the activity doesn't have this time series
+                {
+                    if (ts.IsValid() && ts.GetData() != null)
+                    {
+                        ts.Recalculate(forceCount, forceJustMe);
+                        this.timeSeries.Add(ts.Name, ts);
+                    }
+                }
             }
+            Logging.Instance.PauseAccumulator("Activity.Recalculate(time series)");
 
-            foreach(CalculateFieldBase calculate in CaclulateFieldFactory.Instance.Calulators)
+            Logging.Instance.ContinueAccumulator("Activity.Recalculate(calculated fields)");
+            foreach (CalculateFieldBase calculate in CaclulateFieldFactory.Instance.Calulators)
             {
-                calculate.Recalculate(this, force);
+                calculate.Recalculate(this, forceCount, forceJustMe);
             }
+            Logging.Instance.PauseAccumulator("Activity.Recalculate(calculated fields)");
 
+            Logging.Instance.PauseAccumulator("Activity.Recalculate");
         }
 
         public void RecalculateHills(List<Hill> hills, bool force, bool fullDebug)
@@ -325,90 +347,91 @@ namespace FellrnrTrainingAnalysis.Model
         public const string TagType = "Type";
         public const string TagAltitude = "Altitude";
 
-        public const string TagDistance = "Distance";
+        public const string TagDistance = "Distance"; //both a time series and a datum
         public const string TagElapsedTime = "Elapsed Time";
         public const string TagMovingTime = "Moving Time";
         public const string TagTreadmillAngle = "Treadmill Angle";
-        /*
-        public const string ActivityNameTag = "Activity Name";
-        public const string ActivityDescriptionTag = "Activity Description";
-        public const string MaxHeartRateTag = "Max Heart Rate";
-        public const string RelativeEffortTag = "Relative Effort";
-        public const string CommuteTag = "Commute";
-        public const string ActivityGearTag = "Activity Gear";
-        public const string AthleteWeightTag = "Athlete Weight";
-        public const string BikeWeightTag = "Bike Weight";
-        public const string ElapsedTimeTag = "Elapsed Time";
-        public const string MaxSpeedTag = "Max Speed";
-        public const string AverageSpeedTag = "Average Speed";
-        public const string ElevationGainTag = "Elevation Gain";
-        public const string ElevationLossTag = "Elevation Loss";
-        public const string ElevationLowTag = "Elevation Low";
-        public const string ElevationHighTag = "Elevation High";
-        public const string MaxGradeTag = "Max Grade";
-        public const string AverageGradeTag = "Average Grade";
-        public const string AveragePositiveGradeTag = "Average Positive Grade";
-        public const string AverageNegativeGradeTag = "Average Negative Grade";
-        public const string MaxCadenceTag = "Max Cadence";
-        public const string AverageCadenceTag = "Average Cadence";
-        public const string AverageHeartRateTag = "Average Heart Rate";
-        public const string MaxWattsTag = "Max Watts";
-        public const string AverageWattsTag = "Average Watts";
-        public const string CaloriesTag = "Calories";
-        public const string MaxTemperatureTag = "Max Temperature";
-        public const string AverageTemperatureTag = "Average Temperature";
-        public const string TotalWorkTag = "Total Work";
-        public const string NumberofRunsTag = "Number of Runs";
-        public const string UphillTimeTag = "Uphill Time";
-        public const string DownhillTimeTag = "Downhill Time";
-        public const string OtherTimeTag = "Other Time";
-        public const string PerceivedExertionTag = "Perceived Exertion";
-        public const string TypeTag = "Type";
-        public const string StartTimeTag = "Start Time";
-        public const string WeightedAveragePowerTag = "Weighted Average Power";
-        public const string PowerCountTag = "Power Count";
-        public const string PreferPerceivedExertionTag = "Prefer Perceived Exertion";
-        public const string PerceivedRelativeEffortTag = "Perceived Relative Effort";
-        public const string TotalWeightLiftedTag = "Total Weight Lifted";
-        public const string FromUploadTag = "From Upload";
-        public const string GradeAdjustedDistanceTag = "Grade Adjusted Distance";
-        public const string WeatherObservationTimeTag = "Weather Observation Time";
-        public const string WeatherConditionTag = "Weather Condition";
-        public const string WeatherTemperatureTag = "Weather Temperature";
-        public const string ApparentTemperatureTag = "Apparent Temperature";
-        public const string DewpointTag = "Dewpoint";
-        public const string HumidityTag = "Humidity";
-        public const string WeatherPressureTag = "Weather Pressure";
-        public const string WindSpeedTag = "Wind Speed";
-        public const string WindGustTag = "Wind Gust";
-        public const string WindBearingTag = "Wind Bearing";
-        public const string PrecipitationIntensityTag = "Precipitation Intensity";
-        public const string SunriseTimeTag = "Sunrise Time";
-        public const string SunsetTimeTag = "Sunset Time";
-        public const string MoonPhaseTag = "Moon Phase";
-        public const string BikeTag = "Bike";
-        public const string GearTag = "Gear";
-        public const string PrecipitationProbabilityTag = "Precipitation Probability";
-        public const string PrecipitationTypeTag = "Precipitation Type";
-        public const string CloudCoverTag = "Cloud Cover";
-        public const string WeatherVisibilityTag = "Weather Visibility";
-        public const string UVIndexTag = "UV Index";
-        public const string WeatherOzoneTag = "Weather Ozone";
-        public const string JumpCountTag = "Jump Count";
-        public const string TotalGritTag = "Total Grit";
-        public const string AvgFlowTag = "Avg Flow";
-        public const string FlaggedTag = "Flagged";
-        public const string AvgElapsedSpeedTag = "Avg Elapsed Speed";
-        public const string DirtDistanceTag = "Dirt Distance";
-        public const string NewlyExploredDistanceTag = "Newly Explored Distance";
-        public const string NewlyExploredDirtDistanceTag = "Newly Explored Dirt Distance"; 
-        */
+        public static List<string> ActivityTypeRun = new List<string> { "Run", "Virtual Run" };
+    /*
+    public const string ActivityNameTag = "Activity Name";
+    public const string ActivityDescriptionTag = "Activity Description";
+    public const string MaxHeartRateTag = "Max Heart Rate";
+    public const string RelativeEffortTag = "Relative Effort";
+    public const string CommuteTag = "Commute";
+    public const string ActivityGearTag = "Activity Gear";
+    public const string AthleteWeightTag = "Athlete Weight";
+    public const string BikeWeightTag = "Bike Weight";
+    public const string ElapsedTimeTag = "Elapsed Time";
+    public const string MaxSpeedTag = "Max Speed";
+    public const string AverageSpeedTag = "Average Speed";
+    public const string ElevationGainTag = "Elevation Gain";
+    public const string ElevationLossTag = "Elevation Loss";
+    public const string ElevationLowTag = "Elevation Low";
+    public const string ElevationHighTag = "Elevation High";
+    public const string MaxGradeTag = "Max Grade";
+    public const string AverageGradeTag = "Average Grade";
+    public const string AveragePositiveGradeTag = "Average Positive Grade";
+    public const string AverageNegativeGradeTag = "Average Negative Grade";
+    public const string MaxCadenceTag = "Max Cadence";
+    public const string AverageCadenceTag = "Average Cadence";
+    public const string AverageHeartRateTag = "Average Heart Rate";
+    public const string MaxWattsTag = "Max Watts";
+    public const string AverageWattsTag = "Average Watts";
+    public const string CaloriesTag = "Calories";
+    public const string MaxTemperatureTag = "Max Temperature";
+    public const string AverageTemperatureTag = "Average Temperature";
+    public const string TotalWorkTag = "Total Work";
+    public const string NumberofRunsTag = "Number of Runs";
+    public const string UphillTimeTag = "Uphill Time";
+    public const string DownhillTimeTag = "Downhill Time";
+    public const string OtherTimeTag = "Other Time";
+    public const string PerceivedExertionTag = "Perceived Exertion";
+    public const string TypeTag = "Type";
+    public const string StartTimeTag = "Start Time";
+    public const string WeightedAveragePowerTag = "Weighted Average Power";
+    public const string PowerCountTag = "Power Count";
+    public const string PreferPerceivedExertionTag = "Prefer Perceived Exertion";
+    public const string PerceivedRelativeEffortTag = "Perceived Relative Effort";
+    public const string TotalWeightLiftedTag = "Total Weight Lifted";
+    public const string FromUploadTag = "From Upload";
+    public const string GradeAdjustedDistanceTag = "Grade Adjusted Distance";
+    public const string WeatherObservationTimeTag = "Weather Observation Time";
+    public const string WeatherConditionTag = "Weather Condition";
+    public const string WeatherTemperatureTag = "Weather Temperature";
+    public const string ApparentTemperatureTag = "Apparent Temperature";
+    public const string DewpointTag = "Dewpoint";
+    public const string HumidityTag = "Humidity";
+    public const string WeatherPressureTag = "Weather Pressure";
+    public const string WindSpeedTag = "Wind Speed";
+    public const string WindGustTag = "Wind Gust";
+    public const string WindBearingTag = "Wind Bearing";
+    public const string PrecipitationIntensityTag = "Precipitation Intensity";
+    public const string SunriseTimeTag = "Sunrise Time";
+    public const string SunsetTimeTag = "Sunset Time";
+    public const string MoonPhaseTag = "Moon Phase";
+    public const string BikeTag = "Bike";
+    public const string GearTag = "Gear";
+    public const string PrecipitationProbabilityTag = "Precipitation Probability";
+    public const string PrecipitationTypeTag = "Precipitation Type";
+    public const string CloudCoverTag = "Cloud Cover";
+    public const string WeatherVisibilityTag = "Weather Visibility";
+    public const string UVIndexTag = "UV Index";
+    public const string WeatherOzoneTag = "Weather Ozone";
+    public const string JumpCountTag = "Jump Count";
+    public const string TotalGritTag = "Total Grit";
+    public const string AvgFlowTag = "Avg Flow";
+    public const string FlaggedTag = "Flagged";
+    public const string AvgElapsedSpeedTag = "Avg Elapsed Speed";
+    public const string DirtDistanceTag = "Dirt Distance";
+    public const string NewlyExploredDistanceTag = "Newly Explored Distance";
+    public const string NewlyExploredDirtDistanceTag = "Newly Explored Dirt Distance"; 
+    */
 
-        //transient data
+    //transient data
 
-        //let's hold on to these rather than querying every time
-        //[NonSerialized] 
-        [MemoryPackInclude]
+    //let's hold on to these rather than querying every time
+    //[NonSerialized] 
+    [MemoryPackInclude]
         [MemoryPackOrder(5)]
         public List<string>? DataQualityIssues = null; //we don't persist data quality issues as it depends on the criteria applied, and it's quick to check each time
 
@@ -423,7 +446,7 @@ namespace FellrnrTrainingAnalysis.Model
             //{
             //    MessageBox.Show(activitySportType);
             //}
-            if (activitySportType == null)
+            if (activitySportType == null || sportsToInclude == null)
                 return false;
             if (!sportsToInclude.Contains(activitySportType))
                 return false;

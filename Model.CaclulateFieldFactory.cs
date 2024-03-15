@@ -7,31 +7,33 @@
             //TODO: replace this with configuration driven dynamic load
             Calulators = new List<CalculateFieldBase>
             {
-                new CalculateDataFieldFromDataStreamSimple("Avg Pace", CalculateDataFieldFromDataStreamSimple.Mode.Average, "Speed", new List<string> { "Run" }),
+                new CalculateDataFieldFromTimeSeriesSimple("Avg Pace", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, "Speed", Activity.ActivityTypeRun),
 
                 //TODO: removed ", limit: 120" from climb calculation to let data quality sort out the issues
                 //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
-                new CalculateDataFieldFromDataStreamSimple("Max Climb", CalculateDataFieldFromDataStreamSimple.Mode.Max, "Calc.Climb", new List<string> { "Run" }),
+                new CalculateDataFieldFromTimeSeriesSimple("Max Climb", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Calc.Climb", Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromDataStreamSimple("Min Climb", CalculateDataFieldFromDataStreamSimple.Mode.Min, "Calc.Climb", new List < string > { "Run" }),
-                new CalculateDataFieldFromDataStreamSimple("Grade Adjusted Distance", CalculateDataFieldFromDataStreamSimple.Mode.LastValue, "Grade Adjusted Distance", new List<string> { "Run" }),
+                new CalculateDataFieldFromTimeSeriesSimple("Min Climb", CalculateDataFieldFromTimeSeriesSimple.Mode.Min, "Calc.Climb", new List < string > { "Run", "Virtual Run" }),
+                new CalculateDataFieldFromTimeSeriesSimple("Grade Adjusted Distance", CalculateDataFieldFromTimeSeriesSimple.Mode.LastValue, "Grade Adjusted Distance", Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromDataStreamSimple("Avg GAP", CalculateDataFieldFromDataStreamSimple.Mode.Average, DataStreamFactory.GRADE_ADUJUSTED_PACE, new List<string> { "Run" }), //meters per second
+                new CalculateDataFieldFromTimeSeriesSimple("Avg GAP", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, TimeSeriesFactory.GRADE_ADUJUSTED_PACE, Activity.ActivityTypeRun), //meters per second
 
-                new CalculateDataFieldFromDataStreamSimple("Max HR", CalculateDataFieldFromDataStreamSimple.Mode.Max, "Heart Rate"),
+                new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
 
-                new CalculateDataFieldFromDataStreamSimple("Avg HrPwr", CalculateDataFieldFromDataStreamSimple.Mode.Average, "HrPwr"),
+                new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, "HrPwr", Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromDataStreamAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
+                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, "HrPwr", Activity.ActivityTypeRun, 5*60, 10*60),
 
-                new CalculateDataFieldFromDataStreamAUC("TRIMP anaerobic", false, 250, null, "Power"), //hard code critical power as 250 
+                new CalculateDataFieldFromTimeSeriesAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
 
-                new CalculateDataFieldFromDataStreamAUC("TRIMP downhill", true, 10, null, "Calc.Climb", new List<string> { "Run" }), //hard code start of downhill as 10 meters/minute
+                new CalculateDataFieldFromTimeSeriesAUC("TRIMP anaerobic", false, 250, null, "Power"), //hard code critical power as 250 
 
-                new CalculateDataFieldFromDataStreamThreashold("Percent Run", CalculateDataFieldFromDataStreamThreashold.Mode.AbovePercent, 75, "Cadence", new List<string> { "Run" }), //cadence is both legs, so 75 = 150
+                new CalculateDataFieldFromTimeSeriesAUC("TRIMP downhill", true, 10, null, "Calc.Climb", Activity.ActivityTypeRun), //hard code start of downhill as 10 meters/minute
 
-                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, new List<string> { "Run" }) //9 min/mile is 2.98 m/s
+                new CalculateDataFieldFromTimeSeriesThreashold("Percent Run", CalculateDataFieldFromTimeSeriesThreashold.Mode.AbovePercent, 75, "Cadence", Activity.ActivityTypeRun), //cadence is both legs, so 75 = 150
+
+                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, Activity.ActivityTypeRun) //9 min/mile is 2.98 m/s
             };
         }
             

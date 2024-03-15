@@ -35,6 +35,10 @@ namespace FellrnrTrainingAnalysis
             //TODO: consider using http://dockpanelsuite.com/
             InitializeComponent();
             Options.LoadConfig();
+
+            FilterActivities? filter = FilterActivities.LoadFilters();
+            if (filter != null) { DialogFilterActivities = filter; }
+
             showErrorsToolStripMenuItem.Enabled = false;
             Database = Database.LoadFromFile();
             GoalsUI = new UI.Goals(Database, goalsDataGridView, goalsTextBox);
@@ -88,20 +92,22 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.ResetAndStartTimer("FellrnrTrainingAnalysisForm_Load");
             SetMenuAvailability();
 
-            UpdateViews(false);
+            UpdateViews();
             AddDataQualityMenus();
             Logging.Instance.Log(string.Format("FellrnrTrainingAnalysisForm_Load took {0}", Logging.Instance.GetAndResetTime("FellrnrTrainingAnalysisForm_Load")));
         }
 
 
-        public void CallbackEventHandler(FilterActivities filterActivities)
+        public void FilterChangedCallbackEventHandler(FilterActivities filterActivities)
         {
-            CurrentFilterActivities = filterActivities;
-            UpdateViews(false);
+            DialogFilterActivities = filterActivities;
+            DialogFilterActivities.SaveFilters();
+            UpdateViews();
         }
 
         private void UpdateFilters()
         {
+            CurrentFilterActivities.Filters.Clear();
             CurrentFilterActivities.Filters.AddRange(DialogFilterActivities.Filters);
             if (CurrentFilterBadData != null)
                 CurrentFilterActivities.Filters.Add(CurrentFilterBadData);
@@ -114,11 +120,11 @@ namespace FellrnrTrainingAnalysis
 
         }
 
-        private void UpdateViews(bool force)
+        private void UpdateViews(bool forceActivities = false, bool forceHills = false, bool forceGoals = false)
         {
             Logging.Instance.TraceEntry("UpdateViews");
             //if(force) { progressBar1.Minimum = 0; progressBar1.Maximum = Database.CurrentAthlete.Activities.Count; }
-            Database.MasterRecalculate(force);
+            Database.MasterRecalculate(forceActivities, forceHills, forceGoals);
 
             UpdateFilters();
             UpdateShowOnlyMenu();
@@ -241,13 +247,13 @@ namespace FellrnrTrainingAnalysis
             Application.UseWaitCursor = false;
 
             MessageBox.Show($"Synced {count.Item1} activities, with at least {count.Item2} remaining");
-            UpdateViews(false);
+            UpdateViews();
         }
 
         private void clearDatabaseToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Database = new Database();
-            UpdateViews(false);
+            UpdateViews();
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -266,8 +272,9 @@ namespace FellrnrTrainingAnalysis
         {
             Database.SaveToMemoryPackFile();
             Options.SaveConfig();
+            DialogFilterActivities.SaveFilters();
             ActivityDatumMetadata.WriteToCsv();
-            DataStreamDefinition.WriteToCsv();
+            TimeSeriesDefinition.WriteToCsv();
             if (force)
             {
                 Environment.Exit(0);
@@ -284,7 +291,7 @@ namespace FellrnrTrainingAnalysis
         {
             OptionsDialog configForm = new OptionsDialog();
             configForm.ShowDialog();
-            UpdateViews(false);//TODO: update this to be non-modal with a callback
+            UpdateViews();//TODO: update this to be non-modal with a callback
 
         }
 
@@ -330,18 +337,6 @@ namespace FellrnrTrainingAnalysis
                 }
 
             }
-        }
-
-        private void forceRecalculationToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            UpdateViews(true);
-            MessageBox.Show("Recalculation complete");
-        }
-
-
-        private void recalculateHillsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void showErrorsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -392,14 +387,14 @@ namespace FellrnrTrainingAnalysis
 
         private void dataStreamGraphDefinitionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            List<Model.DataStreamDefinition>? definitions = DataStreamDefinition.GetDefinitions();
+            List<Model.TimeSeriesDefinition>? definitions = TimeSeriesDefinition.GetDefinitions();
             if (definitions != null)
             {
-                UI.DataStreamDefinitionEditor dataStreamDefinitionEditor = new UI.DataStreamDefinitionEditor(definitions);
-                dataStreamDefinitionEditor.Edited += DataStreamEditEventHandler;
+                UI.TimeSeriesDefinitionEditor dataStreamDefinitionEditor = new UI.TimeSeriesDefinitionEditor(definitions);
+                dataStreamDefinitionEditor.Edited += TimeSeriesEditEventHandler;
 
                 dataStreamDefinitionEditor.ShowDialog(); //TODO: update this to be non-modal with a callback
-                UpdateViews(false);
+                UpdateViews();
             }
             else
             {
@@ -407,16 +402,16 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
-        public void DataStreamEditEventHandler(DataStreamDefinitionEditor sender) //a callback from clients
+        public void TimeSeriesEditEventHandler(TimeSeriesDefinitionEditor sender) //a callback from clients
         {
-            List<Model.DataStreamDefinition>? definitions = sender.Definitions;
-            DataStreamDefinition.SetDefinitions(definitions);
+            List<Model.TimeSeriesDefinition>? definitions = sender.Definitions;
+            TimeSeriesDefinition.SetDefinitions(definitions);
             activityReport1.UpdateSelectedRow(); //only update the grpah
         }
 
         public void UpdateViewsEventHandler() //a callback from clients
         {
-            UpdateViews(false);
+            UpdateViews();
         }
 
 
@@ -424,7 +419,7 @@ namespace FellrnrTrainingAnalysis
         private void clearDataQualityToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ClearDataQualityIssues();
-            UpdateViews(false);
+            UpdateViews();
         }
 
 
@@ -453,7 +448,7 @@ namespace FellrnrTrainingAnalysis
 
             //TODO: this doesn't add the bad data filter to the filter dialog
             CurrentFilterBadData = new FilterBadData(FilterBadData.HasBadValueTag);
-            UpdateViews(false);
+            UpdateViews();
         }
 
         private void fixQualitToolStripMenuItem_Click(object? sender, EventArgs e)
@@ -464,9 +459,8 @@ namespace FellrnrTrainingAnalysis
             DataQualityCheck dataQualityCheck = (DataQualityCheck)toolStripMenuItem.Tag;
             rescanForDataQualityIssues(dataQualityCheck, true);
 
-            CurrentFilterActivities.Filters.Clear();
-            CurrentFilterActivities.Filters.Add(new FilterBadData(FilterBadData.HasBadValueTag));
-            UpdateViews(false);
+            CurrentFilterBadData = new FilterBadData(FilterBadData.HasBadValueTag);
+            UpdateViews();
         }
 
         ActivityFilterDialog? activityFilterDialog;
@@ -480,9 +474,9 @@ namespace FellrnrTrainingAnalysis
         {
             ClearDataQualityIssues();
             Utils.DataQuality dataQuality = new DataQuality();
-            List<string> badStreams = dataQuality.FindBadDataStreams(Database, dataQualityCheck, fix);
+            List<string> badStreams = dataQuality.FindBadTimeSeriess(Database, dataQualityCheck, fix);
 
-            UpdateViews(false);
+            UpdateViews();
 
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.AppendLine(string.Format("Found {0} bad data streams\r\n", badStreams.Count));
@@ -657,7 +651,7 @@ namespace FellrnrTrainingAnalysis
             Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
             int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database, worker);
 
-            Database.MasterRecalculate(true, worker);
+            Database.MasterRecalculate(true, true, true, worker);
 
             Logging.Instance.TraceLeave();
 
@@ -677,7 +671,7 @@ namespace FellrnrTrainingAnalysis
 
         private void loadStravaCsvBackgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
         {
-            UpdateViews(false); //has to be done in this thread
+            UpdateViews(); //has to be done in this thread
             ProgressDialog.Hide();
             if (e.Result != null)
             {
@@ -712,7 +706,7 @@ namespace FellrnrTrainingAnalysis
         {
             if (activityFilterDialog == null)
                 activityFilterDialog = new ActivityFilterDialog();
-            activityFilterDialog.UpdatedHandler += CallbackEventHandler;
+            activityFilterDialog.UpdatedHandler += FilterChangedCallbackEventHandler;
             activityFilterDialog.Display(Database);
             activityFilterDialog.Show();
 
@@ -732,8 +726,34 @@ namespace FellrnrTrainingAnalysis
             {
                 string csv = string.Join(',', includedTypes);
                 Options.Instance.OnlyShowActivityTypes = csv;
-                UpdateViews(false);
+                UpdateViews();
             }
+        }
+
+        private void forceRecalculationToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            UpdateViews(forceActivities: true, forceHills: true, forceGoals: true);
+            MessageBox.Show("Recalculation complete");
+        }
+
+
+        private void recalculateHillsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            UpdateViews(forceActivities: false, forceHills: true, forceGoals: false);
+            MessageBox.Show("Recalculation complete");
+        }
+
+
+        private void recalculateGoalsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            UpdateViews(forceActivities: false, forceHills: false, forceGoals: true);
+            MessageBox.Show("Recalculation complete");
+        }
+
+        private void recalculateActivitiesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            UpdateViews(forceActivities: true, forceHills: false, forceGoals: false);
+            MessageBox.Show("Recalculation complete");
         }
     }
 

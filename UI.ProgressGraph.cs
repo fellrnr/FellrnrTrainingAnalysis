@@ -224,11 +224,11 @@ namespace FellrnrTrainingAnalysis.UI
                 string tsName = TimeSeriesFromOperation(key);
                 if (activity.TimeSeries.ContainsKey(tsName))
                 {
-                    DataStreamBase dataStream = activity.TimeSeries[tsName];
+                    TimeSeriesBase dataStream = activity.TimeSeries[tsName];
                     float value = 0;
                     if (dataStream != null && dataStream.GetData() != null)
                     {
-                        float[] valuesFromStream = dataStream.GetData()!.Item2;
+                        float[] valuesFromStream = dataStream.GetData()!.Values;
                         if (Operation(key) == MIN)
                         {
                             value = valuesFromStream.Min();

@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void RemoveNamedDatum(string name) { Data.Remove(name); }
 
-        public string GetNamedDatumForDisplay(string name) { if (Data.ContainsKey(name)) return Data[name].ToString()!; else return ""; }
+        public string GetNamedDatumForDisplay(string name) { if (Data.ContainsKey(name)) return Data[name].DataAsString()!; else return ""; }
 
         public string? GetNamedStringDatum(string name) { return HasNamedDatum(name) ? ((TypedDatum<string>)Data[name]).Data : null; }
         public DateTime? GetNamedDateTimeDatum(string name)
@@ -62,6 +62,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 Datum datum = Data[name];
                 if (datum == null) return null;
+                if (datum is not TypedDatum<float>) return null;
                 TypedDatum<float> typedDatum = (TypedDatum<float>)datum;
                 float value = typedDatum.Data;
                 return value;

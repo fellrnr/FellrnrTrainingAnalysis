@@ -21,7 +21,7 @@ namespace FellrnrTrainingAnalysis.Model
         private List<Activity>? _activities = null;
 
         [MemoryPackIgnore]
-        public IReadOnlyList<Activity>? Activities { get { if (_activities == null) { return null; } else { return _activities.AsReadOnly(); } } }
+        public IReadOnlyList<Activity> Activities { get { if (_activities == null) { return new List<Activity>().AsReadOnly(); } else { return _activities.AsReadOnly(); } } }
 
         public void AddActivity(Activity activity)
         {

@@ -1,6 +1,6 @@
 ﻿namespace FellrnrTrainingAnalysis.UI
 {
-    partial class DataStreamDefinitionEditor
+    partial class TimeSeriesDefinitionEditor
     {
         /// <summary>
         /// Required designer variable.
@@ -46,14 +46,14 @@
             this.objectListView1.CellEditFinished += new BrightIdeasSoftware.CellEditEventHandler(this.objectListView1_CellEditFinished);
             this.objectListView1.SubItemChecking += new System.EventHandler<BrightIdeasSoftware.SubItemCheckingEventArgs>(this.objectListView1_SubItemChecking);
             // 
-            // DataStreamDefinitionEditor
+            // TimeSeriesDefinitionEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1936, 1094);
             this.Controls.Add(this.objectListView1);
-            this.Name = "DataStreamDefinitionEditor";
-            this.Text = "DataStreamDefinitionEditor";
+            this.Name = "TimeSeriesDefinitionEditor";
+            this.Text = "TimeSeriesDefinitionEditor";
             ((System.ComponentModel.ISupportInitialize)(this.objectListView1)).EndInit();
             this.ResumeLayout(false);
 

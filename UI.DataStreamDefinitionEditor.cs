@@ -3,9 +3,9 @@ using FellrnrTrainingAnalysis.Model;
 
 namespace FellrnrTrainingAnalysis.UI
 {
-    public partial class DataStreamDefinitionEditor : Form
+    public partial class TimeSeriesDefinitionEditor : Form
     {
-        public DataStreamDefinitionEditor(List<DataStreamDefinition> definitions)
+        public TimeSeriesDefinitionEditor(List<TimeSeriesDefinition> definitions)
         {
             InitializeComponent();
 
@@ -15,7 +15,7 @@ namespace FellrnrTrainingAnalysis.UI
             objectListView1.ShowGroups= false;
             objectListView1.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
             //Generator.GenerateColumns(objectListView1, definitions);
-            Generator.GenerateColumns(this.objectListView1, typeof(DataStreamDefinition), true);
+            Generator.GenerateColumns(this.objectListView1, typeof(TimeSeriesDefinition), true);
             objectListView1.SetObjects(definitions);
             objectListView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             objectListView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
@@ -24,9 +24,9 @@ namespace FellrnrTrainingAnalysis.UI
 
         }
 
-        public List<DataStreamDefinition> Definitions { get; }
+        public List<TimeSeriesDefinition> Definitions { get; }
 
-        public delegate void EditEventHandler(DataStreamDefinitionEditor sender);
+        public delegate void EditEventHandler(TimeSeriesDefinitionEditor sender);
 
         public event EditEventHandler? Edited;
 
@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         private void objectListView1_SubItemChecking(object sender, SubItemCheckingEventArgs e) //TODO: Check box changes don't update the model
         {
-            DataStreamDefinition row = (DataStreamDefinition)e.RowObject;
+            TimeSeriesDefinition row = (TimeSeriesDefinition)e.RowObject;
             row.ShowReportGraph = (e.NewValue == CheckState.Checked);
             //objectListView1.RefreshObject(e.RowObject);
             Edited?.Invoke(this);

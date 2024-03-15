@@ -35,34 +35,56 @@ namespace FellrnrTrainingAnalysis.Model
 
         //look for the given date and work backwards to find one with a datum with the name provided
         //Another n^2 problem if there are no days with the value
-        public Day? FindRecentDayWithDatum(DateTime date, string name)
+        public float? FindRecentDayWithDatum(DateTime date, string name)
         {
             DateTime dateNoTime = date.Date; //just in case
 
             //lets see if we're lucky
-            if(Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name)) 
-                return Days[dateNoTime];
-            DateTime start = Days.Keys.First();
-            while(dateNoTime > start)
+            if (Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name))
             {
-                dateNoTime = dateNoTime.AddDays(-1);
-
-                if (Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name))
-                    return Days[dateNoTime];
+                Day day = Days[dateNoTime];
+                float? retval = day.GetNamedFloatDatum(name);
+                return retval;
             }
+
+            Logging.Instance.ContinueAccumulator("FindRecentDayWithDatum(search)");
+            DateTime start = Days.Keys.First();
+            DateTime scan = dateNoTime;
+            while(scan > start)
+            {
+                scan = scan.AddDays(-1);
+
+                if (Days.ContainsKey(scan) && Days[scan].HasNamedDatum(name))
+                {
+                    Day day = Days[scan];
+                    float? retval = day.GetNamedFloatDatum(name);
+
+                    Day originalday = GetOrAddDay(dateNoTime);
+                    originalday.AddOrReplaceDatum(new TypedDatum<float>(name, true, retval!.Value));
+
+                    Logging.Instance.PauseAccumulator("FindRecentDayWithDatum(search)");
+                    return retval;
+                }
+            }
+
+            Logging.Instance.PauseAccumulator("FindRecentDayWithDatum(search)");
             return null;
         }
 
-        public float FindDailyValueOrDefault(DateTime dateNoTime, string tag, float defaultValue)
+        public float FindDailyValueOrDefault(DateTime dateNoTime, string name, float defaultValue)
         {
-            Day? dayWithTag = this.FindRecentDayWithDatum(dateNoTime, tag);
-            float? retval = null;
-            if (dayWithTag != null)
-            {
-                retval = dayWithTag.GetNamedFloatDatum(Day.WeightTag);
-            }
-            if (retval == null) { retval = defaultValue; }
+            Logging.Instance.ContinueAccumulator("FindDailyValueOrDefault");
 
+            float? retval = FindRecentDayWithDatum(dateNoTime, name); ;
+            if (retval == null) 
+            {
+                //simple optimization = add the values to the dates so next time around we'll be fast
+                Day day = GetOrAddDay(dateNoTime);
+                day.AddOrReplaceDatum(new TypedDatum<float>(name, true, defaultValue));
+                retval = defaultValue; 
+            }
+
+            Logging.Instance.PauseAccumulator("FindDailyValueOrDefault");
             return retval.Value;
         }
 
@@ -418,11 +440,13 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
+            Logging.Instance.TraceEntry($"Athlete.Recalculate {forceCount}, {forceJustMe}");
             bool force = false;
             if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
             if (force)
             {
+                Logging.Instance.Debug("Athelete force recalculation clean");
                 base.Clean();
                 dayFieldNames = null;
                 activityFieldNames = null;
@@ -435,6 +459,9 @@ namespace FellrnrTrainingAnalysis.Model
                 calendarNode.Recalculate(forceCount, forceJustMe); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
                 if (worker != null) worker.ReportProgress(++i);
             }
+
+            Logging.Instance.TraceLeave();
+
         }
 
 

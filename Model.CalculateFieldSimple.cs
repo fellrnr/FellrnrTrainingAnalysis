@@ -27,6 +27,9 @@ namespace FellrnrTrainingAnalysis.Model
             bool force = false;
             if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimple Forced recalculating {ActivityFieldname}");
+
             if (extensible == null || extensible is not Activity)
             {
                 return;
@@ -57,20 +60,25 @@ namespace FellrnrTrainingAnalysis.Model
             if (SportsToInclude != null && !activity.CheckSportType(SportsToInclude))
                 return;
 
-            float? value = ExtractValue(activity);
+            float? value = ExtractValue(activity, forceJustMe);
             if (value != null)
             {
                 Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
                 activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value.Value));
             }
         }
-        protected abstract float? ExtractValue(Activity activity);
+        protected abstract float? ExtractValue(Activity activity, bool forceJustMe);
 
     }
 
     public class CalculateFieldSimpleDefault : CalculateFieldSimple
     {
-        public CalculateFieldSimpleDefault(string activityFieldname, string dependentFieldname, float defaultValue, Mode extractionMode, bool overrideRecordedZeroOnly, List<string>? sportsToInclude = null) : 
+        public CalculateFieldSimpleDefault(string activityFieldname,
+                                           string dependentFieldname,
+                                           float defaultValue,
+                                           Mode extractionMode,
+                                           bool overrideRecordedZeroOnly,
+                                           List<string>? sportsToInclude = null) : 
             base(activityFieldname, overrideRecordedZeroOnly, sportsToInclude)
         {
             DependentFieldname = dependentFieldname;
@@ -84,8 +92,10 @@ namespace FellrnrTrainingAnalysis.Model
         public enum Mode { Multiply } //add others as needed
         Mode ExtractionMode { get; set; }
 
-        protected override float? ExtractValue(Activity activity)
+        protected override float? ExtractValue(Activity activity, bool forceJustMe)
         {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleDefault Forced ExtractValue {ActivityFieldname}");
             if (!activity.HasNamedDatum(DependentFieldname))
                 return null;
 
@@ -96,6 +106,8 @@ namespace FellrnrTrainingAnalysis.Model
                 dependent *= DefaultValue;
             }
 
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleDefault Forced ExtractValue retval {dependent}");
             return dependent;
         }
 

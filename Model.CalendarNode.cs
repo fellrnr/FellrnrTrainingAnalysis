@@ -56,6 +56,9 @@ namespace FellrnrTrainingAnalysis.Model
             if (force)
                 base.Clean();
 
+
+            //TODO: Don't accumulate goal results as they don't add. (Other things may not accumulate either, so we need to make this configurable.)
+
             //recalculate each field of the calendar node to reflect the underlying children
 
             Dictionary<string, float> floatAccumulators = new Dictionary<string, float>();

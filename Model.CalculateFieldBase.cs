@@ -1,4 +1,6 @@
-﻿using MemoryPack;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
+using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -12,9 +14,5 @@ namespace FellrnrTrainingAnalysis.Model
         //each activity calls the calculation recalculate
         public abstract void Recalculate(Extensible extensible, int forceCount, bool forceJustMe);
 
-        public void Recalculate(Extensible extensible, bool forceJustMe)
-        {
-            Recalculate(extensible, LastForceCount, forceJustMe);
-        }
     }
 }

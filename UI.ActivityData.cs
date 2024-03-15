@@ -3,6 +3,7 @@ using FellrnrTrainingAnalysis.Utils;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Configuration;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -12,6 +13,13 @@ namespace FellrnrTrainingAnalysis.UI
         public ActivityData()
         {
             InitializeComponent();
+            typeof(DataGridView).InvokeMember(
+   "DoubleBuffered",
+   BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
+   null,
+   tableLayoutPanel1,
+   new object[] { true });
+
         }
 
         const string DATUM_POSTFIX = "(activity)";
@@ -68,7 +76,7 @@ namespace FellrnrTrainingAnalysis.UI
             int row = RowCount + 1; //zero is the header
             for (int i = 0; i < 5; i++)
             {
-                string text = (i == 3 ? postfix : "*****");
+                string text = (i == 2 ? postfix : "*****");
                 Label header = new Label { Text = text, Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
                 tableLayoutPanel1.Controls.Add(header, i, row);
             }
@@ -76,7 +84,7 @@ namespace FellrnrTrainingAnalysis.UI
         }
         private void AddRows(IReadOnlyCollection<string> dataNames, string postfix)
         {
-            if(!AddedHeaders)
+            if (!AddedHeaders)
                 AddHeaderRow(postfix);
             IReadOnlyCollection<string> dataNamesSorted = dataNames.ToImmutableSortedSet();
             foreach (string fieldName in dataNamesSorted)
@@ -110,9 +118,9 @@ namespace FellrnrTrainingAnalysis.UI
             {
                 Row row = kvp.Value;
                 row.Value.Text = "";
-                row.Min.Text = "";
-                row.Avg.Text = "";
-                row.Max.Text = "";
+                row.Min.Text = "N/A";
+                row.Avg.Text = "N/A";
+                row.Max.Text = "N/A";
             }
 
             if (activity == null)
@@ -135,19 +143,19 @@ namespace FellrnrTrainingAnalysis.UI
         private void DisplayActivityTimeSeries(Activity? activity)
         {
             Logging.Instance.TraceEntry("ActivityData.DisplayActivityTimeSeries");
-            ReadOnlyDictionary<string, DataStreamBase> timeSeriesList = activity!.TimeSeries;
+            ReadOnlyDictionary<string, TimeSeriesBase> timeSeriesList = activity!.TimeSeries;
 
-            foreach (KeyValuePair<string, DataStreamBase> kvp in timeSeriesList)
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp in timeSeriesList)
             {
                 string fieldName = kvp.Key;
                 string entryName = fieldName + TIMESERIES_POSTFIX;
                 if (Rows.ContainsKey(entryName))
                 {
-                    DataStreamBase dataStream = kvp.Value;
-                    Tuple<uint[], float[]>? tuple = dataStream.GetData();
+                    TimeSeriesBase dataStream = kvp.Value;
+                    TimeValueList? tuple = dataStream.GetData();
                     if (tuple != null)
                     {
-                        float[] values = tuple.Item2;
+                        float[] values = tuple.Values;
                         Row row = Rows[entryName];
                         row.Value.Text = "";
                         row.Min.Text = values.Min().ToString();
@@ -184,7 +192,7 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                     else
                     {
-                        string? val = datum.ToString();
+                        string? val = datum.DataAsString();
                         if (Utils.Options.Instance.DebugAddRawDataToGrids)
                         {
                             val += " [No Metadata]";

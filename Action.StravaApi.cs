@@ -132,7 +132,7 @@ namespace FellrnrTrainingAnalysis.Action
                 //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
                 //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
                 //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                AddDataStreams(activity, streamSet);
+                AddTimeSeriess(activity, streamSet);
 
                 List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
                 activity.PhotoUris = photos;
@@ -261,7 +261,7 @@ namespace FellrnrTrainingAnalysis.Action
         }
 
         //Easier to add streams directly rather than trying reflection 
-        private void AddDataStreams(Activity activity, StreamSet streamSet)
+        private void AddTimeSeriess(Activity activity, StreamSet streamSet)
         {
             int[] timeInt = streamSet.Time.Data;
             uint[] time = Array.ConvertAll(timeInt, x => (uint)x);
@@ -308,29 +308,29 @@ namespace FellrnrTrainingAnalysis.Action
             //GradeSmooth = 1024,
 
             if (streamSet.Heartrate != null)
-                AddDataStream(activity, "Heartrate", time, streamSet.Heartrate.Data);
+                AddTimeSeries(activity, "Heartrate", time, streamSet.Heartrate.Data);
             if (streamSet.Distance != null)
-                AddDataStream(activity, "Distance", time, streamSet.Distance.Data);
+                AddTimeSeries(activity, "Distance", time, streamSet.Distance.Data);
             if (streamSet.Latlng != null)
-                AddDataStream(activity, time, streamSet.Latlng.Data); 
+                AddTimeSeries(activity, time, streamSet.Latlng.Data); 
             if (streamSet.Altitude != null)
-                AddDataStream(activity, "Altitude", time, streamSet.Altitude.Data);
+                AddTimeSeries(activity, "Altitude", time, streamSet.Altitude.Data);
             if (streamSet.VelocitySmooth != null)
-                AddDataStream(activity, "VelocitySmooth", time, streamSet.VelocitySmooth.Data);
+                AddTimeSeries(activity, "VelocitySmooth", time, streamSet.VelocitySmooth.Data);
             if (streamSet.Cadence != null)
-                AddDataStream(activity, "Cadence", time, streamSet.Cadence.Data);
+                AddTimeSeries(activity, "Cadence", time, streamSet.Cadence.Data);
             if (streamSet.Watts != null)
-                AddDataStream(activity, "Watts", time, streamSet.Watts.Data);
+                AddTimeSeries(activity, "Watts", time, streamSet.Watts.Data);
             if (streamSet.Temp != null)
-                AddDataStream(activity, "Temp", time, streamSet.Temp.Data);
+                AddTimeSeries(activity, "Temp", time, streamSet.Temp.Data);
             //if (streamSet.Moving != null)
-            //  AddDataStream(activity, "Moving", time, streamSet.Moving.Data); //TODO: handle boolean moving from strava API
+            //  AddTimeSeries(activity, "Moving", time, streamSet.Moving.Data); //TODO: handle boolean moving from strava API
             if (streamSet.GradeSmooth != null)
-                AddDataStream(activity, "GradeSmooth", time, streamSet.GradeSmooth.Data);
+                AddTimeSeries(activity, "GradeSmooth", time, streamSet.GradeSmooth.Data);
 
         }
 
-        private void AddDataStream(Activity activity, string name, uint[] time, int[] data)
+        private void AddTimeSeries(Activity activity, string name, uint[] time, int[] data)
         {
             if (data == null)
                 return; 
@@ -341,22 +341,22 @@ namespace FellrnrTrainingAnalysis.Action
             }
             else
             {
-                AddDataStream(activity, name, time, values);
+                AddTimeSeries(activity, name, time, values);
             }
         }
-        private void AddDataStream(Activity activity, string name, uint[] time, float[] data)
+        private void AddTimeSeries(Activity activity, string name, uint[] time, float[] data)
         {
-            ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaAPI, LevelType.DataStream, name);
+            ActivityDatumMapping? activityDatumMapping = MapRecord(DataSourceEnum.StravaAPI, LevelType.TimeSeries, name);
             if (activityDatumMapping != null && activityDatumMapping.Import)
             {
                 if (!activity.TimeSeries.ContainsKey(activityDatumMapping.InternalName) || Options.Instance.StravaApiOveridesData)
                 {
-                    activity.AddDataStream(activityDatumMapping.InternalName, time, data);
+                    activity.AddTimeSeries(activityDatumMapping.InternalName, time, data);
                 }
             }
         }
 
-        private void AddDataStream(Activity activity, uint[] time, LatLng[] data)
+        private void AddTimeSeries(Activity activity, uint[] time, LatLng[] data)
         {
             List<uint> LocationTimes = new List<uint>();
             List<float> LocationLats = new List<float>();

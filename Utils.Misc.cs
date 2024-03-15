@@ -105,7 +105,7 @@ namespace FellrnrTrainingAnalysis.Utils
             return retval;
         }
 
-        public static GMapRoute? GmapActivity(Activity? activity, string selectedDataStream, int width, int alpha)
+        public static GMapRoute? GmapActivity(Activity? activity, string selectedTimeSeries, int width, int alpha)
         {
             if (activity == null) { return null; }
 
@@ -116,22 +116,22 @@ namespace FellrnrTrainingAnalysis.Utils
             LocationStream locationStream = activity.LocationStream;
 
 
-            DataStreamBase? dataStream = null;
-            if (activity.TimeSeries.ContainsKey(selectedDataStream))
-                dataStream = activity.TimeSeries[selectedDataStream];
+            TimeSeriesBase? dataStream = null;
+            if (activity.TimeSeries.ContainsKey(selectedTimeSeries))
+                dataStream = activity.TimeSeries[selectedTimeSeries];
 
             const uint INTERVAL = 30;
             if (dataStream != null)
             {
-                AlignedTimeLocationSeries? aligned = Utils.TimeSeries.Align(locationStream, dataStream);
+                AlignedTimeLocationSeries? aligned = AlignedTimeLocationSeries.Align(locationStream, dataStream);
 
                 if (aligned != null)
                 {
                     points = Utils.Misc.SampleLocations(aligned.Time, aligned.Lats, aligned.Lons, INTERVAL);
 
                     GMapRouteColored routeColored = new GMapRouteColored(points, "Route", aligned.Secondary, alpha, width, 
-                        dataStream.Percentile(DataStreamBase.StaticsValue.SD2High),
-                        dataStream.Percentile(DataStreamBase.StaticsValue.SD2Low));
+                        dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2High),
+                        dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2Low));
 
                     return routeColored;
                 }
@@ -176,6 +176,28 @@ namespace FellrnrTrainingAnalysis.Utils
             {
                 return string.Format("{0}:{1:00}", mins, secs);
             }
+        }
+
+        public static string EscapeForCsv(string cell)
+        {
+            var escapeChars = new[] { ',', '\'', '\n' };
+            StringBuilder sb = new StringBuilder();
+            var escape = false;
+
+            if (cell.Contains("\""))
+            {
+                escape = true;
+                cell = cell.Replace("\"", "\"\"");
+            }
+            else if (cell.IndexOfAny(escapeChars) >= 0)
+                escape = true;
+            if (escape)
+                sb.Append('"');
+            sb.Append(cell);
+            if (escape)
+                sb.Append('"');
+
+            return sb.ToString();
         }
 
 
@@ -239,6 +261,7 @@ namespace FellrnrTrainingAnalysis.Utils
             public string TaskName { get => taskName; set => taskName = value; }
             public int Maximum { get => maximum; set => maximum = value; }
         }
+
     }
 
 }

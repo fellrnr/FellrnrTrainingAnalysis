@@ -36,6 +36,7 @@
             saveDatabaseAsToolStripMenuItem = new ToolStripMenuItem();
             clearDatabaseToolStripMenuItem = new ToolStripMenuItem();
             forceRecalculationToolStripMenuItem = new ToolStripMenuItem();
+            recalculateGoalsToolStripMenuItem = new ToolStripMenuItem();
             recalculateHillsToolStripMenuItem = new ToolStripMenuItem();
             openBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
             saveBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
@@ -85,6 +86,7 @@
             tabPage1 = new TabPage();
             overviewMap1 = new UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
+            recalculateActivitiesToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -116,7 +118,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, recalculateHillsToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, recalculateActivitiesToolStripMenuItem, recalculateGoalsToolStripMenuItem, recalculateHillsToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(102, 35);
             fileToolStripMenuItem.Text = "Database";
@@ -153,14 +155,21 @@
             // 
             forceRecalculationToolStripMenuItem.Name = "forceRecalculationToolStripMenuItem";
             forceRecalculationToolStripMenuItem.Size = new Size(296, 34);
-            forceRecalculationToolStripMenuItem.Text = "Force Recalculation";
+            forceRecalculationToolStripMenuItem.Text = "Recalculate All..";
             forceRecalculationToolStripMenuItem.Click += forceRecalculationToolStripMenuItem_Click;
+            // 
+            // recalculateGoalsToolStripMenuItem
+            // 
+            recalculateGoalsToolStripMenuItem.Name = "recalculateGoalsToolStripMenuItem";
+            recalculateGoalsToolStripMenuItem.Size = new Size(296, 34);
+            recalculateGoalsToolStripMenuItem.Text = "Recalculate Goals...";
+            recalculateGoalsToolStripMenuItem.Click += recalculateGoalsToolStripMenuItem_Click;
             // 
             // recalculateHillsToolStripMenuItem
             // 
             recalculateHillsToolStripMenuItem.Name = "recalculateHillsToolStripMenuItem";
             recalculateHillsToolStripMenuItem.Size = new Size(296, 34);
-            recalculateHillsToolStripMenuItem.Text = "Recalculate Hills";
+            recalculateHillsToolStripMenuItem.Text = "Recalculate Hills...";
             recalculateHillsToolStripMenuItem.Click += recalculateHillsToolStripMenuItem_Click;
             // 
             // openBinDatabaseToolStripMenuItem
@@ -569,6 +578,13 @@
             loadStravaCsvBackgroundWorker.ProgressChanged += loadStravaCsvBackgroundWorker_ProgressChanged;
             loadStravaCsvBackgroundWorker.RunWorkerCompleted += loadStravaCsvBackgroundWorker_RunWorkerCompleted;
             // 
+            // recalculateActivitiesToolStripMenuItem
+            // 
+            recalculateActivitiesToolStripMenuItem.Name = "recalculateActivitiesToolStripMenuItem";
+            recalculateActivitiesToolStripMenuItem.Size = new Size(296, 34);
+            recalculateActivitiesToolStripMenuItem.Text = "Recalculate Activities...";
+            recalculateActivitiesToolStripMenuItem.Click += recalculateActivitiesToolStripMenuItem_Click;
+            // 
             // FellrnrTrainingAnalysisForm
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
@@ -665,5 +681,7 @@
         private ToolStripMenuItem recalculateHillsToolStripMenuItem;
         private ToolStripMenuItem filterToolStripMenuItem1;
         private ToolStripMenuItem showOnlyToolStripMenuItem;
+        private ToolStripMenuItem recalculateGoalsToolStripMenuItem;
+        private ToolStripMenuItem recalculateActivitiesToolStripMenuItem;
     }
 }

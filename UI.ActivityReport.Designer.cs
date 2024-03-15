@@ -174,7 +174,7 @@
             dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
             dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
             dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
-            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
+            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
             activityDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             activityDataGridView.Location = new Point(3, 3);
             activityDataGridView.MultiSelect = false;
@@ -245,7 +245,7 @@
             tabPage2.Location = new Point(4, 34);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(1683, 650);
+            tabPage2.Size = new Size(192, 62);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "Activity Data";
             tabPage2.UseVisualStyleBackColor = true;
@@ -255,7 +255,7 @@
             activityData1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             activityData1.Location = new Point(3, 3);
             activityData1.Name = "activityData1";
-            activityData1.Size = new Size(1663, 627);
+            activityData1.Size = new Size(172, 39);
             activityData1.TabIndex = 0;
             // 
             // tabPage3

@@ -33,16 +33,20 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         protected int LastForceCount = 0;
 
+        public void MasterRecalculate(bool forceActivities, bool forceHills, bool forceGoals, BackgroundWorker? worker = null)
+        {
+            RecalculateActivities(forceActivities, worker);
+            RecalculateHills(forceHills, worker);
+            RecalculateGoals(forceGoals, worker);
+        }
 
         //reapply the dynamic components, currently dyanamic data streams and goals
-        public void MasterRecalculate(bool force, BackgroundWorker? worker = null)
+        private void RecalculateActivities(bool force, BackgroundWorker? worker = null)
         {
-            Logging.Instance.ResetAndStartTimer("MasterRecalculate");
-            Logging.Instance.ResetAndStartTimer("Recalcualte");
+            Logging.Instance.TraceEntry("RecalculateActivities");
 
 
             int forceCount = force ? LastForceCount +1 : LastForceCount;
-
 
             foreach (KeyValuePair<string,Athlete> kvp in Athletes)
             {
@@ -50,13 +54,16 @@ namespace FellrnrTrainingAnalysis.Model
                 athlete.Recalculate(forceCount, false);
             }
 
-            Logging.Instance.Log($"Recalculate athlete recalculate {Logging.Instance.GetAndResetTime("Recalculate")}");
-
             //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
                 //if (worker != null) worker.ReportProgress(++i);
 
+            Logging.Instance.TraceLeave();
+        }
 
-            //TODO: the order is unclear here; the goals rely on the data fields, but the calendar node accumulation relies on the goals. 
+        private void RecalculateGoals(bool force, BackgroundWorker? worker = null)
+        {
+            Logging.Instance.TraceEntry("RecalculateGoals");
+            //It's important that calendar nodes don't accumulate goals, partly because of order, and partly because it doesn't make sense. To add all the days in a week's value for 30 running is meaningless 
             List<Goal> goals = GoalFactory.GetGoals();
             List<Model.Period> periods = Model.Period.DefaultStorePeriods;
 
@@ -65,32 +72,34 @@ namespace FellrnrTrainingAnalysis.Model
                 goal.UpdateActivityGoals(this, periods, force);
             }
 
-            Logging.Instance.Log($"Recalculate update goals {Logging.Instance.GetAndResetTime("Recalculate")}");
+            List<Rolling> rollings  = RollingFactory.GetRollings();
+            foreach(Rolling rolling in rollings)
+            {
+                rolling.Recalculate(this, force);
+            }
 
-            Logging.Instance.Log(string.Format("MasterRecalculate took {0}", Logging.Instance.GetAndResetTime("MasterRecalculate")));
+            Logging.Instance.TraceLeave();
         }
 
-        public void RecalculateHills()
+        private void RecalculateHills(bool force, BackgroundWorker? worker = null)
         {
-            Logging.Instance.ResetAndStartTimer("RecalculateHills");
-            Logging.Instance.ResetAndStartTimer("Recalcualte");
+            Logging.Instance.TraceEntry("RecalculateHills");
 
-            Hills = Hill.Reload();
+            if(force || Hills == null)
+                Hills = Hill.Reload();
 
-            Logging.Instance.Log($"Recalculate load hills took {Logging.Instance.GetAndResetTime("Recalculate")}");
 
             foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
             {
                 Activity activity = kvp.Value;
-                activity.RecalculateHills(Hills, true, false);
+                activity.RecalculateHills(Hills, force, false);
             }
 
-            Logging.Instance.Log($"Recalculate recalculate hills {Logging.Instance.GetAndResetTime("Recalculate")}");
 
             if (Options.Instance.DebugHills)
                 Hill.Dump(Hills, Hill.WAINWRIGHT);
 
-            Logging.Instance.Log(string.Format("MasterRecalculate took {0}", Logging.Instance.GetAndResetTime("MasterRecalculate")));
+            Logging.Instance.TraceLeave();
         }
 
 

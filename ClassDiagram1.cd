@@ -1,42 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamDelta" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.TimeSeriesDelta" Collapsed="true">
     <Position X="3.25" Y="3.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAQQgAAAAACAAAIAAAAAAAAAI=</HashCode>
-      <FileName>Model.DataStreamDelta.cs</FileName>
+      <FileName>Model.TimeSeriesDelta.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamEphemeral" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.TimeSeriesEphemeral" Collapsed="true">
     <Position X="3.25" Y="2.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAgAAAAAEAAAAAAAAIgAAAAAAAAACAEAAAIAAAAAAAA=</HashCode>
-      <FileName>Model.DataStreamEphemeral.cs</FileName>
+      <FileName>Model.TimeSeriesEphemeral.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamCalculated" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.TimeSeriesCalculated" Collapsed="true">
     <Position X="5.75" Y="3.25" Width="2.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAQACAICAABAAAAAACAAAA=</HashCode>
-      <FileName>Model.DataStreamCalculated.cs</FileName>
+      <FileName>Model.TimeSeriesCalculated.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamRecorded" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.TimeSeriesRecorded" Collapsed="true">
     <Position X="0.5" Y="2.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAEAAAAAAAAAgAAAAAAAAAABEAAAIAAAAAAAA=</HashCode>
-      <FileName>Model.DataStreamRecorded.cs</FileName>
+      <FileName>Model.TimeSeriesRecorded.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.DataStreamBase" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.TimeSeriesBase" Collapsed="true">
     <Position X="1.75" Y="0.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAgAQAGAAAAAAEAAgAQAQAAAAQAAEACAIAAAAAAAA=</HashCode>
-      <FileName>Model.DataStreamBase.cs</FileName>
+      <FileName>Model.TimeSeriesBase.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
@@ -71,32 +71,32 @@
       <FileName>Model.CalculateFieldBase.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamBase" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromTimeSeriesBase" Collapsed="true">
     <Position X="7.75" Y="5.75" Width="3.75" />
     <TypeIdentifier>
       <HashCode>ABBAADAAAAAAAAAAAAAAAAAAAAEAAAEBAAAAAgAAAAA=</HashCode>
-      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+      <FileName>Model.CalculateDataFieldFromTimeSeries.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamSimple" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromTimeSeriesSimple" Collapsed="true">
     <Position X="7.75" Y="7.25" Width="3" />
     <TypeIdentifier>
       <HashCode>AAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA=</HashCode>
-      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+      <FileName>Model.CalculateDataFieldFromTimeSeries.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamThreashold" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromTimeSeriesThreashold" Collapsed="true">
     <Position X="3" Y="7.25" Width="3.5" />
     <TypeIdentifier>
       <HashCode>AAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACI=</HashCode>
-      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+      <FileName>Model.CalculateDataFieldFromTimeSeries.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromDataStreamAUC" Collapsed="true">
+  <Class Name="FellrnrTrainingAnalysis.Model.CalculateDataFieldFromTimeSeriesAUC" Collapsed="true">
     <Position X="11.25" Y="7.25" Width="3" />
     <TypeIdentifier>
       <HashCode>AAAAACAAABAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAA=</HashCode>
-      <FileName>Model.CalculateDataFieldFromDataStream.cs</FileName>
+      <FileName>Model.CalculateDataFieldFromTimeSeries.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Font Name="Segoe UI" Size="9" />

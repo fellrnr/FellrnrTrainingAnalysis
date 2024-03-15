@@ -5,28 +5,29 @@ namespace FellrnrTrainingAnalysis.Model
 {
     [MemoryPackable]
     [Serializable]
-    [MemoryPackUnion(0, typeof(DataStreamRecorded))]
-    [MemoryPackUnion(1, typeof(DataStreamDelta))]
-    [MemoryPackUnion(2, typeof(DataStreamEphemeral))]
-    [MemoryPackUnion(3, typeof(DataStreamCalculated))]
-    [MemoryPackUnion(4, typeof(DataStreamGradeAdjustedDistance))] 
-    public abstract partial class DataStreamBase
+    [MemoryPackUnion(0, typeof(TimeSeriesRecorded))]
+    [MemoryPackUnion(1, typeof(TimeSeriesDelta))]
+    [MemoryPackUnion(2, typeof(TimeSeriesEphemeral))]
+    [MemoryPackUnion(3, typeof(TimeSeriesCalculated))]
+    [MemoryPackUnion(4, typeof(TimeSeriesGradeAdjustedDistance))]
+    [MemoryPackUnion(5, typeof(TimeSeriesHeartRatePower))]
+    public abstract partial class TimeSeriesBase
     {
-        //Note: there is an instance of each DataStream object for each activity
+        //Note: there is an instance of each TimeSeries object for each activity
         [MemoryPackConstructor]
-        protected DataStreamBase()  //for use by memory pack deserialization only
+        protected TimeSeriesBase()  //for use by memory pack deserialization only
         {
             Name = "Memory Pack Default"; //check Name is overritten on memory pack load
         }
 
-        public DataStreamBase(string name, Activity parent_)
+        public TimeSeriesBase(string name, Activity parent_)
         {
             Name = name;
             this.parent_ = parent_;
         }
 
         
-        public abstract Tuple<uint[], float[]>? GetData();
+        public abstract TimeValueList? GetData();
 
         public abstract bool IsValid();
 
@@ -45,7 +46,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         [MemoryPackIgnore]
-        protected Activity? Parent { get { return parent_; } }
+        protected Activity? ParentActivity { get { return parent_; } }
         //[MemoryPackInclude]
         [MemoryPackIgnore]
         private Activity? parent_;
@@ -64,11 +65,11 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (_percentiles == null)
             {
-                Tuple<uint[], float[]>? data = GetData();
-                if (data == null || data.Item2.Length == 0)
+                TimeValueList? data = GetData();
+                if (data == null || data.Values.Length == 0)
                     return float.MinValue;
 
-                List<float> sorted = data.Item2.ToList();
+                List<float> sorted = data.Values.ToList();
                 sorted.Sort();
                 _percentiles = new float[Enum.GetNames(typeof(StaticsValue)).Length];
                 _percentiles[(int)StaticsValue.Min] = sorted[0];

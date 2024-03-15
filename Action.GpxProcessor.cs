@@ -1,5 +1,6 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils.Gpx;
+using GMap.NET.MapProviders;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -83,7 +84,7 @@ namespace FellrnrTrainingAnalysis.Action
             List<float> LocationLons = new List<float>();
             List<float>? LocationElev = new List<float>();
             DateTime start = DateTime.MinValue;
-
+            float distance = 0;
             GpxPoint? previous = null;
             foreach (GpxPoint gpxPoint in gpxPoints)
             {
@@ -104,8 +105,14 @@ namespace FellrnrTrainingAnalysis.Action
                     }
                     if(previous != null)
                     {
-                        double distance = gpxPoint.GetDistanceFrom(previous);
-                        LocationDistance.Add((float)distance);
+                        double distanceKm = gpxPoint.GetDistanceFromInKm(previous);
+                        double distanceM = distanceKm * 1000.0;
+                        distance += (float)distanceM;
+                        LocationDistance.Add(distance);
+                    }
+                    else
+                    {
+                        LocationDistance.Add(0f); //add the first point at zero
                     }
                     previous = gpxPoint;
 
@@ -125,10 +132,10 @@ namespace FellrnrTrainingAnalysis.Action
             if (LocationTimes != null)
             {
                 Activity.LocationStream = new LocationStream(LocationTimes.ToArray(), LocationLats.ToArray(), LocationLons.ToArray());
-                Activity.AddDataStream(Activity.TagDistance, LocationTimes.ToArray(), LocationDistance.ToArray());
+                Activity.AddTimeSeries(Activity.TagDistance, LocationTimes.ToArray(), LocationDistance.ToArray());
                 if (LocationElev != null && LocationElev.Count > 0)
                 {
-                    Activity.AddDataStream(Activity.TagAltitude, LocationTimes.ToArray(), LocationElev.ToArray());
+                    Activity.AddTimeSeries(Activity.TagAltitude, LocationTimes.ToArray(), LocationElev.ToArray());
                 }
             }
             else

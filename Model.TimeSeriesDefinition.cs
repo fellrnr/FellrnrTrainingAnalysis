@@ -3,9 +3,9 @@ using System.Globalization;
 
 namespace FellrnrTrainingAnalysis.Model
 {
-    public class DataStreamDefinition
+    public class TimeSeriesDefinition
     {
-        public DataStreamDefinition() { }
+        public TimeSeriesDefinition() { }
 
         public string Name { get; set; } = "";
 
@@ -48,9 +48,9 @@ namespace FellrnrTrainingAnalysis.Model
         //Just to comment the CSV file
         public string Comment { get; set; } = "";
 
-        private const string PathToCsv = "Config.DataStreamDefinition.csv";
-        private static Dictionary<string, DataStreamDefinition>? map = null;
-        public static DataStreamDefinition? FindDataStreamDefinition(string name)
+        private const string PathToCsv = "Config.TimeSeriesDefinition.csv";
+        private static Dictionary<string, TimeSeriesDefinition>? map = null;
+        public static TimeSeriesDefinition? FindTimeSeriesDefinition(string name)
         {
             if (map == null)
             {
@@ -60,7 +60,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 //return null; 
                 //Let's generate any missing definitions to make editing them easier
-                DataStreamDefinition dataStreamDefinition = new DataStreamDefinition();
+                TimeSeriesDefinition dataStreamDefinition = new TimeSeriesDefinition();
                 dataStreamDefinition.Name = name;
                 dataStreamDefinition.DisplayTitle = name;
                 dataStreamDefinition.ShowReportGraph = false;
@@ -70,13 +70,13 @@ namespace FellrnrTrainingAnalysis.Model
             return map[name];
         }
 
-        private static Dictionary<string, DataStreamDefinition> ReadFromCsv()
+        private static Dictionary<string, TimeSeriesDefinition> ReadFromCsv()
         {
-            Dictionary<string, DataStreamDefinition> returnMap = new Dictionary<string, DataStreamDefinition>();
+            Dictionary<string, TimeSeriesDefinition> returnMap = new Dictionary<string, TimeSeriesDefinition>();
             using (var reader = new StreamReader(PathToCsv))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
-                var records = csv.GetRecords<DataStreamDefinition>();
+                var records = csv.GetRecords<TimeSeriesDefinition>();
 
                 foreach (var record in records)
                 {
@@ -94,7 +94,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if(map == null)
                 return;
-            List<DataStreamDefinition> definitions = map.Values.ToList();
+            List<TimeSeriesDefinition> definitions = map.Values.ToList();
             using (var writer = new StreamWriter(PathToCsv))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
@@ -104,16 +104,16 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //don't use a property as it will confuse the ObjectListView editor
-        public static List<DataStreamDefinition>? GetDefinitions() { return map?.Values.ToList(); }
-        public static void SetDefinitions(List<DataStreamDefinition> value)
+        public static List<TimeSeriesDefinition>? GetDefinitions() { return map?.Values.ToList(); }
+        public static void SetDefinitions(List<TimeSeriesDefinition> value)
         {
             if (value == null)
             {
                 map = null;
                 return;
             }
-            map = new Dictionary<string, DataStreamDefinition>();
-            foreach (DataStreamDefinition dataStreamDefinition in value)
+            map = new Dictionary<string, TimeSeriesDefinition>();
+            foreach (TimeSeriesDefinition dataStreamDefinition in value)
                 map.Add(dataStreamDefinition.Name, dataStreamDefinition);
             WriteToCsv();
         }

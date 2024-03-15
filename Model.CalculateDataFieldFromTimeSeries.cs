@@ -1,0 +1,273 @@
+﻿using FellrnrTrainingAnalysis.Utils;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+
+namespace FellrnrTrainingAnalysis.Model
+{
+    public abstract class CalculateDataFieldFromTimeSeriesBase : CalculateFieldBase
+    {
+        public CalculateDataFieldFromTimeSeriesBase(string activityFieldname, string sourceStreamName, List<string>? sportsToInclude = null)
+        {
+            SourceStreamName = sourceStreamName;
+            SourceTimeSeries = null;
+            ActivityFieldname = activityFieldname;
+            SportsToInclude = sportsToInclude;
+        }
+
+        List<string>? SportsToInclude;
+        private string SourceStreamName;
+        private TimeSeriesBase? SourceTimeSeries = null;
+
+
+        private TimeSeriesBase? TimeSeries(Activity activity)
+        {
+            if (SourceTimeSeries != null)
+                return SourceTimeSeries;
+
+
+            if (!activity.TimeSeries.ContainsKey(SourceStreamName))
+                return null;
+
+            return activity.TimeSeries[SourceStreamName];
+        }
+
+        private TimeValueList? GetUnderlyingTimeSeries(Activity parent)
+        {
+            //calling TimeSeries(parent) does the computation,
+            TimeSeriesBase? dataStreamBase = TimeSeries(parent);
+            return dataStreamBase == null ? null : dataStreamBase!.GetData();
+        }
+
+
+        public string ActivityFieldname { get; set; }
+
+
+        public override void Recalculate(Extensible extensible, int forceCount, bool forceJustMe)
+        {
+            bool force = false;
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
+
+            if (forceJustMe) Logging.Instance.TraceEntry($"CalculateDataFieldFromTimeSeriesBase Forced recalculating {ActivityFieldname}");
+
+
+            if (extensible == null || extensible is not Activity)
+            {
+                if (force) Logging.Instance.TraceLeave($"No activity");
+                return;
+            }
+
+            Activity activity = (Activity)extensible;
+
+            if (activity.HasNamedDatum(ActivityFieldname) && !force)
+            {
+                return;
+            }
+            //always remove if we're recalculating
+            activity.RemoveNamedDatum(ActivityFieldname);
+
+            if (SportsToInclude != null && !activity.CheckSportType(SportsToInclude))
+            {
+                if (force) Logging.Instance.TraceLeave($"Wrong type {activity.ActivityType}");
+                return;
+            }
+            if (TimeSeries(activity) == null)
+            {
+                if (force) Logging.Instance.TraceLeave($"No time series at all");
+                return;
+            }
+            TimeSeries(activity)!.Recalculate(forceCount, false);
+
+
+            TimeValueList? data = GetUnderlyingTimeSeries(activity);
+            if (data == null)
+            {
+                if (force) Logging.Instance.TraceLeave($"No underlying time series");
+                return;
+            }
+
+            float value = ExtractValue(data, force);
+
+
+            if (value != 0)
+                activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value));
+
+            if (force) Logging.Instance.TraceLeave($"CalculateDataFieldFromTimeSeriesBase Forced ExtractValue {ActivityFieldname} retval {value}");
+        }
+        protected abstract float ExtractValue(TimeValueList data, bool forceJustMe);
+
+    }
+
+    public class CalculateDataFieldFromTimeSeriesSimple : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesSimple(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            ExtractionMode = extractionMode;
+        }
+        public enum Mode { LastValue, Average, Min, Max }
+        Mode ExtractionMode { get; set; }
+
+        protected override float ExtractValue(TimeValueList data, bool forceJustMe)
+        {
+            float value = 0;
+            if (ExtractionMode == Mode.LastValue)
+            {
+                value = data.Values.Last();
+            }
+            else if (ExtractionMode == Mode.Average)
+            {
+                value = data.Values.Average(); //TODO: Add average ignoring zeros
+            }
+            else if (ExtractionMode == Mode.Max)
+            {
+                value = data.Values.Max();
+            }
+            else if (ExtractionMode == Mode.Min)
+            {
+                value = data.Values.Min();
+            }
+            return value;
+        }
+    }
+    public class CalculateDataFieldFromTimeSeriesThreashold : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            ExtractionMode = extractionMode;
+            Threashold = threashold;
+        }
+        public enum Mode { AboveAbs, BelowAbs, AbovePercent, BelowPercent }
+        Mode ExtractionMode { get; set; }
+
+        float Threashold {  get; set; }
+
+        protected override float ExtractValue(TimeValueList data, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesThreashold Forced ExtractValue {ActivityFieldname}");
+            uint pastThreashold = 0;
+            uint lastTime = 0;
+            for (int i = 0; i < data.Times.Length; i++)
+            {
+                uint thisTime = data.Times[i] - lastTime;
+                float thisValue = data.Values[i];
+                if (ExtractionMode == Mode.AboveAbs && thisValue > Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.BelowAbs && thisValue < Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.AbovePercent && thisValue > Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+                else if (ExtractionMode == Mode.BelowPercent && thisValue < Threashold)
+                {
+                    pastThreashold += thisTime;
+                }
+
+                lastTime = data.Times[i];
+            }
+
+            if(ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
+            {
+                float percent = (pastThreashold * 100.0f) / ((float)lastTime);
+                return percent;
+            }
+            else
+            {
+                return pastThreashold;
+            }
+        }
+    }
+
+    public class CalculateDataFieldFromTimeSeriesAUC : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesAUC(string activityFieldname, bool negate, float min, float? max, string sourceStreamName, List<string>? sportsToInclude = null) : 
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            Negate = negate; Min = min; Max = max;
+        }
+
+        bool Negate { get; set; }
+        float Min { get; set; }
+        float? Max { get; set; }
+
+        protected override float ExtractValue(TimeValueList data, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldname}");
+
+            float sum = 0;
+            uint lastTime = 0;
+
+            for (int i = 0; i < data.Times.Length; i++)
+            {
+                uint time = data.Times[i];
+                double value = data.Values[i];
+                if(Negate)
+                    value = -value;
+                if (value > Min)
+                {
+                    uint timespan = time - lastTime;
+                    double collared = Max is null ? value : Math.Min((double)Max, (double)value);
+                    double offset = collared - Min;
+                    double areaUnderCurve = offset * timespan;
+                    sum += (float)areaUnderCurve;
+                }
+                lastTime = time;
+            }
+            return sum;
+        }
+    }
+
+    public class CalculateDataFieldFromTimeSeriesWindow : CalculateDataFieldFromTimeSeriesBase
+    {
+        //zero end means to the end
+        public CalculateDataFieldFromTimeSeriesWindow(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude, uint start, uint end = 0) :
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            ExtractionMode = extractionMode;
+            Start = start;
+            End = end;
+        }
+        public enum Mode { LastValue, Average, Min, Max }
+        Mode ExtractionMode { get; set; }
+
+        uint Start { get; set; }
+        uint End { get; set; }
+
+        protected override float ExtractValue(TimeValueList data, bool forceJustMe)
+        {
+            float value = 0;
+
+            TimeValueList? dataSubset = TimeValueList.ExtractWindow(data, Start, End);
+            if (dataSubset == null) { return 0; }
+
+            if (ExtractionMode == Mode.LastValue)
+            {
+                value = dataSubset.Values.Last();
+            }
+            else if (ExtractionMode == Mode.Average)
+            {
+                value = dataSubset.Values.Average(); //TODO: Add average ignoring zeros
+            }
+            else if (ExtractionMode == Mode.Max)
+            {
+                value = dataSubset.Values.Max();
+            }
+            else if (ExtractionMode == Mode.Min)
+            {
+                value = dataSubset.Values.Min();
+            }
+            return value;
+        }
+    }
+
+
+}

@@ -11,7 +11,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public enum DataSourceEnum { StravaCSV, StravaAPI, FitFile }
         public DataSourceEnum DataSource { get; set; }
-        public enum LevelType { Athlete, Day, Activity, DataStream }
+        public enum LevelType { Athlete, Day, Activity, TimeSeries }
         public LevelType Level { get; set; }
         public string ExternalName { get; set; }
         public string InternalName { get; set; }

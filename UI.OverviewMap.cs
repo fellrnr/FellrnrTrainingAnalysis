@@ -174,12 +174,12 @@ namespace FellrnrTrainingAnalysis.UI
 
         private GMapRoute? DisplayActivity(Activity activity)
         {
-            string selectedDataStream = showComboBox.Text;
+            string selectedTimeSeries = showComboBox.Text;
             int width = (int)widthNumericUpDown.Value;
             int alpha = (int)alphaNumericUpDown.Value;
 
 
-            GMapRoute? route = Utils.Misc.GmapActivity(activity, selectedDataStream, width, alpha);
+            GMapRoute? route = Utils.Misc.GmapActivity(activity, selectedTimeSeries, width, alpha);
             return route;
         }
 

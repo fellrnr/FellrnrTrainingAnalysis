@@ -26,7 +26,7 @@ namespace FellrnrTrainingAnalysis.Action
         //new TagActivities("Delete Power", "⌗Power༶Delete֍"),
         //new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
 
-        public bool ProcessTags(Activity activity)
+        public bool ProcessTags(Activity activity, bool force)
         {
             TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagDescription);
             if (descriptionDatum == null || descriptionDatum.Data == null)
@@ -35,7 +35,7 @@ namespace FellrnrTrainingAnalysis.Action
 
 
             TypedDatum<string>? processedDatum = (TypedDatum<string>?)activity.GetNamedDatum("Processed Tags");
-            string processedTags = (processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
+            string processedTags = (force || processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
             bool processedTagsChanged = false;
 
             while (description.Contains(START) && description.Contains(END))
@@ -80,7 +80,7 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 Logging.Instance.Debug($"ProcessTag command: delete stream:{target}");
                 activity.RemoveNamedDatum(target);
-                activity.RemoveDataStream(target);
+                activity.RemoveTimeSeries(target);
                 retval = true;
             }
             else if (command == "CopyBack")
@@ -92,18 +92,18 @@ namespace FellrnrTrainingAnalysis.Action
                     Logging.Instance.Debug($"ProcessTag CopyBack missing {target}");
                     return retval;
                 }
-                DataStreamBase dataStream = activity.TimeSeries[target];
-                Tuple<uint[], float[]>? data = dataStream.GetData();
-                if (data == null || data.Item1.Length < amount)
+                TimeSeriesBase dataStream = activity.TimeSeries[target];
+                TimeValueList? data = dataStream.GetData();
+                if (data == null || data.Times.Length < amount)
                 {
                     Logging.Instance.Debug($"ProcessTag CopyBack {target} is too short");
                     return retval;
                 }
-                float copyback = data.Item2[amount];
+                float copyback = data.Values[amount];
 
                 for (int i = 0; i < amount; i++)
                 {
-                    data.Item2[i] = copyback;
+                    data.Values[i] = copyback;
                 }
                 Logging.Instance.Debug($"ProcessTag CopyBack {target} Done");
                 retval = true;
@@ -112,17 +112,17 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 int amount = strings.Length > 2 ? int.Parse(strings[2]) : 0;
                 Logging.Instance.Debug($"ProcessTag Cap {target} to {amount}");
-                DataStreamBase dataStream = activity.TimeSeries[target];
-                Tuple<uint[], float[]>? data = dataStream.GetData();
+                TimeSeriesBase dataStream = activity.TimeSeries[target];
+                TimeValueList? data = dataStream.GetData();
                 if (data == null)
                 {
                     Logging.Instance.Debug($"ProcessTag Cap {target} no data");
                     return retval;
                 }
-                for (int i = 0; i < data.Item2.Length; i++)
+                for (int i = 0; i < data.Values.Length; i++)
                 {
-                    if (data.Item2[i] > amount)
-                        data.Item2[i] = amount;
+                    if (data.Values[i] > amount)
+                        data.Values[i] = amount;
                 }
                 Logging.Instance.Debug($"ProcessTag Cap {target} Done");
                 retval = true;
@@ -132,7 +132,7 @@ namespace FellrnrTrainingAnalysis.Action
                 //⌗Distance༶Override༶9656֍
                 float amount = strings.Length > 2 ? float.Parse(strings[2]) : 0;
 
-                activity.AddOrReplaceDatum(new TypedDatum<float>(target, false, amount));
+                activity.AddOrReplaceDatum(new TypedDatum<float>(target, true, amount)); //set recorded to true, otherwise we'll delete them on recalculate and ignore the override becaseu we've saved the processed tags
                 Logging.Instance.Debug($"ProcessTag Override {target} datum to {amount}");
 
                 retval = true;

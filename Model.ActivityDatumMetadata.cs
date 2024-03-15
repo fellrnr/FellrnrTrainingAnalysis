@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using CsvHelper.Configuration;
 using System.Globalization;
 
 namespace FellrnrTrainingAnalysis.Model
@@ -20,8 +21,8 @@ namespace FellrnrTrainingAnalysis.Model
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 
 
-        public int? PositionInTree { get; set; } //null for don't show
-        public int? PositionInReport { get; set; }  //null for don't show
+        public bool InTree { get; set; } 
+        public bool InReport { get; set; }  
 
         public int? ColumnSize { get; set; } //null for resize dynamically
 
@@ -31,7 +32,13 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string Comment { get; set; } = ""; //for commenting the CSV file
 
+        public int? PositionInTree { get; set; } //null for don't show
+        public int? PositionInReport { get; set; }  //null for don't show
+
+
+
         private const string PathToCsv = "Config.ActivityDatumMetadata.csv";
+        private const string WritePathToCsv = "Config.ActivityDatumMetadata_updated.csv";
 
         private static Dictionary<string, ActivityDatumMetadata>? _map = null;
         private static int _maxReportColumn = int.MinValue;
@@ -52,7 +59,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public static ActivityDatumMetadata? FindMetadata(string name)
+        public static ActivityDatumMetadata? FindMetadata(string name) //we don't have the datum itself to do a better job on the type
         {
             if (!Map.ContainsKey(name))
             {
@@ -63,6 +70,8 @@ namespace FellrnrTrainingAnalysis.Model
                 activityDatumMetadata.Title = name;
                 activityDatumMetadata.PositionInReport = null;
                 activityDatumMetadata.PositionInTree = null;
+                activityDatumMetadata.InReport = false;
+                activityDatumMetadata.InTree = false;
                 Map.Add(name, activityDatumMetadata);
 
                 return activityDatumMetadata;
@@ -77,11 +86,14 @@ namespace FellrnrTrainingAnalysis.Model
             using (var reader = new StreamReader(PathToCsv))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
+                csv.Context.RegisterClassMap<ActivityDatumMetadataMap>();
                 var records = csv.GetRecords<ActivityDatumMetadata>();
-
+                int possInTree = 0;
+                int possInReport = 0;
                 foreach (var record in records)
                 {
-
+                    if (record.InReport) { record.PositionInReport = possInReport; possInReport++; }
+                    if (record.InTree) { record.PositionInTree = possInTree; possInTree++; }
                     if (!returnMap.ContainsKey(record.Name))
                     {
                         returnMap.Add(record.Name, record);
@@ -96,7 +108,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (Map == null)
                 return;
             List<ActivityDatumMetadata> definitions = Map.Values.ToList();
-            using (var writer = new StreamWriter(PathToCsv))
+            using (var writer = new StreamWriter(WritePathToCsv))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 csv.WriteRecords(definitions);
@@ -135,6 +147,17 @@ namespace FellrnrTrainingAnalysis.Model
                 }
             }
             return _maxReportColumn +1; //positions are zero indexed
+        }
+
+
+        public sealed class ActivityDatumMetadataMap : ClassMap<ActivityDatumMetadata>
+        {
+            public ActivityDatumMetadataMap()
+            {
+                AutoMap(CultureInfo.InvariantCulture);
+                Map(m => m.PositionInReport).Ignore();
+                Map(m => m.PositionInTree).Ignore();
+            }
         }
     }
 }

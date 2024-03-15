@@ -1,8 +1,79 @@
-﻿namespace FellrnrTrainingAnalysis.Model
-{
+﻿using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using FellrnrTrainingAnalysis.Utils;
 
+namespace FellrnrTrainingAnalysis.Model
+{
+    [Serializable]
     public class FilterActivities
     {
+        private const string fileName = @"FellrnrFilter.bin";
+        static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        static string AppDataSubFolder = "FellrnrTrainingData";
+        static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
+
+
+        //todo: the serialization doesn't work, lists of polymorphic types is beyond
+        public static FilterActivities? LoadFilters()
+        {
+            string path = Path.Combine(AppDataPath, fileName);
+            if (!File.Exists(path))
+                return null;
+
+            IFormatter formatter = new BinaryFormatter();
+            using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None)) //TODO: allow for loading specific database file, and history of files
+            {
+#pragma warning disable SYSLIB0011
+                Object deserialized = formatter.Deserialize(stream);
+                if (deserialized != null && deserialized is Model.FilterActivities)
+                {
+                    FilterActivities retval = (FilterActivities)deserialized;
+                    return retval;
+                }
+#pragma warning restore SYSLIB0011
+                return null;
+
+                //var options = new JsonSerializerOptions { IncludeFields = true, };
+                //string path = Path.Combine(AppDataPath, fileName);
+                //if (File.Exists(path))
+                //{
+                //    string jsonFromFile = File.ReadAllText(path);
+                //    FilterActivities? Filters = JsonSerializer.Deserialize<FilterActivities>(jsonFromFile, options);
+                //    if (Filters != null)
+                //    {
+                //        return Filters;
+                //    }
+                //    else
+                //    {
+                //        Logging.Instance.Error(string.Format("Failed to deserialize options from {0}", path));
+                //    }
+                //}
+                //else
+                //{
+                //    Logging.Instance.Error(string.Format("File does not exist for options - {0}", path));
+                //}
+                //return null;
+            }
+        }
+
+        public void SaveFilters()
+        {
+            //var options = new JsonSerializerOptions { IncludeFields = true, };
+            //string json = JsonSerializer.Serialize(this, options);
+            string path = Path.Combine(AppDataPath, fileName);
+            //File.WriteAllText(path, json);
+
+            IFormatter formatter = new BinaryFormatter();
+            using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+#pragma warning disable SYSLIB0011
+                formatter.Serialize(stream, this);
+#pragma warning restore SYSLIB0011
+            }
+        }
+
 
         public List<FilterBase> Filters { get; set; } = new List<FilterBase>();
 
@@ -23,6 +94,7 @@
     }
 
 
+    [Serializable]
     public class FilterBase
     {
         //note, always return the list sorted by start date/time
@@ -35,6 +107,7 @@
 
 
 
+    [Serializable]
     public class FilterDateTime : FilterBase
     {
         public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "1M", "6M", "1Y", "in", "has", "missing" };
@@ -63,11 +136,16 @@
             FieldName = fieldName;
         }
 
+        [JsonInclude]
         private string FieldName { get; set; }
+        [JsonInclude]
         private string Command { get; set; }
 
+        [JsonInclude]
         public DateTime? StartDateTime { get; set; }
+        [JsonInclude]
         public DateTime? EndDateTime { get; set; }
+        [JsonInclude]
         public List<DateTime>? ListOfDates;
 
         public override List<Activity> GetActivities(List<Activity> activities)
@@ -149,6 +227,7 @@
         }
     }
 
+    [Serializable]
     public class FilterFloat : FilterBase
     {
         public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "has", "missing" };
@@ -162,10 +241,14 @@
             FieldName = fieldName;
         }
 
+        [JsonInclude]
         private string FieldName { get; set; }
+        [JsonInclude]
         private string Command { get; set; }
 
+        [JsonInclude]
         public float? FirstValue { get; set; }
+        [JsonInclude]
         public float? SecondValue { get; set; }
 
 
@@ -224,7 +307,8 @@
         }
     }
 
-    public class FilterDataStream : FilterBase
+    [Serializable]
+    public class FilterTimeSeries : FilterBase
     {
         public static readonly string[] FilterCommands = new string[] { "", 
             "max <", "max <=", "max =", "max >=", "max >", "max between", 
@@ -232,7 +316,7 @@
             "min <", "min <=", "min =", "min >=", "min >", "min between", "has", "missing" };
 
 
-        public FilterDataStream(string fieldName, string command, float? firstValue, float? secondValue)
+        public FilterTimeSeries(string fieldName, string command, float? firstValue, float? secondValue)
         {
             FirstValue = firstValue;
             SecondValue = secondValue;
@@ -240,10 +324,14 @@
             FieldName = fieldName;
         }
 
+        [JsonInclude]
         private string FieldName { get; set; }
+        [JsonInclude]
         private string Command { get; set; }
 
+        [JsonInclude]
         public float? FirstValue { get; set; }
+        [JsonInclude]
         public float? SecondValue { get; set; }
 
 
@@ -261,15 +349,15 @@
                 }
                 else
                 {
-                    DataStreamBase datastream = activity.TimeSeries[FieldName];
-                    Tuple<uint[], float[]>? dataTuple = datastream.GetData();
+                    TimeSeriesBase datastream = activity.TimeSeries[FieldName];
+                    TimeValueList? dataTuple = datastream.GetData();
                     if(dataTuple == null)
                     {
                         value = null;
                     }
                     else
                     {
-                        float[] data = dataTuple.Item2;
+                        float[] data = dataTuple.Values;
                         string statistic = Command.Substring(0, 3);
                         if (statistic == "max")
                             value = data.Max();
@@ -331,6 +419,7 @@
         }
     }
 
+    [Serializable]
 
     public class FilterString : FilterBase
     {
@@ -344,9 +433,12 @@
             FieldName = fieldName;
         }
 
+        [JsonInclude]
         private string FieldName { get; set; }
+        [JsonInclude]
         private string Command { get; set; }
 
+        [JsonInclude]
         public string? Value1 { get; set; }
 
 
@@ -405,6 +497,8 @@
             return returnActivities;
         }
     }
+
+    [Serializable]
     public class FilterBadData : FilterBase
     {
         public const string HasBadValueTag = "Has Bad Data";
@@ -416,9 +510,8 @@
             Command = command;
         }
 
+        [JsonInclude]
         private string Command { get; set; }
-
-
 
         public override List<Activity> GetActivities(List<Activity> activities)
         {
@@ -444,4 +537,77 @@
             return returnActivities;
         }
     }
+
+    [Serializable]
+    public class FilterRelative : FilterBase
+    {
+        public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">" };
+
+
+        public FilterRelative(string fieldName, string command, string otherFieldName)
+        {
+            OtherFieldName = otherFieldName;
+            Command = command;
+            FieldName = fieldName;
+        }
+
+        [JsonInclude]
+        private string FieldName { get; set; }
+        [JsonInclude]
+        private string Command { get; set; }
+
+        [JsonInclude]
+        public string OtherFieldName { get; set; }
+
+        public override List<Activity> GetActivities(List<Activity> activities)
+        {
+            List<Activity> returnActivities = new List<Activity>();
+            foreach (Activity activity in activities)
+            {
+                bool addIt = false;
+                float? value = activity.GetNamedFloatDatum(FieldName);
+                float? OtherValue = null;
+                if (activity.HasNamedDatum(OtherFieldName))
+                {
+                    Datum? datum = activity.GetNamedDatum(OtherFieldName);
+                    if (datum != null && datum is TypedDatum<float>)
+                    {
+                        OtherValue = activity.GetNamedFloatDatum(OtherFieldName);
+                    }
+                }
+                switch (Command)
+                {
+                    case "<":
+                        if (value.HasValue && OtherValue.HasValue && value.Value < OtherValue)
+                            addIt = true;
+                        break;
+                    case "<=":
+                        if (value.HasValue && OtherValue.HasValue && value.Value <= OtherValue)
+                            addIt = true;
+                        break;
+                    case "=":
+                        if (value.HasValue && OtherValue.HasValue && value.Value == OtherValue) //lets do equals as on the day
+                            addIt = true;
+                        break;
+                    case ">=":
+                        if (value.HasValue && OtherValue.HasValue && value.Value >= OtherValue)
+                            addIt = true;
+                        break;
+                    case ">":
+                        if (value.HasValue && OtherValue.HasValue && value.Value > OtherValue)
+                            addIt = true;
+                        break;
+                    default:
+                        break;
+                }
+
+                if (addIt)
+                {
+                    returnActivities.Add(activity);
+                }
+            }
+            return returnActivities;
+        }
+    }
+
 }

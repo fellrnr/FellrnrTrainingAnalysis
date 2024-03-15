@@ -163,27 +163,8 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
             set { Properties_.SetValueProperty<int>("DgpsId", value); }
         }
 
-        public GpxLink HttpLink
-        {
-            get
-            {
-#pragma warning disable CS8603 // Possible null reference return.
-                return Links.Where(l => l != null && l.Uri != null && l.Uri.Scheme == Uri.UriSchemeHttp).FirstOrDefault();
-#pragma warning restore CS8603 // Possible null reference return.
-            }
-        }
 
-        public GpxLink EmailLink
-        {
-            get
-            {
-#pragma warning disable CS8603 // Possible null reference return.
-                return Links.Where(l => l != null && l.Uri != null && l.Uri.Scheme == Uri.UriSchemeMailto).FirstOrDefault();
-#pragma warning restore CS8603 // Possible null reference return.
-            }
-        }
-
-        public double GetDistanceFrom(GpxPoint other)
+        public double GetDistanceFromInKm(GpxPoint other)
         {
             double thisLatitude = Latitude * RADIAN;
             double otherLatitude = other.Latitude * RADIAN;
@@ -409,13 +390,13 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
 #pragma warning restore CS8603 // Possible null reference return.
         }
 
-        public double GetLength()
+        public double GetLengthInKm()
         {
             double result = 0;
 
             for (int i = 1; i < Points_.Count; i++)
             {
-                double dist = Points_[i].GetDistanceFrom(Points_[i - 1]);
+                double dist = Points_[i].GetDistanceFromInKm(Points_[i - 1]);
                 result += dist;
             }
 
@@ -554,7 +535,7 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
             get { return DisplayColor != null; }
         }
 
-        public abstract double GetLength();
+        public abstract double GetLengthInKm();
     }
 
     public class GpxRoute : GpxTrackOrRoute
@@ -566,19 +547,19 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
             get { return RoutePoints_; }
         }
 
-        public override double GetLength()
+        public override double GetLengthInKm()
         {
             double result = 0;
             GpxPoint? current = null;
 
             foreach (GpxRoutePoint routePoint in RoutePoints_)
             {
-                if (current != null) result += routePoint.GetDistanceFrom(current);
+                if (current != null) result += routePoint.GetDistanceFromInKm(current);
                 current = routePoint;
 
                 foreach (GpxPoint gpxPoint in routePoint.RoutePoints)
                 {
-                    result += gpxPoint.GetDistanceFrom(current);
+                    result += gpxPoint.GetDistanceFromInKm(current);
                     current = gpxPoint;
                 }
             }
@@ -613,9 +594,9 @@ namespace FellrnrTrainingAnalysis.Utils.Gpx
             get { return Segments_; }
         }
 
-        public override double GetLength()
+        public override double GetLengthInKm()
         {
-            return Segments_.Sum(s => s.TrackPoints.GetLength());
+            return Segments_.Sum(s => s.TrackPoints.GetLengthInKm());
         }
 
         [Obsolete]

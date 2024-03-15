@@ -19,9 +19,9 @@ namespace FellrnrTrainingAnalysis.Model
         public abstract int? ApproxDays { get; }
 
         //public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 6), new PeriodRolling(0, 0, 7), new PeriodRolling(0, 1, 0), new PeriodRolling(1, 0, 0), new PeriodYearToDate() };
-        public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
-        public static List<Period> DefaultEmailPeriods = new List<Period> { new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
-        public static List<Period> DefaultStorePeriods = new List<Period> { new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
+        public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
+        public static List<Period> DefaultEmailPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
+        public static List<Period> DefaultStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
     }
 
     internal class PeriodRolling : Period

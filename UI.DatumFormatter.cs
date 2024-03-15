@@ -39,7 +39,7 @@ namespace FellrnrTrainingAnalysis.UI
         private static string Format(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
         {
             if (datum == null) { return "";  }
-            if(activityDatumMetadata == null) { return datum.ToString()!; }
+            if(activityDatumMetadata == null) { return datum.DataAsString()!; }
 
             float value = 0;
 
@@ -83,7 +83,7 @@ namespace FellrnrTrainingAnalysis.UI
                     return value.ToString("N" + activityDatumMetadata.DecimalPlaces);
                 case ActivityDatumMetadata.DisplayUnitsType.None:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
-                    return datum.ToString()!;
+                    return datum.DataAsString()!;
                 default:
                     return "";
             }

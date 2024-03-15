@@ -41,6 +41,7 @@
             // 
             tableLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tableLayoutPanel1.AutoScroll = true;
+            tableLayoutPanel1.CellBorderStyle = TableLayoutPanelCellBorderStyle.Single;
             tableLayoutPanel1.ColumnCount = 5;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
@@ -63,7 +64,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(3, 0);
+            label1.Location = new Point(4, 1);
             label1.Name = "label1";
             label1.Size = new Size(59, 25);
             label1.TabIndex = 0;
@@ -72,7 +73,7 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(68, 0);
+            label2.Location = new Point(70, 1);
             label2.Name = "label2";
             label2.Size = new Size(54, 25);
             label2.TabIndex = 1;
@@ -81,7 +82,7 @@
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(128, 0);
+            label3.Location = new Point(131, 1);
             label3.Name = "label3";
             label3.Size = new Size(42, 25);
             label3.TabIndex = 2;
@@ -90,7 +91,7 @@
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(176, 0);
+            label4.Location = new Point(180, 1);
             label4.Name = "label4";
             label4.Size = new Size(44, 25);
             label4.TabIndex = 3;
@@ -99,7 +100,7 @@
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(226, 0);
+            label5.Location = new Point(231, 1);
             label5.Name = "label5";
             label5.Size = new Size(45, 25);
             label5.TabIndex = 4;

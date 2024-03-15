@@ -28,129 +28,131 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
-            this.applyAndCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.applyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.closeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.tableLayoutPanel1.SuspendLayout();
-            this.menuStrip1.SuspendLayout();
-            this.SuspendLayout();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            label1 = new Label();
+            label2 = new Label();
+            label3 = new Label();
+            label4 = new Label();
+            menuStrip1 = new MenuStrip();
+            applyAndCloseToolStripMenuItem = new ToolStripMenuItem();
+            applyToolStripMenuItem = new ToolStripMenuItem();
+            closeToolStripMenuItem = new ToolStripMenuItem();
+            clearAndCloseToolStripMenuItem = new ToolStripMenuItem();
+            tableLayoutPanel1.SuspendLayout();
+            menuStrip1.SuspendLayout();
+            SuspendLayout();
             // 
             // tableLayoutPanel1
             // 
-            this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.AutoScroll = true;
-            this.tableLayoutPanel1.ColumnCount = 4;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-            this.tableLayoutPanel1.Controls.Add(this.label1, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.label2, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.label3, 2, 0);
-            this.tableLayoutPanel1.Controls.Add(this.label4, 3, 0);
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 55);
-            this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 1;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(1137, 1134);
-            this.tableLayoutPanel1.TabIndex = 0;
+            tableLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tableLayoutPanel1.AutoScroll = true;
+            tableLayoutPanel1.ColumnCount = 4;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.Controls.Add(label1, 0, 0);
+            tableLayoutPanel1.Controls.Add(label2, 1, 0);
+            tableLayoutPanel1.Controls.Add(label3, 2, 0);
+            tableLayoutPanel1.Controls.Add(label4, 3, 0);
+            tableLayoutPanel1.Location = new Point(12, 55);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 1;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle());
+            tableLayoutPanel1.Size = new Size(1137, 1134);
+            tableLayoutPanel1.TabIndex = 0;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 25);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Field";
+            label1.AutoSize = true;
+            label1.Location = new Point(3, 0);
+            label1.Name = "label1";
+            label1.Size = new Size(49, 25);
+            label1.TabIndex = 0;
+            label1.Text = "Field";
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(58, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(50, 25);
-            this.label2.TabIndex = 1;
-            this.label2.Text = "Filter";
+            label2.AutoSize = true;
+            label2.Location = new Point(58, 0);
+            label2.Name = "label2";
+            label2.Size = new Size(50, 25);
+            label2.TabIndex = 1;
+            label2.Text = "Filter";
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(114, 0);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(69, 25);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Value 1";
+            label3.AutoSize = true;
+            label3.Location = new Point(114, 0);
+            label3.Name = "label3";
+            label3.Size = new Size(69, 25);
+            label3.TabIndex = 2;
+            label3.Text = "Value 1";
             // 
             // label4
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(189, 0);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(69, 25);
-            this.label4.TabIndex = 3;
-            this.label4.Text = "Value 2";
+            label4.AutoSize = true;
+            label4.Location = new Point(189, 0);
+            label4.Name = "label4";
+            label4.Size = new Size(69, 25);
+            label4.TabIndex = 3;
+            label4.Text = "Value 2";
             // 
             // menuStrip1
             // 
-            this.menuStrip1.ImageScalingSize = new System.Drawing.Size(24, 24);
-            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.applyAndCloseToolStripMenuItem,
-            this.applyToolStripMenuItem,
-            this.closeToolStripMenuItem});
-            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
-            this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1161, 33);
-            this.menuStrip1.TabIndex = 1;
-            this.menuStrip1.Text = "menuStrip1";
+            menuStrip1.ImageScalingSize = new Size(24, 24);
+            menuStrip1.Items.AddRange(new ToolStripItem[] { applyAndCloseToolStripMenuItem, applyToolStripMenuItem, closeToolStripMenuItem, clearAndCloseToolStripMenuItem });
+            menuStrip1.Location = new Point(0, 0);
+            menuStrip1.Name = "menuStrip1";
+            menuStrip1.Size = new Size(1161, 33);
+            menuStrip1.TabIndex = 1;
+            menuStrip1.Text = "menuStrip1";
             // 
             // applyAndCloseToolStripMenuItem
             // 
-            this.applyAndCloseToolStripMenuItem.Name = "applyAndCloseToolStripMenuItem";
-            this.applyAndCloseToolStripMenuItem.Size = new System.Drawing.Size(158, 29);
-            this.applyAndCloseToolStripMenuItem.Text = "Apply and Close";
-            this.applyAndCloseToolStripMenuItem.Click += new System.EventHandler(this.applyAndCloseToolStripMenuItem_Click);
+            applyAndCloseToolStripMenuItem.Name = "applyAndCloseToolStripMenuItem";
+            applyAndCloseToolStripMenuItem.Size = new Size(158, 29);
+            applyAndCloseToolStripMenuItem.Text = "Apply and Close";
+            applyAndCloseToolStripMenuItem.Click += applyAndCloseToolStripMenuItem_Click;
             // 
             // applyToolStripMenuItem
             // 
-            this.applyToolStripMenuItem.Name = "applyToolStripMenuItem";
-            this.applyToolStripMenuItem.Size = new System.Drawing.Size(75, 29);
-            this.applyToolStripMenuItem.Text = "Apply";
-            this.applyToolStripMenuItem.Click += new System.EventHandler(this.applyToolStripMenuItem_Click);
+            applyToolStripMenuItem.Name = "applyToolStripMenuItem";
+            applyToolStripMenuItem.Size = new Size(75, 29);
+            applyToolStripMenuItem.Text = "Apply";
+            applyToolStripMenuItem.Click += applyToolStripMenuItem_Click;
             // 
             // closeToolStripMenuItem
             // 
-            this.closeToolStripMenuItem.Name = "closeToolStripMenuItem";
-            this.closeToolStripMenuItem.Size = new System.Drawing.Size(71, 29);
-            this.closeToolStripMenuItem.Text = "Close";
-            this.closeToolStripMenuItem.Click += new System.EventHandler(this.closeToolStripMenuItem_Click);
+            closeToolStripMenuItem.Name = "closeToolStripMenuItem";
+            closeToolStripMenuItem.Size = new Size(71, 29);
+            closeToolStripMenuItem.Text = "Close";
+            closeToolStripMenuItem.Click += closeToolStripMenuItem_Click;
+            // 
+            // clearAndCloseToolStripMenuItem
+            // 
+            clearAndCloseToolStripMenuItem.Name = "clearAndCloseToolStripMenuItem";
+            clearAndCloseToolStripMenuItem.Size = new Size(153, 29);
+            clearAndCloseToolStripMenuItem.Text = "Clear And Close";
+            clearAndCloseToolStripMenuItem.Click += clearAndCloseToolStripMenuItem_Click;
             // 
             // ActivityFilterDialog
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1161, 1201);
-            this.Controls.Add(this.tableLayoutPanel1);
-            this.Controls.Add(this.menuStrip1);
-            this.MainMenuStrip = this.menuStrip1;
-            this.Name = "ActivityFilterDialog";
-            this.Text = "ActivityFilter";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ActivityFilterDialog_FormClosing);
-            this.tableLayoutPanel1.ResumeLayout(false);
-            this.tableLayoutPanel1.PerformLayout();
-            this.menuStrip1.ResumeLayout(false);
-            this.menuStrip1.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1161, 1201);
+            Controls.Add(tableLayoutPanel1);
+            Controls.Add(menuStrip1);
+            MainMenuStrip = menuStrip1;
+            Name = "ActivityFilterDialog";
+            Text = "ActivityFilter";
+            FormClosing += ActivityFilterDialog_FormClosing;
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel1.PerformLayout();
+            menuStrip1.ResumeLayout(false);
+            menuStrip1.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -164,5 +166,6 @@
         private ToolStripMenuItem applyAndCloseToolStripMenuItem;
         private ToolStripMenuItem applyToolStripMenuItem;
         private ToolStripMenuItem closeToolStripMenuItem;
+        private ToolStripMenuItem clearAndCloseToolStripMenuItem;
     }
 }

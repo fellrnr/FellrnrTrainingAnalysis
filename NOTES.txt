@@ -63,7 +63,7 @@ Database.MasterRecalculate
 	Athlete.Recalculate
 		CalendarNode.Recalculate (recursive)
 			Activity.Recalculate
-				DataStreamBase.Recalculate
+				TimeSeriesBase.Recalculate
 				ICalculateField.Recalculate
 	Activity.RecalculateHills
 	Goal.UpdateActivityGoals
@@ -82,7 +82,7 @@ Database.MasterRecalculate
 
 Extensible
 	Athlete [Day, DateTime->Day, DateTime->CalendarNode, String->Activity, DateTime->Activity]
-	Activity [DataStreams]
+	Activity [TimeSeriess]
 	CalendarNode [DateTime->Extensible (CalendarNode or Activity)
 	Day (Activity)
 	

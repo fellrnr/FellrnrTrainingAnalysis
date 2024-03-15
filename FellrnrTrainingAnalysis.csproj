@@ -70,7 +70,7 @@
     <None Update="Config.ActivityDatumMetadata.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Config.DataStreamDefinition.csv">
+    <None Update="Config.TimeSeriesDefinition.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Config.Hills.csv">

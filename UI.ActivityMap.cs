@@ -66,14 +66,14 @@ namespace FellrnrTrainingAnalysis.UI
             //do this first to see if it helps with all markers shown in the middle
             DisplayHills();
 
-            string selectedDataStream = showComboBox.Text;
+            string selectedTimeSeries = showComboBox.Text;
 
             int width = (int)widthNumericUpDown.Value;
             int alpha = (int)alphaNumericUpDown.Value;
 
             GMapOverlay routes = new GMapOverlay("routes");
 
-            GMapRoute? route = Utils.Misc.GmapActivity(Activity, selectedDataStream, width, alpha);
+            GMapRoute? route = Utils.Misc.GmapActivity(Activity, selectedTimeSeries, width, alpha);
             if (route != null)
             {
                 routes.Routes.Add(route);

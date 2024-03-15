@@ -4,14 +4,14 @@ namespace FellrnrTrainingAnalysis.Model
 {
     [MemoryPackable]
     [Serializable]
-    public partial class DataStreamRecorded : DataStreamBase
+    public partial class TimeSeriesRecorded : TimeSeriesBase
     {
         [MemoryPackConstructor]
-        private DataStreamRecorded()
+        private TimeSeriesRecorded()
         {
-            Data = new Tuple<uint[], float[]>(new uint[0], new float[0]);
+            Data = new TimeValueList(new uint[0], new float[0]);
         }
-        public DataStreamRecorded(string name, Tuple<uint[], float[]> data, Activity parent) : base(name, parent)
+        public TimeSeriesRecorded(string name, TimeValueList data, Activity parent) : base(name, parent)
         {
             Data = data;
         }
@@ -25,10 +25,10 @@ namespace FellrnrTrainingAnalysis.Model
         //time offset to Datum
         //TODO: we need the absolute time for a datum as well. If the timer is stopped, the elapsed time stops, but it might be useful to know the actual time. Solution: This will be a data stream of DateTime. 
         [MemoryPackInclude]
-        private Tuple<uint[], float[]> Data;
+        private TimeValueList Data;
 
         //TODO: Potential optimisation - Share time between data streams 
-        public override Tuple<uint[], float[]> GetData() { return Data; }
+        public override TimeValueList GetData() { return Data; }
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity

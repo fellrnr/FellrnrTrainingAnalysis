@@ -14,8 +14,6 @@ namespace FellrnrTrainingAnalysis.Utils
         static Logging() { }
         public static Logging Instance { get; set; } = new Logging();
 
-        private Dictionary<string, Stopwatch> timing = new Dictionary<string, Stopwatch> { { "", new Stopwatch() } };
-        private Dictionary<string, Stopwatch> accumulators = new Dictionary<string, Stopwatch>();
 
         private StringBuilder DebugStringBuilder { get; set; } = new StringBuilder();
         private StreamWriter DebugFile { get; } = new("FellrnrTrainingAnalysis_debug.txt");
@@ -29,12 +27,17 @@ namespace FellrnrTrainingAnalysis.Utils
         private int depth = 0;
         private Stack<string> names = new Stack<string>();
 
+
+        private Dictionary<string, Stopwatch> timing = new Dictionary<string, Stopwatch> { { "", new Stopwatch() } };
+        private Dictionary<string, Stopwatch> accumulators = new Dictionary<string, Stopwatch>();
+        private Dictionary<string, int> Counters = new Dictionary<string, int>();
+
         private Stopwatch Timer(string name) { if (!timing.ContainsKey(name)) timing.Add(name, new Stopwatch()); return timing[name]; }
-        private Stopwatch Accumulator(string name) { if (!accumulators.ContainsKey(name)) accumulators.Add(name, new Stopwatch()); return accumulators[name]; }
+        private Stopwatch Accumulator(string name) { if (!accumulators.ContainsKey(name)) { accumulators.Add(name, new Stopwatch()); Counters.Add(name, 0); } return accumulators[name]; }
 
         public void ResetAndStartTimer(string name = "") { Timer(name).Reset(); Timer(name).Start(); }
 
-        public void ContinueAccumulator(string name) { Accumulator(name).Start(); }
+        public void ContinueAccumulator(string name) { Accumulator(name).Start(); Counters[name]++; }
         public void PauseAccumulator(string name) { Accumulator(name).Stop(); }
 
         public void DumpAndResetAccumulators()
@@ -45,26 +48,29 @@ namespace FellrnrTrainingAnalysis.Utils
                 Stopwatch sw = kvp.Value;
                 TimeSpan ts = sw.Elapsed;
                 string seconds = new string('#', (int)ts.TotalSeconds);
-                Debug($"{kvp.Key} - {ts} {seconds}");
+                int counter = Counters[kvp.Key];
+                Debug($"{kvp.Key} - {ts} {seconds} x{counter} ");
                 sw.Reset();
+                Counters[kvp.Key] = 0;
             }
             accumulators.Clear();
+            Counters.Clear();
         }
 
         public void TraceEntry(string name, bool announce = true)
         {
-            depth++;
             ResetAndStartTimer(name);
-            if (announce) Log("Entering " + name);
+            if (announce) Debug("Entering " + name);
             names.Push(name);
+            depth++;
         }
 
-        public void TraceLeave()
+        public void TraceLeave(string msg = "")
         {
+            depth--;
             string name = names.Pop();
             string ts = Logging.Instance.GetAndResetTime(name);
-            Logging.Instance.Log($"{name} took {ts} took");
-            depth--;
+            Debug($"{name} took {ts} {msg}");
         }
 
 

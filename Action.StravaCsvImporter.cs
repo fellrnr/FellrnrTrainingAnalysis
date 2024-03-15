@@ -28,7 +28,6 @@ namespace FellrnrTrainingAnalysis.Action
             return count;
         }
 
-        //TODO make the load async with a progress bar
         private void LoadAthletesFromStravaArchive(string profileCsvPath, Database database)
         {
             List<Dictionary<string, Datum>> spreadsheetOfAthletes = ImportFromCSV(profileCsvPath, LevelType.Athlete);
@@ -36,7 +35,7 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 if (athleteRow.ContainsKey(Athlete.AthleteIdTag)) //TODO: Give error on missing primary kay
                 {
-                    Athlete athlete = database.FindOrCreateAthlete(athleteRow[Athlete.AthleteIdTag].ToString()!);
+                    Athlete athlete = database.FindOrCreateAthlete(athleteRow[Athlete.AthleteIdTag].DataAsString()!);
                     foreach (KeyValuePair<string, Datum> kvp in athleteRow)
                     {
                         athlete.AddOrReplaceDatum(kvp.Value);
