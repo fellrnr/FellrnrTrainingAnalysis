@@ -47,19 +47,26 @@ namespace FellrnrTrainingAnalysis.Model
             for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
             {
                 float deltaTime = elapsedTime[i] - lastTime;
-                float deltasValue = (values[i] - lastValue) / deltaTime;
-                deltas[i] = deltasValue;
+                if (deltaTime == 0) //seems to happen for the last entry
+                {
+                    deltas[i] = 0;
+                }
+                else
+                {
+                    float deltasValue = (values[i] - lastValue) / deltaTime;
+                    deltas[i] = deltasValue;
 
-                //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
-                if (i == 1)
-                    deltas[0] = deltasValue;
-                if (Numerator != null && deltas[i] != 0)
-                    deltas[i] = Numerator.Value / deltas[i];
-                deltas[i] = deltas[i] * ScalingFactor;
-                if (Limit != null && Math.Abs(deltas[i]) > Limit)
-                    return null;
-                lastValue = values[i];
-                lastTime = elapsedTime[i];
+                    //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
+                    if (i == 1)
+                        deltas[0] = deltasValue;
+                    if (Numerator != null && deltas[i] != 0)
+                        deltas[i] = Numerator.Value / deltas[i];
+                    deltas[i] = deltas[i] * ScalingFactor;
+                    if (Limit != null && Math.Abs(deltas[i]) > Limit)
+                        return null;
+                    lastValue = values[i];
+                    lastTime = elapsedTime[i];
+                }
             }
             TimeValueList newData = new TimeValueList(elapsedTime, deltas);
 

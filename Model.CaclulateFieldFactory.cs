@@ -5,7 +5,7 @@
         private CaclulateFieldFactory()
         {
             //TODO: replace this with configuration driven dynamic load
-            Calulators = new List<CalculateFieldBase>
+            PostTimeSeriesCalulators = new List<CalculateFieldBase>
             {
                 new CalculateDataFieldFromTimeSeriesSimple("Avg Pace", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, "Speed", Activity.ActivityTypeRun),
 
@@ -21,9 +21,9 @@
 
                 new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
 
-                new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, "HrPwr", Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, "HrPwr", Activity.ActivityTypeRun, 5*60, 10*60),
+                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun, 5*60, 10*60),
 
                 new CalculateDataFieldFromTimeSeriesAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
 
@@ -33,12 +33,29 @@
 
                 new CalculateDataFieldFromTimeSeriesThreashold("Percent Run", CalculateDataFieldFromTimeSeriesThreashold.Mode.AbovePercent, 75, "Cadence", Activity.ActivityTypeRun), //cadence is both legs, so 75 = 150
 
-                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, Activity.ActivityTypeRun) //9 min/mile is 2.98 m/s
+                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, Activity.ActivityTypeRun), //9 min/mile is 2.98 m/s
+
+                new CalculateFieldSimpleMath(activityFieldname: "GADΔ",
+                                           firstFieldName: "Distance",
+                                           secondFieldname: "Grade Adjusted Distance",
+                                           extractionMode: CalculateFieldSimpleMath.Mode.Subtract,
+                                           overrideRecordedZeroOnly: false,
+                                           sportsToInclude:Activity.ActivityTypeRun),
+
             };
+
+            PreTimeSeriesCalulators = new List<CalculateFieldBase>
+            {
+                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, Activity.ActivityTypeRun), //9 min/mile is 2.98 m/s
+
+            };
+
+
         }
-            
+
         public static CaclulateFieldFactory Instance { get; set; } = new CaclulateFieldFactory();
 
-        public List<CalculateFieldBase> Calulators { get; set; }
+        public List<CalculateFieldBase> PostTimeSeriesCalulators { get; set; }
+        public List<CalculateFieldBase> PreTimeSeriesCalulators { get; set; }
     }
 }

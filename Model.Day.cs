@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using FellrnrTrainingAnalysis.Utils;
 using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -43,6 +44,12 @@ namespace FellrnrTrainingAnalysis.Model
         public const string WeightTag = "Weight";
         public const string RestingHeartRateTag = "Resting Heart Rate";
 
+        public override string ToString()
+        {
+            string s = _activities == null ? "null" : $"#{_activities.Count}";
+            string d = _activities == null || _activities.Count == 0 ? "" : $", First {_activities.First()}";
+            return string.Format($"Day: [Date {Date}, Activites {s}{d}]");
+        }
 
     }
 }

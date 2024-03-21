@@ -89,6 +89,7 @@
             Controls.Add(textBox1);
             Name = "LargeTextDialogForm";
             Text = "LargeTextDialogForm1";
+            WindowState = FormWindowState.Maximized;
             ResumeLayout(false);
             PerformLayout();
         }

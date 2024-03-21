@@ -35,9 +35,12 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void MasterRecalculate(bool forceActivities, bool forceHills, bool forceGoals, BackgroundWorker? worker = null)
         {
-            RecalculateActivities(forceActivities, worker);
-            RecalculateHills(forceHills, worker);
-            RecalculateGoals(forceGoals, worker);
+            if(forceActivities)
+                RecalculateActivities(forceActivities, worker);
+            if(forceHills)
+                RecalculateHills(forceHills, worker);
+            if(forceGoals)
+                RecalculateGoals(forceGoals, worker);
         }
 
         //reapply the dynamic components, currently dyanamic data streams and goals
@@ -45,13 +48,12 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("RecalculateActivities");
 
-
-            int forceCount = force ? LastForceCount +1 : LastForceCount;
+            LastForceCount = force ? LastForceCount +1 : LastForceCount;
 
             foreach (KeyValuePair<string,Athlete> kvp in Athletes)
             {
                 Athlete athlete = kvp.Value;
-                athlete.Recalculate(forceCount, false);
+                athlete.Recalculate(LastForceCount, false, worker);
             }
 
             //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
@@ -67,15 +69,21 @@ namespace FellrnrTrainingAnalysis.Model
             List<Goal> goals = GoalFactory.GetGoals();
             List<Model.Period> periods = Model.Period.DefaultStorePeriods;
 
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Goals ({goals.Count})", goals.Count));
+            int i = 0;
             foreach (Goal goal in goals)
             {
                 goal.UpdateActivityGoals(this, periods, force);
+                if (worker != null) worker.ReportProgress(++i);
             }
 
+            i = 0;
             List<Rolling> rollings  = RollingFactory.GetRollings();
-            foreach(Rolling rolling in rollings)
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Rolling Data ({rollings.Count})", rollings.Count));
+            foreach (Rolling rolling in rollings)
             {
                 rolling.Recalculate(this, force);
+                if (worker != null) worker.ReportProgress(++i);
             }
 
             Logging.Instance.TraceLeave();
@@ -127,6 +135,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void SaveToMemoryPackFile()
         {
+            PreSerialize();
             string path = Path.Combine(AppDataPath, DatabaseSerializedNameMP);
             SaveToMemoryPack(path);
         }
@@ -135,6 +144,8 @@ namespace FellrnrTrainingAnalysis.Model
         public void SaveToBinaryFile(string path)
         {
             Logging.Instance.TraceEntry("Database.SaveToFile");
+
+            PreSerialize();
 
             if (File.Exists(path))
             {
@@ -209,6 +220,14 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<string, Athlete> kvp in Athletes)
             {
                 kvp.Value.PostDeserialize();
+            }
+        }
+
+        public void PreSerialize()
+        {
+            foreach (KeyValuePair<string, Athlete> kvp in Athletes)
+            {
+                kvp.Value.PreSerialize();
             }
         }
 

@@ -12,6 +12,8 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 using System.Windows.Forms;
 using System;
 using System.Linq;
+using System.Xml.Linq;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -120,11 +122,13 @@ namespace FellrnrTrainingAnalysis
 
         }
 
-        private void UpdateViews(bool forceActivities = false, bool forceHills = false, bool forceGoals = false)
+        private void UpdateViews(bool recalculate = true)
         {
             Logging.Instance.TraceEntry("UpdateViews");
             //if(force) { progressBar1.Minimum = 0; progressBar1.Maximum = Database.CurrentAthlete.Activities.Count; }
-            Database.MasterRecalculate(forceActivities, forceHills, forceGoals);
+
+            if (recalculate)
+                Database.MasterRecalculate(false, false, false); //forced recalculation done by our caller
 
             UpdateFilters();
             UpdateShowOnlyMenu();
@@ -432,9 +436,7 @@ namespace FellrnrTrainingAnalysis
             foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByLocalDateTime)
             {
                 Activity activity = kvp.Value;
-
-                if (activity.DataQualityIssues != null)
-                    activity.DataQualityIssues.Clear();
+                activity.ClearDataQualityIssues();
             }
         }
 
@@ -474,7 +476,7 @@ namespace FellrnrTrainingAnalysis
         {
             ClearDataQualityIssues();
             Utils.DataQuality dataQuality = new DataQuality();
-            List<string> badStreams = dataQuality.FindBadTimeSeriess(Database, dataQualityCheck, fix);
+            List<string> badStreams = dataQuality.FindBadTimeSeries(Database, dataQualityCheck, fix);
 
             UpdateViews();
 
@@ -658,7 +660,22 @@ namespace FellrnrTrainingAnalysis
             e.Result = count;
         }
 
-        private void loadStravaCsvBackgroundWorker_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
+        private void recalculateBackgroundWorker_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        {
+            bool[] recalcs = (bool[])e.Argument!;
+            BackgroundWorker worker = (BackgroundWorker)sender!;
+
+            Logging.Instance.TraceEntry("loadStravaCsvBackgroundWorker_DoWork");
+
+            Database.MasterRecalculate(forceActivities: recalcs[0], forceHills: recalcs[1], forceGoals: recalcs[2], worker); 
+
+            Logging.Instance.TraceLeave();
+
+            e.Result = null;
+        }
+
+
+        private void backgroundWorker_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
         {
             if (e.UserState != null && e.UserState is Misc.ProgressReport)
             {
@@ -666,23 +683,29 @@ namespace FellrnrTrainingAnalysis
                 ProgressDialog.TaskName = progress.TaskName;
                 ProgressDialog.Maximum = progress.Maximum;
             }
-            ProgressDialog.Progress = e.ProgressPercentage;
+            if (e.ProgressPercentage < ProgressDialog.Maximum)
+                ProgressDialog.Progress = e.ProgressPercentage;
         }
 
-        private void loadStravaCsvBackgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
+        private void backgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
         {
             UpdateViews(); //has to be done in this thread
             ProgressDialog.Hide();
             if (e.Result != null)
             {
                 int count = (int)e.Result;
-                MessageBox.Show($"Loaded {count} activities from archive");
+                MessageBox.Show($"Loaded {count} activities from archive, took {Logging.Instance.GetAndStopTime("Async")}");
+            }
+            else
+            {
+                MessageBox.Show($"Recalculation complete, took {Logging.Instance.GetAndStopTime("Async")}");
             }
 
         }
 
         private void LoadFromStravaCsv(string filePath)
         {
+            Logging.Instance.ResetAndStartTimer("Async");
             ProgressDialog.Progress = 0;
             ProgressDialog.TaskName = "Load FIT Files";
             ProgressDialog.ShowMe();
@@ -730,31 +753,54 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
+        private void RecalculateAsync(bool forceActivities = false, bool forceHills = false, bool forceGoals = false)
+        {
+            Logging.Instance.ResetAndStartTimer("Async");
+            ProgressDialog.Progress = 0;
+            ProgressDialog.TaskName = "Recalculate";
+            ProgressDialog.ShowMe();
+
+            bool[] recalcs = new bool[3] { forceActivities, forceHills, forceGoals };
+
+            recalculateBackgroundWorker1.RunWorkerAsync(recalcs);
+        }
         private void forceRecalculationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            UpdateViews(forceActivities: true, forceHills: true, forceGoals: true);
-            MessageBox.Show("Recalculation complete");
+            RecalculateAsync(forceActivities: true, forceHills: true, forceGoals: true);
         }
 
 
         private void recalculateHillsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            UpdateViews(forceActivities: false, forceHills: true, forceGoals: false);
-            MessageBox.Show("Recalculation complete");
+            RecalculateAsync(forceActivities: false, forceHills: true, forceGoals: false);
         }
 
 
         private void recalculateGoalsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            UpdateViews(forceActivities: false, forceHills: false, forceGoals: true);
-            MessageBox.Show("Recalculation complete");
+            RecalculateAsync(forceActivities: false, forceHills: false, forceGoals: true);
         }
 
         private void recalculateActivitiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            UpdateViews(forceActivities: true, forceHills: false, forceGoals: false);
-            MessageBox.Show("Recalculation complete");
+            //force goals is quick, so always do it
+            RecalculateAsync(forceActivities: true, forceHills: false, forceGoals: true);
         }
+
+        private void activityReport1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void integrityCheckToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            StringBuilder sb = new StringBuilder();
+            Utils.Misc.IntegrityCheck(Database, sb);
+
+            LargeTextDialogForm ltdf = new LargeTextDialogForm(sb.ToString());
+            ltdf.ShowDialog();
+        }
+
     }
 
 }

@@ -132,7 +132,7 @@ namespace FellrnrTrainingAnalysis.Action
                 //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
                 //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
                 //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                AddTimeSeriess(activity, streamSet);
+                AddTimeSeries(activity, streamSet);
 
                 List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
                 activity.PhotoUris = photos;
@@ -261,7 +261,7 @@ namespace FellrnrTrainingAnalysis.Action
         }
 
         //Easier to add streams directly rather than trying reflection 
-        private void AddTimeSeriess(Activity activity, StreamSet streamSet)
+        private void AddTimeSeries(Activity activity, StreamSet streamSet)
         {
             int[] timeInt = streamSet.Time.Data;
             uint[] time = Array.ConvertAll(timeInt, x => (uint)x);

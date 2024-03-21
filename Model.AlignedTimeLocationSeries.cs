@@ -22,12 +22,12 @@ namespace FellrnrTrainingAnalysis.Model
         public float[] Lons { get; set; }
         public float[] Secondary { get; set; }
 
-        public static AlignedTimeLocationSeries? Align(LocationStream primary, TimeSeriesBase secondary)
+        public static AlignedTimeLocationSeries? Align(LocationStream primary, TimeSeriesBase secondary, int forceCount, bool forceJustMe)
         {
             if (primary.Times == null)
                 return null; //can't aling without time
 
-            TimeValueList? sdata = secondary.GetData();
+            TimeValueList? sdata = secondary.GetData(forceCount, forceJustMe);
             if (sdata == null) return null;
 
             uint[] ptimes = primary.Times;

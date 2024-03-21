@@ -115,10 +115,15 @@ namespace FellrnrTrainingAnalysis.Action
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
 
-            if(Calculation.activityStartLocal != null)
+            if (Calculation.activityStartLocal != null)
+            {
                 Accumulation.activity.StartDateTimeLocal = Calculation.activityStartLocal;
+            }
             else
+            {
+                Logging.Instance.Error($"No local time for activity {Accumulation.activity}, using UTC {Calculation.activityStartUTC}");
                 Accumulation.activity.StartDateTimeLocal = Calculation.activityStartUTC; //last ditch fallback
+            }
             Accumulation.activity.StartDateTimeUTC = Calculation.activityStartUTC;
 
             Calculation.Overall.Stop();
@@ -506,9 +511,9 @@ namespace FellrnrTrainingAnalysis.Action
                 //don't do this - it's the timestamp of the record that's at the end of the activity! Oops. 
                 //Calculation.activityStartUTC = startTime; 
 
-                if (!myActivityMesg.GetLocalTimestamp().HasValue)
+                uint? timestampUint = myActivityMesg.GetLocalTimestamp();
+                if (timestampUint != null)
                 {
-                    uint? timestampUint = myActivityMesg.GetLocalTimestamp();
                     Dynastream.Fit.DateTime ldt = new Dynastream.Fit.DateTime((uint)timestampUint!);
                     System.DateTime startTimeLocal = ldt.GetDateTime();
                     Calculation.activityStartLocal = startTimeLocal;

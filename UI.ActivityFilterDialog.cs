@@ -1,4 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
+using System.Reflection;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -7,6 +8,13 @@ namespace FellrnrTrainingAnalysis.UI
         public ActivityFilterDialog()
         {
             InitializeComponent();
+            typeof(DataGridView).InvokeMember(
+"DoubleBuffered",
+BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
+null,
+tableLayoutPanel1,
+new object[] { true });
+
         }
 
         private const string BadDataName = "BadData";

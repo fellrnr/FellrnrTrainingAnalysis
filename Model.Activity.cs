@@ -22,7 +22,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override string ToString()
         {
-            return string.Format("Start {0} key {1} filename {2} name {3}", StartDateTimeLocal, PrimaryKey(), Filename, Name);
+            return string.Format("Activity, Start {0} key {1} filename {2} name {3}", StartDateTimeLocal, PrimaryKey(), Filename, Name);
         }
 
 
@@ -39,9 +39,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         //[MemoryPackOrder(0)]
         [MemoryPackIgnore]
-        public DateTime? StartDateTimeLocal { 
+        public DateTime? StartDateTimeLocal
+        {
             get { return GetNamedDateTimeDatum(TagStartDateAndTimeLocal); }
-            set { if(value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(TagStartDateAndTimeLocal, true, (DateTime)value)); } //used by fit reader
+            set { if (value != null) AddOrReplaceDatum(new TypedDatum<DateTime>(TagStartDateAndTimeLocal, true, (DateTime)value)); } //used by fit reader
         }
 
         [MemoryPackIgnore]
@@ -64,7 +65,7 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public string? Filename { get { return GetNamedStringDatum(FilenameTag); } }
         [MemoryPackIgnore]
-        public string? FileFullPath { get { return GetNamedStringDatum(TagFileFullPath); } set { if(value != null) AddOrReplaceDatum(new TypedDatum<string>(TagFileFullPath, true, value)); } }
+        public string? FileFullPath { get { return GetNamedStringDatum(TagFileFullPath); } set { if (value != null) AddOrReplaceDatum(new TypedDatum<string>(TagFileFullPath, true, value)); } }
         [MemoryPackIgnore]
         public string? ActivityType { get { return GetNamedStringDatum(TagActivityType); } }
 
@@ -83,7 +84,7 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //This needs to be static so callers can find the date to check if it's after the loading date. Has to be UTC as that's all we have from the Strava CSV file
-        public static DateTime ExpectedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[TagStartDateAndTimeUTC]).Data; }
+        public static DateTime EstimatedStartDateTime(Dictionary<string, Datum> activityData) { return ((TypedDatum<DateTime>)activityData[TagStartDateAndTimeUTC]).Data; }
 
         //TimeSeries
         //    _______ _                   _____           _           
@@ -129,6 +130,17 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 //kvp.Value.PostDeserialize(kvp.Key, this); //we had to repair names when memory pack didn't have a public setter
                 kvp.Value.PostDeserialize(this);
+            }
+
+        }
+
+        public void PreSerialize(Athlete parent)
+        {
+            this.parent_ = parent;
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp in TimeSeries)
+            {
+                //kvp.Value.PostDeserialize(kvp.Key, this); //we had to repair names when memory pack didn't have a public setter
+                kvp.Value.PreSerialize();
             }
 
         }
@@ -183,9 +195,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void RemoveTimeSeries(string name)
         {
-            if (timeSeries.ContainsKey(name))
+            if (timeSeries.ContainsKey(name) && !TimeSeries[name].IsVirtual())
             {
-                if(removedTimeSeries == null)
+                if (removedTimeSeries == null)
                     removedTimeSeries = new Dictionary<string, TimeSeriesBase>();
                 removedTimeSeries.Add(name, timeSeries[name]);
                 timeSeries.Remove(name);
@@ -201,20 +213,27 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackOrder(4)]
         public List<Uri>? PhotoUris { get; set; }
 
+
+        [MemoryPackIgnore]
+        public static int CurrentRecalculateProgress { get; set; } //ugly, but the alternatives are worse
+
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
             Logging.Instance.ContinueAccumulator("Activity.Recalculate");
 
+            if (worker != null)
+                worker.ReportProgress(++CurrentRecalculateProgress);
+
+            if (parent_ != null && CurrentRecalculateProgress > parent_.Activities.Count)
+                MessageBox.Show("Huh");
+
             bool force = false;
-            if(forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
+            if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
-            Logging.Instance.ContinueAccumulator("Activity.Recalculate(clean)");
-            if (force)
-                base.Clean();
-
-            //prepare to delete any unused or invalid time series
             if (force)
             {
+                Logging.Instance.ContinueAccumulator("Activity.Recalculate(clean)");
+                base.Clean();
                 List<string> toDelete = new List<string>();
                 foreach (KeyValuePair<string, TimeSeriesBase> kvp in TimeSeries)
                 {
@@ -223,46 +242,58 @@ namespace FellrnrTrainingAnalysis.Model
                 }
 
                 foreach (string s in toDelete) { timeSeries.Remove(s); }
+                Logging.Instance.PauseAccumulator("Activity.Recalculate(clean)");
             }
 
-            Logging.Instance.PauseAccumulator("Activity.Recalculate(clean)");
-
+            //process the action tags first, as they may change or remove the recorded time series
             Action.Tags tags = new Action.Tags();
-            if (tags.ProcessTags(this, force))
+            if (tags.ProcessTags(this, forceCount: forceCount, forceJustMe: forceJustMe, force: force))
                 forceJustMe = true;
 
-            List<TimeSeriesBase> ephemeralTimeSeries = TimeSeriesFactory.Instance.TimeSeries(this);
-
-            Logging.Instance.ContinueAccumulator("Activity.Recalculate(time series)");
-            foreach (TimeSeriesBase ts in ephemeralTimeSeries)
+            foreach (CalculateFieldBase calculate in CaclulateFieldFactory.Instance.PreTimeSeriesCalulators)
             {
-                if (this.timeSeries.ContainsKey(ts.Name))
+                calculate.Recalculate(this, forceCount, forceJustMe);
+            }
+
+            if (force)
+            {
+
+                List<TimeSeriesBase> ephemeralTimeSeries = TimeSeriesFactory.Instance.TimeSeries(this);
+
+                Logging.Instance.ContinueAccumulator("Activity.Recalculate(time series)");
+                foreach (TimeSeriesBase ts in ephemeralTimeSeries)
                 {
-                    //the activity has the time series, so use the one on the activity, not the new one from the factory
-                    TimeSeriesBase existingTimeSeries = this.timeSeries[ts.Name];
-                    if (existingTimeSeries.IsValid() && existingTimeSeries.GetData() != null)
+                    if (!this.timeSeries.ContainsKey(ts.Name)) //we've just removed all virtual ts, so the only ones left with the same name are recorded data
                     {
-                        existingTimeSeries.Recalculate(forceCount, forceJustMe);
+                        if (ts.IsValid() && ts.GetData(forceCount, forceJustMe) != null)
+                        {
+                            ts.Recalculate(forceCount, forceJustMe);
+                            this.timeSeries.Add(ts.Name, ts);
+                        }
+                    }
+                }
+                Logging.Instance.PauseAccumulator("Activity.Recalculate(time series)");
+
+            }
+            else
+            {
+                foreach (KeyValuePair<string, TimeSeriesBase> kvp in timeSeries) //no longer try to add ephemeral time series - only add them on a full recalculate
+                {
+                    TimeSeriesBase ts = kvp.Value;
+                    if (ts.IsValid())
+                    {
+                        ts.Recalculate(forceCount, forceJustMe);
                     }
                     else
                     {
-                        if (forceJustMe) Logging.Instance.Debug("No data from {dataStream.Name}");
-                        this.timeSeries.Remove(ts.Name);
-                    }
-                }
-                else //the activity doesn't have this time series
-                {
-                    if (ts.IsValid() && ts.GetData() != null)
-                    {
-                        ts.Recalculate(forceCount, forceJustMe);
-                        this.timeSeries.Add(ts.Name, ts);
+                        Logging.Instance.Log($"Unforced TimSeries recalulation for {ts} isn't valid");
                     }
                 }
             }
-            Logging.Instance.PauseAccumulator("Activity.Recalculate(time series)");
 
+            //do the calculated fields last, as they rely on time series data
             Logging.Instance.ContinueAccumulator("Activity.Recalculate(calculated fields)");
-            foreach (CalculateFieldBase calculate in CaclulateFieldFactory.Instance.Calulators)
+            foreach (CalculateFieldBase calculate in CaclulateFieldFactory.Instance.PostTimeSeriesCalulators)
             {
                 calculate.Recalculate(this, forceCount, forceJustMe);
             }
@@ -325,9 +356,9 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     nomatched++;
 
-                    if(!Climbed.Contains(hill))
+                    if (!Climbed.Contains(hill))
                         Climbed.Add(hill);
-                    if(!hill.Climbed.Contains(this))
+                    if (!hill.Climbed.Contains(this))
                         hill.Climbed.Add(this);
                 }
             }
@@ -349,91 +380,102 @@ namespace FellrnrTrainingAnalysis.Model
 
         public const string TagDistance = "Distance"; //both a time series and a datum
         public const string TagElapsedTime = "Elapsed Time";
+        public const string TagHeartRate = "Heart Rate";
+        public const string TagPower = "Power";
+        public const string TagHrPwr = "HrPwr";
         public const string TagMovingTime = "Moving Time";
         public const string TagTreadmillAngle = "Treadmill Angle";
         public static List<string> ActivityTypeRun = new List<string> { "Run", "Virtual Run" };
-    /*
-    public const string ActivityNameTag = "Activity Name";
-    public const string ActivityDescriptionTag = "Activity Description";
-    public const string MaxHeartRateTag = "Max Heart Rate";
-    public const string RelativeEffortTag = "Relative Effort";
-    public const string CommuteTag = "Commute";
-    public const string ActivityGearTag = "Activity Gear";
-    public const string AthleteWeightTag = "Athlete Weight";
-    public const string BikeWeightTag = "Bike Weight";
-    public const string ElapsedTimeTag = "Elapsed Time";
-    public const string MaxSpeedTag = "Max Speed";
-    public const string AverageSpeedTag = "Average Speed";
-    public const string ElevationGainTag = "Elevation Gain";
-    public const string ElevationLossTag = "Elevation Loss";
-    public const string ElevationLowTag = "Elevation Low";
-    public const string ElevationHighTag = "Elevation High";
-    public const string MaxGradeTag = "Max Grade";
-    public const string AverageGradeTag = "Average Grade";
-    public const string AveragePositiveGradeTag = "Average Positive Grade";
-    public const string AverageNegativeGradeTag = "Average Negative Grade";
-    public const string MaxCadenceTag = "Max Cadence";
-    public const string AverageCadenceTag = "Average Cadence";
-    public const string AverageHeartRateTag = "Average Heart Rate";
-    public const string MaxWattsTag = "Max Watts";
-    public const string AverageWattsTag = "Average Watts";
-    public const string CaloriesTag = "Calories";
-    public const string MaxTemperatureTag = "Max Temperature";
-    public const string AverageTemperatureTag = "Average Temperature";
-    public const string TotalWorkTag = "Total Work";
-    public const string NumberofRunsTag = "Number of Runs";
-    public const string UphillTimeTag = "Uphill Time";
-    public const string DownhillTimeTag = "Downhill Time";
-    public const string OtherTimeTag = "Other Time";
-    public const string PerceivedExertionTag = "Perceived Exertion";
-    public const string TypeTag = "Type";
-    public const string StartTimeTag = "Start Time";
-    public const string WeightedAveragePowerTag = "Weighted Average Power";
-    public const string PowerCountTag = "Power Count";
-    public const string PreferPerceivedExertionTag = "Prefer Perceived Exertion";
-    public const string PerceivedRelativeEffortTag = "Perceived Relative Effort";
-    public const string TotalWeightLiftedTag = "Total Weight Lifted";
-    public const string FromUploadTag = "From Upload";
-    public const string GradeAdjustedDistanceTag = "Grade Adjusted Distance";
-    public const string WeatherObservationTimeTag = "Weather Observation Time";
-    public const string WeatherConditionTag = "Weather Condition";
-    public const string WeatherTemperatureTag = "Weather Temperature";
-    public const string ApparentTemperatureTag = "Apparent Temperature";
-    public const string DewpointTag = "Dewpoint";
-    public const string HumidityTag = "Humidity";
-    public const string WeatherPressureTag = "Weather Pressure";
-    public const string WindSpeedTag = "Wind Speed";
-    public const string WindGustTag = "Wind Gust";
-    public const string WindBearingTag = "Wind Bearing";
-    public const string PrecipitationIntensityTag = "Precipitation Intensity";
-    public const string SunriseTimeTag = "Sunrise Time";
-    public const string SunsetTimeTag = "Sunset Time";
-    public const string MoonPhaseTag = "Moon Phase";
-    public const string BikeTag = "Bike";
-    public const string GearTag = "Gear";
-    public const string PrecipitationProbabilityTag = "Precipitation Probability";
-    public const string PrecipitationTypeTag = "Precipitation Type";
-    public const string CloudCoverTag = "Cloud Cover";
-    public const string WeatherVisibilityTag = "Weather Visibility";
-    public const string UVIndexTag = "UV Index";
-    public const string WeatherOzoneTag = "Weather Ozone";
-    public const string JumpCountTag = "Jump Count";
-    public const string TotalGritTag = "Total Grit";
-    public const string AvgFlowTag = "Avg Flow";
-    public const string FlaggedTag = "Flagged";
-    public const string AvgElapsedSpeedTag = "Avg Elapsed Speed";
-    public const string DirtDistanceTag = "Dirt Distance";
-    public const string NewlyExploredDistanceTag = "Newly Explored Distance";
-    public const string NewlyExploredDirtDistanceTag = "Newly Explored Dirt Distance"; 
-    */
+        /*
+        public const string ActivityNameTag = "Activity Name";
+        public const string ActivityDescriptionTag = "Activity Description";
+        public const string MaxHeartRateTag = "Max Heart Rate";
+        public const string RelativeEffortTag = "Relative Effort";
+        public const string CommuteTag = "Commute";
+        public const string ActivityGearTag = "Activity Gear";
+        public const string AthleteWeightTag = "Athlete Weight";
+        public const string BikeWeightTag = "Bike Weight";
+        public const string ElapsedTimeTag = "Elapsed Time";
+        public const string MaxSpeedTag = "Max Speed";
+        public const string AverageSpeedTag = "Average Speed";
+        public const string ElevationGainTag = "Elevation Gain";
+        public const string ElevationLossTag = "Elevation Loss";
+        public const string ElevationLowTag = "Elevation Low";
+        public const string ElevationHighTag = "Elevation High";
+        public const string MaxGradeTag = "Max Grade";
+        public const string AverageGradeTag = "Average Grade";
+        public const string AveragePositiveGradeTag = "Average Positive Grade";
+        public const string AverageNegativeGradeTag = "Average Negative Grade";
+        public const string MaxCadenceTag = "Max Cadence";
+        public const string AverageCadenceTag = "Average Cadence";
+        public const string AverageHeartRateTag = "Average Heart Rate";
+        public const string MaxWattsTag = "Max Watts";
+        public const string AverageWattsTag = "Average Watts";
+        public const string CaloriesTag = "Calories";
+        public const string MaxTemperatureTag = "Max Temperature";
+        public const string AverageTemperatureTag = "Average Temperature";
+        public const string TotalWorkTag = "Total Work";
+        public const string NumberofRunsTag = "Number of Runs";
+        public const string UphillTimeTag = "Uphill Time";
+        public const string DownhillTimeTag = "Downhill Time";
+        public const string OtherTimeTag = "Other Time";
+        public const string PerceivedExertionTag = "Perceived Exertion";
+        public const string TypeTag = "Type";
+        public const string StartTimeTag = "Start Time";
+        public const string WeightedAveragePowerTag = "Weighted Average Power";
+        public const string PowerCountTag = "Power Count";
+        public const string PreferPerceivedExertionTag = "Prefer Perceived Exertion";
+        public const string PerceivedRelativeEffortTag = "Perceived Relative Effort";
+        public const string TotalWeightLiftedTag = "Total Weight Lifted";
+        public const string FromUploadTag = "From Upload";
+        public const string GradeAdjustedDistanceTag = "Grade Adjusted Distance";
+        public const string WeatherObservationTimeTag = "Weather Observation Time";
+        public const string WeatherConditionTag = "Weather Condition";
+        public const string WeatherTemperatureTag = "Weather Temperature";
+        public const string ApparentTemperatureTag = "Apparent Temperature";
+        public const string DewpointTag = "Dewpoint";
+        public const string HumidityTag = "Humidity";
+        public const string WeatherPressureTag = "Weather Pressure";
+        public const string WindSpeedTag = "Wind Speed";
+        public const string WindGustTag = "Wind Gust";
+        public const string WindBearingTag = "Wind Bearing";
+        public const string PrecipitationIntensityTag = "Precipitation Intensity";
+        public const string SunriseTimeTag = "Sunrise Time";
+        public const string SunsetTimeTag = "Sunset Time";
+        public const string MoonPhaseTag = "Moon Phase";
+        public const string BikeTag = "Bike";
+        public const string GearTag = "Gear";
+        public const string PrecipitationProbabilityTag = "Precipitation Probability";
+        public const string PrecipitationTypeTag = "Precipitation Type";
+        public const string CloudCoverTag = "Cloud Cover";
+        public const string WeatherVisibilityTag = "Weather Visibility";
+        public const string UVIndexTag = "UV Index";
+        public const string WeatherOzoneTag = "Weather Ozone";
+        public const string JumpCountTag = "Jump Count";
+        public const string TotalGritTag = "Total Grit";
+        public const string AvgFlowTag = "Avg Flow";
+        public const string FlaggedTag = "Flagged";
+        public const string AvgElapsedSpeedTag = "Avg Elapsed Speed";
+        public const string DirtDistanceTag = "Dirt Distance";
+        public const string NewlyExploredDistanceTag = "Newly Explored Distance";
+        public const string NewlyExploredDirtDistanceTag = "Newly Explored Dirt Distance"; 
+        */
 
-    //transient data
+        //transient data
 
-    //let's hold on to these rather than querying every time
-    //[NonSerialized] 
-    [MemoryPackInclude]
+        //let's hold on to these rather than querying every time
+        //[NonSerialized] 
+        [MemoryPackInclude]
         [MemoryPackOrder(5)]
         public List<string>? DataQualityIssues = null; //we don't persist data quality issues as it depends on the criteria applied, and it's quick to check each time
+
+        public void ClearDataQualityIssues()
+        {
+            DataQualityIssues = null;
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp2 in TimeSeries)
+                kvp2.Value.Highlights = null;
+
+        }
 
         [MemoryPackOrder(6)]
         public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches

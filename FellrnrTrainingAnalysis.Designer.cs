@@ -36,10 +36,12 @@
             saveDatabaseAsToolStripMenuItem = new ToolStripMenuItem();
             clearDatabaseToolStripMenuItem = new ToolStripMenuItem();
             forceRecalculationToolStripMenuItem = new ToolStripMenuItem();
+            recalculateActivitiesToolStripMenuItem = new ToolStripMenuItem();
             recalculateGoalsToolStripMenuItem = new ToolStripMenuItem();
             recalculateHillsToolStripMenuItem = new ToolStripMenuItem();
             openBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
             saveBinDatabaseToolStripMenuItem = new ToolStripMenuItem();
+            validationToolStripMenuItem = new ToolStripMenuItem();
             exitToolStripMenuItem = new ToolStripMenuItem();
             dataSourcesToolStripMenuItem = new ToolStripMenuItem();
             bootstrapToolStripMenuItem = new ToolStripMenuItem();
@@ -86,7 +88,7 @@
             tabPage1 = new TabPage();
             overviewMap1 = new UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
-            recalculateActivitiesToolStripMenuItem = new ToolStripMenuItem();
+            recalculateBackgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -118,7 +120,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, recalculateActivitiesToolStripMenuItem, recalculateGoalsToolStripMenuItem, recalculateHillsToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, exitToolStripMenuItem });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, saveToolStripMenuItem, saveDatabaseAsToolStripMenuItem, clearDatabaseToolStripMenuItem, forceRecalculationToolStripMenuItem, recalculateActivitiesToolStripMenuItem, recalculateGoalsToolStripMenuItem, recalculateHillsToolStripMenuItem, openBinDatabaseToolStripMenuItem, saveBinDatabaseToolStripMenuItem, validationToolStripMenuItem, exitToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(102, 35);
             fileToolStripMenuItem.Text = "Database";
@@ -158,6 +160,13 @@
             forceRecalculationToolStripMenuItem.Text = "Recalculate All..";
             forceRecalculationToolStripMenuItem.Click += forceRecalculationToolStripMenuItem_Click;
             // 
+            // recalculateActivitiesToolStripMenuItem
+            // 
+            recalculateActivitiesToolStripMenuItem.Name = "recalculateActivitiesToolStripMenuItem";
+            recalculateActivitiesToolStripMenuItem.Size = new Size(296, 34);
+            recalculateActivitiesToolStripMenuItem.Text = "Recalculate Activities...";
+            recalculateActivitiesToolStripMenuItem.Click += recalculateActivitiesToolStripMenuItem_Click;
+            // 
             // recalculateGoalsToolStripMenuItem
             // 
             recalculateGoalsToolStripMenuItem.Name = "recalculateGoalsToolStripMenuItem";
@@ -185,6 +194,13 @@
             saveBinDatabaseToolStripMenuItem.Size = new Size(296, 34);
             saveBinDatabaseToolStripMenuItem.Text = "Save As Bin Database...";
             saveBinDatabaseToolStripMenuItem.Click += saveAsBinDatabaseToolStripMenuItem_Click;
+            // 
+            // validationToolStripMenuItem
+            // 
+            validationToolStripMenuItem.Name = "validationToolStripMenuItem";
+            validationToolStripMenuItem.Size = new Size(296, 34);
+            validationToolStripMenuItem.Text = "Integrity Check...";
+            validationToolStripMenuItem.Click += integrityCheckToolStripMenuItem_Click;
             // 
             // exitToolStripMenuItem
             // 
@@ -455,6 +471,7 @@
             activityReport1.Name = "activityReport1";
             activityReport1.Size = new Size(1820, 1121);
             activityReport1.TabIndex = 0;
+            activityReport1.Load += activityReport1_Load;
             // 
             // activityTreeTabPage
             // 
@@ -575,15 +592,15 @@
             // 
             loadStravaCsvBackgroundWorker.WorkerReportsProgress = true;
             loadStravaCsvBackgroundWorker.DoWork += loadStravaCsvBackgroundWorker_DoWork;
-            loadStravaCsvBackgroundWorker.ProgressChanged += loadStravaCsvBackgroundWorker_ProgressChanged;
-            loadStravaCsvBackgroundWorker.RunWorkerCompleted += loadStravaCsvBackgroundWorker_RunWorkerCompleted;
+            loadStravaCsvBackgroundWorker.ProgressChanged += backgroundWorker_ProgressChanged;
+            loadStravaCsvBackgroundWorker.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
-            // recalculateActivitiesToolStripMenuItem
+            // recalculateBackgroundWorker1
             // 
-            recalculateActivitiesToolStripMenuItem.Name = "recalculateActivitiesToolStripMenuItem";
-            recalculateActivitiesToolStripMenuItem.Size = new Size(296, 34);
-            recalculateActivitiesToolStripMenuItem.Text = "Recalculate Activities...";
-            recalculateActivitiesToolStripMenuItem.Click += recalculateActivitiesToolStripMenuItem_Click;
+            recalculateBackgroundWorker1.WorkerReportsProgress = true;
+            recalculateBackgroundWorker1.DoWork += recalculateBackgroundWorker_DoWork;
+            recalculateBackgroundWorker1.ProgressChanged += backgroundWorker_ProgressChanged;
+            recalculateBackgroundWorker1.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
             // FellrnrTrainingAnalysisForm
             // 
@@ -683,5 +700,7 @@
         private ToolStripMenuItem showOnlyToolStripMenuItem;
         private ToolStripMenuItem recalculateGoalsToolStripMenuItem;
         private ToolStripMenuItem recalculateActivitiesToolStripMenuItem;
+        private System.ComponentModel.BackgroundWorker recalculateBackgroundWorker1;
+        private ToolStripMenuItem validationToolStripMenuItem;
     }
 }

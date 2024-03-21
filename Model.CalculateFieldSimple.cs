@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -63,7 +64,7 @@ namespace FellrnrTrainingAnalysis.Model
             float? value = ExtractValue(activity, forceJustMe);
             if (value != null)
             {
-                Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
+                if(forceJustMe) Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
                 activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value.Value));
             }
         }
@@ -92,6 +93,12 @@ namespace FellrnrTrainingAnalysis.Model
         public enum Mode { Multiply } //add others as needed
         Mode ExtractionMode { get; set; }
 
+        public override string ToString()
+        {
+            return $"CalculateFieldSimpleDefault: Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
+        }
+
+
         protected override float? ExtractValue(Activity activity, bool forceJustMe)
         {
             if (forceJustMe)
@@ -109,6 +116,57 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateFieldSimpleDefault Forced ExtractValue retval {dependent}");
             return dependent;
+        }
+
+    }
+
+    public class CalculateFieldSimpleMath: CalculateFieldSimple
+    {
+        public CalculateFieldSimpleMath(string activityFieldname,
+                                           string firstFieldName,
+                                           string secondFieldname,
+                                           Mode extractionMode,
+                                           bool overrideRecordedZeroOnly,
+                                           List<string>? sportsToInclude = null) :
+            base(activityFieldname, overrideRecordedZeroOnly, sportsToInclude)
+        {
+            FirstFieldname = firstFieldName;
+            SecondFieldname = secondFieldname;
+            ExtractionMode = extractionMode;
+        }
+
+        public string FirstFieldname { get; set; }
+        public string SecondFieldname { get; set; }
+
+        public enum Mode { Subtract } //add others as needed
+        Mode ExtractionMode { get; set; }
+
+        public override string ToString()
+        {
+            return $"CalculateFieldSimpleMath: [Type {this.GetType().Name} ActivityFieldname {ActivityFieldname} FirstFieldname {FirstFieldname} SecondFieldname {SecondFieldname} Mode {ExtractionMode}]";
+        }
+
+
+        protected override float? ExtractValue(Activity activity, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleMath Forced ExtractValue {ActivityFieldname}");
+            if (!activity.HasNamedDatum(FirstFieldname))
+                return null;
+            if (!activity.HasNamedDatum(SecondFieldname))
+                return null;
+
+            float? f1 = activity.GetNamedFloatDatum(FirstFieldname);
+            float? f2 = activity.GetNamedFloatDatum(SecondFieldname);
+            float? result = null;
+            if (f1 != null && f2 != null && ExtractionMode == Mode.Subtract)
+            {
+                result = (float)f1 - (float)f2;
+            }
+
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleMath Forced ExtractValue retval {result}");
+            return result;
         }
 
     }

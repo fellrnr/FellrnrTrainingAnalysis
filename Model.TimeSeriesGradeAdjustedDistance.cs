@@ -15,49 +15,50 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackConstructor]
         protected TimeSeriesGradeAdjustedDistance()  //for use by memory pack deserialization only
         {
-            SportsToInclude = new List<string>(); //keep the compiler happy
         }
 
-        public TimeSeriesGradeAdjustedDistance(string name, List<List<string>> requiredFields, Activity activity, List<string> sportsToInclude) : base(name, requiredFields, activity)
+        public TimeSeriesGradeAdjustedDistance(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null) :
+            base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
-            SportsToInclude = sportsToInclude;
         }
 
-        [MemoryPackInclude]
-        List<string> SportsToInclude;
-
-
-        public override TimeValueList? CalculateData(bool forceJustMe)
+        public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
             if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesGradeAdjustedDistance - Forced recalculating {this.Name}");
 
-            if (ParentActivity == null) 
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"No parent");
-                return null; 
-            }
-
-            if (!ParentActivity.CheckSportType(SportsToInclude))
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"Sport not included {ParentActivity.ActivityType}");
-                return null;
-            }
-
-            ReadOnlyDictionary<string, TimeSeriesBase> timeSeries = ParentActivity.TimeSeries;
             TimeSeriesBase distanceStream = RequiredTimeSeries[0];
-            TimeValueList? distanceData = distanceStream.GetData();
-            if (distanceData == null)
+            TimeValueList? distanceData = distanceStream.GetData(forceCount, forceJustMe);
+            if (distanceData == null || distanceData.Length < 1)
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"No distance");
                 return null;
             }
 
             TimeSeriesBase altitudeStream = RequiredTimeSeries[1]; 
-            TimeValueList? altitudeData = altitudeStream.GetData();
-            if (altitudeData == null)
+            TimeValueList? altitudeData = altitudeStream.GetData(forceCount, forceJustMe);
+            if (altitudeData == null || altitudeData.Length < 1)
             {
+                if (forceJustMe) Logging.Instance.TraceLeave($"No altitude");
                 return distanceData;
             }
+
+            uint finalTimeAltitude = altitudeData.Times.Last();
+            uint finalTimeDistance = distanceData.Times.Last();
+            uint finalTimeDistance90 = finalTimeDistance * 90 / 100;
+            if(finalTimeAltitude < finalTimeDistance90)
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"altitude less than 90 distance, {finalTimeAltitude}, {finalTimeDistance}, {finalTimeDistance90}");
+                return distanceData;
+            }
+
+            uint firstTimeAltitude = altitudeData.Times.First();
+            uint firstTimeDistance = distanceData.Times.First();
+            if (firstTimeAltitude > firstTimeDistance + 5 * 60)
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"altitude starts more than 5 min after distance, {firstTimeAltitude}, {firstTimeDistance}");
+                return distanceData;
+            }
+
 
             AlignedTimeSeries? aligned = AlignedTimeSeries.Align(distanceData, altitudeData);
 
@@ -74,8 +75,6 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (forceJustMe) Logging.Instance.TraceLeave($"return GAD {retval}");
             return retval;
-
-
         }
 
 

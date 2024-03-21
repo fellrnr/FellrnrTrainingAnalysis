@@ -1,16 +1,17 @@
-﻿Name,ShowReportGraph,Description,DisplayTitle,Smoothing,SmoothingWindow,DisplayUnits,DisplayUnitsName,Comment
-Altitude,TRUE,Altitude,Altitude,None,0,Meters,Meters,
-Cadence,TRUE,Cadence,Cadence,None,0,None,SPM,
-Heart Rate,TRUE,Heart Rate,Heart Rate,None,0,None,BPM,
-Power,TRUE,Power,Power,None,0,None,Watts,
-Speed,TRUE,Speed,Speed,None,0,Pace,m/s,
-Stance Time Percent,TRUE,Stance Time Percent,Stance Time Percent,None,0,None,Percent,
-Step Length,TRUE,Step Length,Step Length,None,0,Meters,Meters,
-Temperature,FALSE,Temperature,Temperature,None,0,None,Celcius,
-Vertical Oscillation,TRUE,Vertical Oscillation,Vertical Oscillation,None,0,Meters,Meters,
-Vertical Ratio,TRUE,Vertical Ratio,Vertical Ratio,None,0,Meters,Meters,
-Calc.Climb,TRUE,Calculated Climbing Rate,Calc Climb,AverageWindow,60,Meters,meters/min,Calculated from time and distance
-Grade Adjusted Pace,TRUE,Grade Adjusted Pace,GA Pace,AverageWindow,100,Pace,m/s,Calculated from Calc.Pace and Altitude
-Distance,FALSE,Distance,Distance,None,0,Meters,Meters,
-Grade Adjusted Distance,FALSE,Grade Adjusted Distance,Grade Adjusted Distance,None,0,Meters,Meters,
-HrPwr,TRUE,Heart Rate to Power,HrPwr,AverageWindow,60,Integer,mW/beat,
+﻿Name,ShowReportGraph,Description,DisplayTitle,Smoothing,SmoothingWindow,DisplayUnits,DisplayUnitsName,ColorName,Comment
+Altitude,TRUE,Altitude,Altitude,None,0,Meters,Meters,Green,
+Cadence,TRUE,Cadence,Cadence,None,0,None,SPM,Plum,
+Calc.Climb,TRUE,Calculated Climbing Rate,Calc Climb,AverageWindow,60,Meters,meters/min,Dark Green,Calculated from time and distance
+Distance,FALSE,Distance,Distance,None,0,Meters,Meters,Gray,
+Grade Adjusted Distance,FALSE,Grade Adjusted Distance,Grade Adjusted Distance,None,0,Meters,Meters,Dark Gray,
+Grade Adjusted Pace,TRUE,Grade Adjusted Pace,GA Pace,AverageWindow,100,Pace,m/s,Light Blue,Calculated from Calc.Pace and Altitude
+Heart Rate,TRUE,Heart Rate,Heart Rate,None,0,None,BPM,Red,
+HrPwr,TRUE,Heart Rate to Power,HrPwr,AverageWindow,60,Integer,mW/beat,Magenta,
+HrPwrOffset,FALSE,Heart Rate to Power (Offset),HrPwr (Offset),None,50,None,,Maroon,
+Power,TRUE,Power,Power,None,0,None,Watts,Blue,
+Speed,TRUE,Speed,Speed,None,0,Pace,m/s,Cyan,
+Stance Time Percent,TRUE,Stance Time Percent,Stance Time Percent,None,0,None,Percent,Black,
+Step Length,TRUE,Step Length,Step Length,None,0,Meters,Meters,Black,
+Temperature,FALSE,Temperature,Temperature,None,0,None,Celcius,Black,
+Vertical Oscillation,TRUE,Vertical Oscillation,Vertical Oscillation,None,0,Meters,Meters,Black,
+Vertical Ratio,TRUE,Vertical Ratio,Vertical Ratio,None,0,Meters,Meters,Black,

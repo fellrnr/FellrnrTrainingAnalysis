@@ -34,14 +34,16 @@ namespace FellrnrTrainingAnalysis.UI
             public Label Min;
             public Label Avg;
             public Label Max;
+            public Label Notes;
 
-            public Row(Label name, Label value, Label min, Label avg, Label max)
+            public Row(Label name, Label value, Label min, Label avg, Label max, Label notes)
             {
                 Name = name;
                 Value = value;
                 Min = min;
                 Avg = avg;
                 Max = max;
+                Notes = notes;
             }
         }
 
@@ -74,10 +76,10 @@ namespace FellrnrTrainingAnalysis.UI
         private void AddHeaderRow(string postfix)
         {
             int row = RowCount + 1; //zero is the header
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 string text = (i == 2 ? postfix : "*****");
-                Label header = new Label { Text = text, Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                Label header = new Label { Text = text, Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true, BackColor = Color.AntiqueWhite };
                 tableLayoutPanel1.Controls.Add(header, i, row);
             }
             RowCount++;
@@ -102,8 +104,10 @@ namespace FellrnrTrainingAnalysis.UI
                     tableLayoutPanel1.Controls.Add(avg, 3, row);
                     Label max = new Label { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
                     tableLayoutPanel1.Controls.Add(max, 4, row);
+                    Label notes = new Label { Text = "", Anchor = AnchorStyles.Left | AnchorStyles.Top, AutoSize = true };
+                    tableLayoutPanel1.Controls.Add(notes, 5, row);
 
-                    Rows.Add(fieldName + postfix, new Row(name, value, min, avg, max));
+                    Rows.Add(fieldName + postfix, new Row(name, value, min, avg, max, notes));
                 }
                 RowCount++;
             }
@@ -121,6 +125,7 @@ namespace FellrnrTrainingAnalysis.UI
                 row.Min.Text = "N/A";
                 row.Avg.Text = "N/A";
                 row.Max.Text = "N/A";
+                row.Notes.Text = "N/A";
             }
 
             if (activity == null)
@@ -152,7 +157,7 @@ namespace FellrnrTrainingAnalysis.UI
                 if (Rows.ContainsKey(entryName))
                 {
                     TimeSeriesBase dataStream = kvp.Value;
-                    TimeValueList? tuple = dataStream.GetData();
+                    TimeValueList? tuple = dataStream.GetData(forceCount: 0, forceJustMe: false);
                     if (tuple != null)
                     {
                         float[] values = tuple.Values;
@@ -161,6 +166,8 @@ namespace FellrnrTrainingAnalysis.UI
                         row.Min.Text = values.Min().ToString();
                         row.Avg.Text = values.Average().ToString();
                         row.Max.Text = values.Max().ToString();
+                        string last = tuple.Times.Count() > 0 ? $"{Utils.Misc.FormatTime(tuple.Times.Last())}" : "No Times";
+                        row.Notes.Text = $"IsVirtual {dataStream.IsVirtual()}, t {last}";
                     }
                 }
             }
@@ -188,6 +195,7 @@ namespace FellrnrTrainingAnalysis.UI
                         string s = DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldName), activityDatumMetadata);
                         s = Utils.Misc.WordWrap(s, ArbitraryWrapLiength, " ".ToCharArray());
                         row.Value.Text = s;
+                        row.Notes.Text = $"Recorded {datum.Recorded}";
                         //row.Value.BackColor = Color.White;
                     }
                     else

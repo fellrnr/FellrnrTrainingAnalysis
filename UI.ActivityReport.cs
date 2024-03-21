@@ -1,19 +1,13 @@
-﻿using FellrnrTrainingAnalysis.Model;
-using ScottPlot.Renderable;
-using ScottPlot;
-using FellrnrTrainingAnalysis.Utils;
-using System.Text;
-using System.Reflection;
-using System;
+﻿using FellrnrTrainingAnalysis.Action;
+using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.UI;
-using System.Xml.Linq;
-using System.Collections.ObjectModel;
+using FellrnrTrainingAnalysis.Utils;
 using Microsoft.VisualBasic;
+using ScottPlot;
 using ScottPlot.Plottable;
-using FellrnrTrainingAnalysis.Action;
-using System.Windows.Forms;
-using CsvHelper;
-using System.Globalization;
+using ScottPlot.Renderable;
+using System.Reflection;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -22,7 +16,6 @@ namespace FellrnrTrainingAnalysis
         public ActivityReport()
         {
             InitializeComponent();
-            CreateRightClickMenus();
             typeof(DataGridView).InvokeMember(
                "DoubleBuffered",
                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
@@ -36,6 +29,7 @@ namespace FellrnrTrainingAnalysis
         Database? Database = null;
         FilterActivities? FilterActivities = null;
         int PageSize = 25;
+        bool FirstTime = true;
 
         public delegate void UpdateViewsEventHandler();
         public event UpdateViewsEventHandler? UpdateViews;
@@ -46,6 +40,9 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.TraceEntry("UpdateReport");
             Database = database;
             FilterActivities = filterActivities;
+            if (FirstTime)
+                CreateRightClickMenus();
+            FirstTime = false;
             UpdateReport();
             Logging.Instance.TraceLeave();
         }
@@ -274,7 +271,8 @@ namespace FellrnrTrainingAnalysis
                     CurrentlyDisplayedActivity = activity;
                     foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
                     {
-                        DisplayTimeSeries(activity, kvp);
+                        if(kvp.Value.IsValid())
+                            DisplayTimeSeries(activity, kvp);
                     }
 
                     SetAxis();
@@ -315,22 +313,31 @@ namespace FellrnrTrainingAnalysis
         private void DisplayTimeSeries(Model.Activity activity, KeyValuePair<string, TimeSeriesBase> kvp)
         {
             string timeSeriesName = kvp.Key;
+            TimeSeriesBase timeSeriesBase = kvp.Value;
 
             TimeSeriesDefinition? dataStreamDefinition = TimeSeriesDefinition.FindTimeSeriesDefinition(timeSeriesName);
             if (dataStreamDefinition == null || !dataStreamDefinition.ShowReportGraph)
                 return;
 
             double[] xArray, yArraySmoothed;
-            Tuple<double[], double[]>? xyData = GetTimeSeriesForDisplay(activity, kvp, dataStreamDefinition);
+            Tuple<double[], double[]>? xyData = GetTimeSeriesForDisplay(activity, timeSeriesName, timeSeriesBase, dataStreamDefinition);
             if (xyData == null)
                 return;
             xArray = xyData.Item1;
             yArraySmoothed = xyData.Item2;
 
-            var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArraySmoothed);
+            var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArraySmoothed, color: dataStreamDefinition.GetColor());
             scatterGraph.MarkerShape = MarkerShape.none;
             scatterGraph.LineWidth = 2;
             YAxisMinMax.Add(new Tuple<double, double>(yArraySmoothed.Min(), yArraySmoothed.Max()));
+
+            if(timeSeriesBase.Highlights != null)
+            {
+                foreach(Tuple<uint, uint> area in timeSeriesBase.Highlights)
+                {
+                    var rect = formsPlot1.Plot.AddRectangle()
+                }
+            }
 
             formsPlot1.Plot.XAxis.TickLabelFormat(customTickFormatterForTime);
             Axis yAxis;
@@ -363,14 +370,12 @@ namespace FellrnrTrainingAnalysis
             return;
         }
 
-        private Tuple<double[], double[]>? GetTimeSeriesForDisplay(Activity activity, KeyValuePair<string, TimeSeriesBase> kvp, TimeSeriesDefinition dataStreamDefinition)
+        private Tuple<double[], double[]>? GetTimeSeriesForDisplay(Activity activity, string timeSeriesName, TimeSeriesBase activityTimeSeriesdataStream, TimeSeriesDefinition dataStreamDefinition)
         {
-            string timeSeriesName = kvp.Key;
             double[] xArray;
             double[] yArraySmoothed;
 
-            Model.TimeSeriesBase activityTimeSeriesdataStream = kvp.Value;
-            TimeValueList? dataStream = activityTimeSeriesdataStream.GetData();
+            TimeValueList? dataStream = activityTimeSeriesdataStream.GetData(forceCount: 0, forceJustMe: false);
             if (dataStream == null)
             {
                 return null;
@@ -485,64 +490,145 @@ namespace FellrnrTrainingAnalysis
 
         private DataGridViewCellEventArgs? mouseLocation;
         ContextMenuStrip strip = new ContextMenuStrip();
-        List<ToolStripMenuItem> toolStripMenuItems = new List<ToolStripMenuItem>();
+        List<ToolStripItem> rightClickMenuSubMenus = new List<ToolStripItem>();
 
         private void CreateRightClickMenus()
         {
-            AddContextMenu("Highlight", new EventHandler(toolStripItem1_Click_highlight));
-            AddContextMenu("Edit Name", new EventHandler(toolStripItem1_Click_editName));
-            AddContextMenu("Edit Description", new EventHandler(toolStripItem1_Click_editDescription));
-            AddContextMenu("Recalculate", new EventHandler(toolStripItem1_Click_recalculate));
-            AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
-            AddContextMenu("Recalculate Hills", new EventHandler(toolStripItem1_Click_recalculateHills));
-            AddContextMenu("Reread FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadDataFile));
             AddContextMenu("Open In Strava...", new EventHandler(toolStripItem1_Click_openStrava));
+            AddContextMenu("Open ALL In Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
             AddContextMenu("Open File (system viewer)...", new EventHandler(toolStripItem1_Click_openFile));
             AddContextMenu("Copy File path", new EventHandler(toolStripItem1_Click_copyFitFile));
             AddContextMenu("Open In Garmin...", new EventHandler(toolStripItem1_Click_openGarmin));
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
+            AddContextMenu("Recalculate", new EventHandler(toolStripItem1_Click_recalculate));
+            AddContextMenu("Recalculate Hills", new EventHandler(toolStripItem1_Click_recalculateHills));
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
+            AddContextMenu("Highlight", new EventHandler(toolStripItem1_Click_highlight));
+            AddContextMenu("Edit Name", new EventHandler(toolStripItem1_Click_editName));
+            AddContextMenu("Edit Description", new EventHandler(toolStripItem1_Click_editDescription));
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
+            AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
+            AddContextMenu("Refresh ALL From Strava", new EventHandler(toolStripItem1_Click_refreshAll));
+            AddContextMenu("Reread FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadDataFile));
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Scan For Data Quality Issues...", new EventHandler(toolStripItem1_Click_findDataQuality));
             AddContextMenu("Show Data Quality Issues...", new EventHandler(toolStripItem1_Click_showDataQuality));
-            AddContextMenu("Open ALL In Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
             AddContextMenu("Tag ALL In Strava As...", new EventHandler(toolStripItem1_Click_tagAllStravaAsInput));
-
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddFixSubMenus("Fix This Activity", toolStripItem1_Click_tagStrava);
             AddFixSubMenus("Fix ALL Activities", toolStripItem1_Click_tagAllStrava);
-
+            rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Write table to CSV...", new EventHandler(toolStripItem1_Click_writeCsv));
             AddContextMenu("Debug Activity...", new EventHandler(toolStripItem1_Click_debugActivity));
+            AddContextMenu("Delete Activity...", new EventHandler(toolStripItem1_Click_deleteActivity));
         }
 
         private void AddContextMenu(string text, EventHandler eventHandler, TagActivities? tagActivities = null)
         {
-            ToolStripMenuItem toolStripItem3 = new ToolStripMenuItem();
-            toolStripItem3.Text = text;
-            toolStripItem3.Click += eventHandler;
-            toolStripItem3.Tag = tagActivities;
-            toolStripMenuItems.Add(toolStripItem3);
+            ToolStripMenuItem rightClickMenuItem = new ToolStripMenuItem();
+            rightClickMenuItem.Text = text;
+            rightClickMenuItem.Click += eventHandler;
+            rightClickMenuItem.Tag = tagActivities;
+            rightClickMenuSubMenus.Add(rightClickMenuItem);
+        }
+
+
+
+        //start char is ⌗ U+2317
+        //middle markers are ༶ (U+0F36)
+        //end is ֍ (U+058D)
+        private const string ASKME = "ASKME";
+        List<TagActivities> SpecialFixActivityTags = new List<TagActivities>() {
+            new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
+        };
+        List<string> FixTimeSeriesCommands = new List<string>() { "Delete", "Cap" };
+        List<string> FixDatumCommands = new List<string>() { "Override" };
+        List<TagActivities> GetFixDatumTags(string command)
+        {
+            List<TagActivities> tags = new List<TagActivities>();
+            if (Database != null)
+            {
+                foreach (string afn in Database!.CurrentAthlete.ActivityRecordedFieldNames)
+                {
+                    tags.Add(new TagActivities($"{command} {afn}...", $"⌗{afn}༶Override༶ASKME֍"));
+                }
+            }
+            return tags;
+        }
+        List<TagActivities> GetFixTimeSeriesTags(string command)
+        {
+            List<TagActivities> tags = new List<TagActivities>();
+            if (Database != null)
+            {
+                foreach (string tsn in Database!.CurrentAthlete.AllNonVirtualTimeSeriesNames)
+                {
+                    tags.Add(new TagActivities($"{command} {tsn}", $"⌗{tsn}༶{command}֍"));
+                }
+            }
+            return tags;
         }
 
         private void AddFixSubMenus(string name, EventHandler eventHandler)
         {
-            ToolStripMenuItem toolStripItem3 = new ToolStripMenuItem();
-            toolStripItem3.Text = name;
-            toolStripMenuItems.Add(toolStripItem3);
+            ToolStripMenuItem rightClickMenu = new ToolStripMenuItem(); //Fix All/Fix
+            rightClickMenu.Text = name;
+            rightClickMenuSubMenus.Add(rightClickMenu);
+
+            AddFixSubSubMenus("Special", rightClickMenu, eventHandler, SpecialFixActivityTags);
+            foreach (string command in FixTimeSeriesCommands)
+            {
+                List<TagActivities> tags = GetFixTimeSeriesTags(command);
+                AddFixSubSubMenus(command, rightClickMenu, eventHandler, tags);
+            }
+            foreach (string command in FixDatumCommands)
+            {
+                List<TagActivities> tags = GetFixDatumTags(command);
+                AddFixSubSubMenus(command, rightClickMenu, eventHandler, tags);
+            }
+        }
+
+        private void AddFixSubSubMenus(string subSubMenuName, ToolStripMenuItem rightClickSubMenu, EventHandler eventHandler, List<TagActivities> tagActivities)
+        {
+            ToolStripMenuItem rightClickSubSubMenu = new ToolStripMenuItem(); //delete, cap, etc.
+            rightClickSubSubMenu.Text = subSubMenuName;
+            rightClickSubMenu.DropDownItems.Add(rightClickSubSubMenu);
 
             List<ToolStripMenuItem> toolStripSubMenuItems = new List<ToolStripMenuItem>();
-            foreach (TagActivities t in FixActivityTags)
+            foreach (TagActivities t in tagActivities)
             {
-                ToolStripMenuItem toolStripItem4 = new ToolStripMenuItem();
-                toolStripItem4.Text = t.Name;
-                toolStripItem4.Click += eventHandler;
-                toolStripItem4.Tag = t;
-                toolStripSubMenuItems.Add(toolStripItem4);
+                ToolStripMenuItem toolStripItem = new ToolStripMenuItem();
+                toolStripItem.Text = t.Name;
+                toolStripItem.Click += eventHandler;
+                toolStripItem.Tag = t;
+                toolStripSubMenuItems.Add(toolStripItem);
             }
-            toolStripItem3.DropDownItems.AddRange(toolStripSubMenuItems.ToArray());
+            rightClickSubSubMenu.DropDownItems.AddRange(toolStripSubMenuItems.ToArray());
         }
+
+        //private void AddFixSubMenusOLDXXXXXXXXXXXXXXXXXXX(string name, EventHandler eventHandler)
+        //{
+        //    ToolStripMenuItem rightClickMenuItem = new ToolStripMenuItem();
+        //    rightClickMenuItem.Text = name;
+        //    rightClickMenuSubMenus.Add(rightClickMenuItem);
+
+        //    List<ToolStripMenuItem> toolStripSubMenuItems = new List<ToolStripMenuItem>();
+        //    List<TagActivities> tagActivities = GetFixActivityTags();
+        //    foreach (TagActivities t in tagActivities)
+        //    {
+        //        ToolStripMenuItem toolStripItem4 = new ToolStripMenuItem();
+        //        toolStripItem4.Text = t.Name;
+        //        toolStripItem4.Click += eventHandler;
+        //        toolStripItem4.Tag = t;
+        //        toolStripSubMenuItems.Add(toolStripItem4);
+        //    }
+        //    rightClickMenuItem.DropDownItems.AddRange(toolStripSubMenuItems.ToArray());
+        //}
 
         private void AddRightClicks(DataGridViewColumn dataGridViewColumn)
         {
             dataGridViewColumn.ContextMenuStrip = strip;
-            dataGridViewColumn.ContextMenuStrip.Items.AddRange(toolStripMenuItems.ToArray());
+            if (dataGridViewColumn.ContextMenuStrip.Items.Count > 0) { dataGridViewColumn.ContextMenuStrip.Items.Clear(); }
+            dataGridViewColumn.ContextMenuStrip.Items.AddRange(rightClickMenuSubMenus.ToArray());
         }
 
         private Activity? GetActivity()
@@ -660,6 +746,29 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.Log($"toolStripItem1_Click_recalculate done");
             MessageBox.Show("Done");
         }
+
+        private void toolStripItem1_Click_refreshAll(object? sender, EventArgs args)
+        {
+
+            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            {
+                Model.Activity? activity = GetActivityForRow(row);
+                if (activity == null)
+                    return;
+
+                StravaApi.Instance.RefreshActivity(Database!, activity);
+
+                Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
+                activity.Recalculate(true);
+            }
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
+            UpdateViews?.Invoke();
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate done");
+            MessageBox.Show("Done");
+        }
+
 
         private void toolStripItem1_Click_rereadDataFile(object? sender, EventArgs args)
         {
@@ -891,24 +1000,19 @@ namespace FellrnrTrainingAnalysis
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(sb.ToString());
             largeTextDialogForm.ShowDialog();
         }
+        private void toolStripItem1_Click_deleteActivity(object? sender, EventArgs args)
+        {
+            Model.Activity? activity = GetActivity();
+            if (Database == null || activity == null) return;
 
+            if (MessageBox.Show($"Really delete {activity}? (This doesn not remove it from Strava)", "Delete Activity", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
+                return;
 
-        //start char is ⌗ U+2317
-        //middle markers are ༶ (U+0F36)
-        //end is ֍ (U+058D)
-        private const string ASKME = "ASKME";
-        TagActivities[] FixActivityTags = {
-            new TagActivities("Delete Altitude", "⌗Altitude༶Delete֍"),
-            new TagActivities("Delete Power", "⌗Power༶Delete֍"),
-            new TagActivities("Delete Heart Rate", "⌗Heart Rate༶Delete֍"),
-            new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
-            new TagActivities("Cap Power...", "⌗Power༶Cap༶ASKME֍"),
-            new TagActivities("Cap Heart Rate @ 150", "⌗Heart Rate༶Cap༶150֍"),
-            new TagActivities("Cap Heart Rate @ 160", "⌗Heart Rate༶Cap༶160֍"),
-            new TagActivities("Cap Heart Rate @ 170", "⌗Heart Rate༶Cap༶170֍"),
-            new TagActivities("Cap Heart Rate @ 180", "⌗Heart Rate༶Cap༶180֍"),
-            new TagActivities("Cap Heart Rate...", "⌗Heart Rate༶Cap༶ASKME֍"),
-        };
+            Database.CurrentAthlete.DeleteActivityBeforeRecalcualte(activity);
+
+            MessageBox.Show("Deleted activity. Perform forced recalculation or restart now");
+        }
+
 
         private void toolStripItem1_Click_tagStrava(object? sender, EventArgs args)
         {
@@ -955,7 +1059,7 @@ namespace FellrnrTrainingAnalysis
             if (descriptionDatum == null)
                 descriptionDatum = new TypedDatum<string>(Activity.TagDescription, true, ""); //make this recoreded as we need it to persist
 
-            if (tag.Contains(ASKME))
+            if (tag.Contains(ASKME)) //TODO: support overriding non-numeric values
             {
                 string input = Interaction.InputBox("Enter numeric value");
                 if (string.IsNullOrEmpty(input) || !int.TryParse(input, out int askme))
@@ -977,10 +1081,7 @@ namespace FellrnrTrainingAnalysis
                 activity.AddOrReplaceDatum(descriptionDatum);
 
                 Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
-                if (!tags.ProcessTags(activity, true))
-                {
-                    MessageBox.Show("Didn't work");
-                }
+                tags.ProcessTags(activity, 0, true, true); //force and ask for debug
 
                 activity.Recalculate(true);
 
@@ -1063,7 +1164,7 @@ namespace FellrnrTrainingAnalysis
             }
 
             DataQuality dataQuality = new DataQuality();
-            dataQuality.FindBadTimeSeriess(activity);
+            dataQuality.FindBadTimeSeries(activity);
 
             if (activity.DataQualityIssues == null || activity.DataQualityIssues.Count == 0)
             {
@@ -1124,7 +1225,7 @@ namespace FellrnrTrainingAnalysis
                     if (dataStreamDefinition != null && dataStreamDefinition.ShowReportGraph)
                     {
                         TimeSeriesBase dataStreamBase = kvp.Value;
-                        TimeValueList? data = dataStreamBase.GetData();
+                        TimeValueList? data = dataStreamBase.GetData(forceCount: 0, forceJustMe: false);
                         if (data != null)
                         {
                             uint[] times = data.Times;

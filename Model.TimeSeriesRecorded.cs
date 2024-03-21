@@ -28,7 +28,7 @@ namespace FellrnrTrainingAnalysis.Model
         private TimeValueList Data;
 
         //TODO: Potential optimisation - Share time between data streams 
-        public override TimeValueList GetData() { return Data; }
+        public override TimeValueList GetData(int forceCount, bool forceJustMe) { return Data; }
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity

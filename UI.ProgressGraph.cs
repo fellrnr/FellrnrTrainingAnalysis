@@ -30,7 +30,7 @@ namespace FellrnrTrainingAnalysis.UI
         private int OP_LENGTH = MIN.Length; //not const to prevent compiler objection
 
         private string[] TimeSeriesOperations = { MIN, AVG, MAX };
-        private bool IsTimeSeriesOperations(string s) { if(s.Length < OP_LENGTH) return false; return (TimeSeriesOperations.Any(s.Contains)); }
+        private bool IsTimeSeriesOperations(string s) { if (s.Length < OP_LENGTH) return false; return (TimeSeriesOperations.Any(s.Contains)); }
         private string TimeSeriesFromOperation(string s) { if (s.Length < OP_LENGTH) return ""; return s.Substring(OP_LENGTH); }
         private string Operation(string s) { if (s.Length < OP_LENGTH) return ""; return s.Substring(0, OP_LENGTH); }
 
@@ -129,7 +129,7 @@ namespace FellrnrTrainingAnalysis.UI
                 List<double> values = new List<double>();
 
                 //foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
-                foreach(Activity activity in activities)
+                foreach (Activity activity in activities)
                 {
                     //DateTime dateTime = kvp.Key;
                     DateTime? startDateTime = activity.StartDateTimeLocal;
@@ -147,7 +147,7 @@ namespace FellrnrTrainingAnalysis.UI
                 }
                 double[] xArray = dateTimes.Select(x => x.ToOADate()).ToArray();
                 double[] yArray = values.ToArray();
-                if(filterRow.Smoothing > 0)
+                if (filterRow.Smoothing > 0)
                     yArray = TimeSeries.WindowSmoothed(yArray, (int)filterRow.Smoothing);
 
                 IPlottable plottable;
@@ -192,7 +192,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         private float? GetValue(string key, Activity activity)
         {
-            if(key.StartsWith(ACTIVITY_DOT))
+            if (key.StartsWith(ACTIVITY_DOT))
             {
                 string name = key.Substring(ACTIVITY_DOT.Length);
                 if (activity.HasNamedDatum(name))
@@ -226,9 +226,9 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     TimeSeriesBase dataStream = activity.TimeSeries[tsName];
                     float value = 0;
-                    if (dataStream != null && dataStream.GetData() != null)
+                    if (dataStream != null && dataStream.GetData(forceCount: 0, forceJustMe: false) != null)
                     {
-                        float[] valuesFromStream = dataStream.GetData()!.Values;
+                        float[] valuesFromStream = dataStream.GetData(forceCount: 0, forceJustMe: false)!.Values;
                         if (Operation(key) == MIN)
                         {
                             value = valuesFromStream.Min();

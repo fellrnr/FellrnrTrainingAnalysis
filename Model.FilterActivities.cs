@@ -350,7 +350,7 @@ namespace FellrnrTrainingAnalysis.Model
                 else
                 {
                     TimeSeriesBase datastream = activity.TimeSeries[FieldName];
-                    TimeValueList? dataTuple = datastream.GetData();
+                    TimeValueList? dataTuple = datastream.GetData(forceCount: 0, forceJustMe: false);
                     if(dataTuple == null)
                     {
                         value = null;

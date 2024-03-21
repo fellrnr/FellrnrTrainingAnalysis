@@ -10,23 +10,24 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackConstructor]
         protected TimeSeriesHeartRatePower()  //for use by memory pack deserialization only
         {
-            SportsToInclude = new List<string>(); //keep the compiler happy
         }
 
-        public TimeSeriesHeartRatePower(string name, List<List<string>> requiredFields, Activity activity, List<string> sportsToInclude, float offset = 0, float ignoreStart=0) : base(name, requiredFields, activity)
+        public TimeSeriesHeartRatePower(string name, 
+                                        Activity parent, 
+                                        bool persistCache, 
+                                        List<string>? requiredFields, 
+                                        List<string>? opposingFields = null, 
+                                        List<string>? sportsToInclude = null,
+                                        float offset = 0, 
+                                        float ignoreStart = 0) :
+            base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
-            SportsToInclude = sportsToInclude;
             Parameter(OFFSET, offset);
             Parameter(IGNORESTART, ignoreStart);
         }
 
-        [MemoryPackInclude]
-        List<string> SportsToInclude;
-
         private const string OFFSET = "Offset";
         private const string IGNORESTART = "ignoreStart";
-        [MemoryPackIgnore]
-        private float Offset {  get {  return Parameter(OFFSET); } set { Parameter(OFFSET, value); } }
 
         private const string RHR = "RestingHeartRate";
         [MemoryPackIgnore]
@@ -36,27 +37,15 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         private float Weight { get { return Parameter(WEIGHT); } set { Parameter(WEIGHT, value); } }
 
-        public override TimeValueList? CalculateData(bool forceJustMe)
+        public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
             if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesHeartRatePower - Forced recalculating {this.Name}");
-
-            if (ParentActivity == null)
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"No parent");
-                return null;
-            }
-
-            if (!ParentActivity.CheckSportType(SportsToInclude))
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"Sport not included {ParentActivity.ActivityType}");
-                return null;
-            }
 
             Logging.Instance.ContinueAccumulator("GetHrPwr");
             if (forceJustMe)
                 Logging.Instance.Debug($"Forced recalculating HrPwr");
-            TimeValueList? hrData = RequiredTimeSeries[0].GetData();
-            TimeValueList? pwrData = RequiredTimeSeries[1].GetData();
+            TimeValueList? hrData = RequiredTimeSeries[0].GetData(forceCount, forceJustMe);
+            TimeValueList? pwrData = RequiredTimeSeries[1].GetData(forceCount, forceJustMe);
 
             if (hrData == null || pwrData == null) { return null; } //should never happen
 

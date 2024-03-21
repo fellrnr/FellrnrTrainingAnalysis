@@ -223,7 +223,7 @@ namespace FellrnrTrainingAnalysis.Action
             stringBuilderResults.Append(stringBuilder.ToString());
         }
 
-
+        private const string SportsTracksGUID = "SportTracks GUID";
         string FitLogPreamble = """
             <?xml version="1.0" encoding="utf-8"?>
             <FitnessWorkbook xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.zonefivesoftware.com/xmlschemas/FitnessLogbook/v3">
@@ -348,7 +348,16 @@ namespace FellrnrTrainingAnalysis.Action
 
                 totalCount++;
             }
-            
+
+            foreach (SportTracksActivity act in AllActivitesParsed)
+            {
+                if(act.matchingActivity != null && act._guid != null)
+                {
+                    act.matchingActivity.AddOrReplaceDatum(new TypedDatum<string>(SportsTracksGUID, true, act._guid));
+                }
+            }
+
+
             WriteMissingFitlog(stringBuilder); //do this after verify or the activities won't be updated!
 
             stringBuilder.AppendLine($"Total {totalCount}");

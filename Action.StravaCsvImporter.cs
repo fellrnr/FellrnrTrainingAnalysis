@@ -54,10 +54,10 @@ namespace FellrnrTrainingAnalysis.Action
             List<Activity> activities = new List<Activity>();  
             foreach (Dictionary<string, Datum> activityRow in spreadsheetOfActivites)
             {
-                DateTime expectedStartDateTime = Activity.ExpectedStartDateTime(activityRow);
-                if (Options.Instance.OnlyLoadAfter != null && Options.Instance.OnlyLoadAfter >= expectedStartDateTime)
+                DateTime estimatedStartDateTime = Activity.EstimatedStartDateTime(activityRow);
+                if (Options.Instance.OnlyLoadAfter != null && Options.Instance.OnlyLoadAfter >= estimatedStartDateTime)
                 {
-                    Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", expectedStartDateTime, Options.Instance.OnlyLoadAfter));
+                    Logging.Instance.Log(string.Format("Activity is at {0} and OnlyLoadAfter is {1}", estimatedStartDateTime, Options.Instance.OnlyLoadAfter));
                 }
                 else
                 {

@@ -82,7 +82,7 @@ Database.MasterRecalculate
 
 Extensible
 	Athlete [Day, DateTime->Day, DateTime->CalendarNode, String->Activity, DateTime->Activity]
-	Activity [TimeSeriess]
+	Activity [TimeSeries]
 	CalendarNode [DateTime->Extensible (CalendarNode or Activity)
 	Day (Activity)
 	

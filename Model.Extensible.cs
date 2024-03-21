@@ -1,4 +1,5 @@
-﻿using MemoryPack;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 using System.ComponentModel;
 using System.Formats.Asn1;
 
@@ -24,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackOrder(20)] //start at 20 to avoid conflict with Activity
         protected Dictionary<string, Datum> Data { get; set; }
 
-        public abstract Utils.DateTimeTree Id(); //Hack to see if tree works
+        public virtual Utils.DateTimeTree Id() { return new DateTimeTree(); } 
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<string> DataNames { get { return Data.Keys.ToList().AsReadOnly(); } }

@@ -11,35 +11,12 @@ namespace FellrnrTrainingAnalysis.Model
         public CalculateDataFieldFromTimeSeriesBase(string activityFieldname, string sourceStreamName, List<string>? sportsToInclude = null)
         {
             SourceStreamName = sourceStreamName;
-            SourceTimeSeries = null;
             ActivityFieldname = activityFieldname;
             SportsToInclude = sportsToInclude;
         }
 
         List<string>? SportsToInclude;
         private string SourceStreamName;
-        private TimeSeriesBase? SourceTimeSeries = null;
-
-
-        private TimeSeriesBase? TimeSeries(Activity activity)
-        {
-            if (SourceTimeSeries != null)
-                return SourceTimeSeries;
-
-
-            if (!activity.TimeSeries.ContainsKey(SourceStreamName))
-                return null;
-
-            return activity.TimeSeries[SourceStreamName];
-        }
-
-        private TimeValueList? GetUnderlyingTimeSeries(Activity parent)
-        {
-            //calling TimeSeries(parent) does the computation,
-            TimeSeriesBase? dataStreamBase = TimeSeries(parent);
-            return dataStreamBase == null ? null : dataStreamBase!.GetData();
-        }
-
 
         public string ActivityFieldname { get; set; }
 
@@ -54,7 +31,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (extensible == null || extensible is not Activity)
             {
-                if (force) Logging.Instance.TraceLeave($"No activity");
+                if (forceJustMe) Logging.Instance.TraceLeave($"No activity");
                 return;
             }
 
@@ -62,6 +39,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (activity.HasNamedDatum(ActivityFieldname) && !force)
             {
+                if (forceJustMe) Logging.Instance.TraceLeave($"No activity");
                 return;
             }
             //always remove if we're recalculating
@@ -69,21 +47,30 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (SportsToInclude != null && !activity.CheckSportType(SportsToInclude))
             {
-                if (force) Logging.Instance.TraceLeave($"Wrong type {activity.ActivityType}");
+                if (forceJustMe) Logging.Instance.TraceLeave($"Wrong type {activity.ActivityType}");
                 return;
             }
-            if (TimeSeries(activity) == null)
+
+            if (!activity.TimeSeries.ContainsKey(SourceStreamName))
             {
-                if (force) Logging.Instance.TraceLeave($"No time series at all");
+                if (forceJustMe) Logging.Instance.TraceLeave($"No time series {SourceStreamName}");
                 return;
             }
-            TimeSeries(activity)!.Recalculate(forceCount, false);
 
+            TimeSeriesBase ts = activity.TimeSeries[SourceStreamName];
 
-            TimeValueList? data = GetUnderlyingTimeSeries(activity);
+            //ts.Recalculate(forceCount, forceJustMe); //if recalculation is required, it will have been done earlier
+
+            if (!ts.IsValid())
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"Not valid {SourceStreamName}");
+                return;
+            }
+
+            TimeValueList? data = ts.GetData(forceCount, forceJustMe);
             if (data == null)
             {
-                if (force) Logging.Instance.TraceLeave($"No underlying time series");
+                if (forceJustMe) Logging.Instance.TraceLeave($"No underlying time series data");
                 return;
             }
 
@@ -93,10 +80,14 @@ namespace FellrnrTrainingAnalysis.Model
             if (value != 0)
                 activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value));
 
-            if (force) Logging.Instance.TraceLeave($"CalculateDataFieldFromTimeSeriesBase Forced ExtractValue {ActivityFieldname} retval {value}");
+            if (forceJustMe) Logging.Instance.TraceLeave($"CalculateDataFieldFromTimeSeriesBase Forced ExtractValue {ActivityFieldname} retval {value}");
         }
         protected abstract float ExtractValue(TimeValueList data, bool forceJustMe);
 
+        public override string ToString()
+        {
+            return $"CalculateDataFieldFromTimeSeriesBase: Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
+        }
     }
 
     public class CalculateDataFieldFromTimeSeriesSimple : CalculateDataFieldFromTimeSeriesBase

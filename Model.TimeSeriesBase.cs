@@ -8,9 +8,11 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(0, typeof(TimeSeriesRecorded))]
     [MemoryPackUnion(1, typeof(TimeSeriesDelta))]
     [MemoryPackUnion(2, typeof(TimeSeriesEphemeral))]
-    [MemoryPackUnion(3, typeof(TimeSeriesCalculated))]
-    [MemoryPackUnion(4, typeof(TimeSeriesGradeAdjustedDistance))]
-    [MemoryPackUnion(5, typeof(TimeSeriesHeartRatePower))]
+    [MemoryPackUnion(3, typeof(TimeSeriesGradeAdjustedDistance))]
+    [MemoryPackUnion(4, typeof(TimeSeriesHeartRatePower))]
+    [MemoryPackUnion(5, typeof(TimeSeriesCalculateAltitude))]
+    [MemoryPackUnion(6, typeof(TimeSeriesCalculateDistance))]
+    [MemoryPackUnion(7, typeof(TimeSeriesCalculatePower))]
     public abstract partial class TimeSeriesBase
     {
         //Note: there is an instance of each TimeSeries object for each activity
@@ -27,11 +29,21 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         
-        public abstract TimeValueList? GetData();
+        public abstract TimeValueList? GetData(int forceCount, bool forceJustMe);
 
         public abstract bool IsValid();
 
         public abstract bool IsVirtual();
+
+        [MemoryPackIgnore]
+        public List<Tuple<uint, uint>>? Highlights = null;
+
+        public void AddHighlight(Tuple<uint, uint> area)
+        {
+            if(Highlights == null)
+                Highlights = new List<Tuple<uint, uint>>();
+            Highlights.Add(area);
+        }
 
         [MemoryPackInclude]
         public string Name { get; set; } //Ohhh, memory pack requires a public setter! 
@@ -45,6 +57,8 @@ namespace FellrnrTrainingAnalysis.Model
             parent_ = parent;
         }
 
+        public virtual void PreSerialize() { }
+
         [MemoryPackIgnore]
         protected Activity? ParentActivity { get { return parent_; } }
         //[MemoryPackInclude]
@@ -56,8 +70,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override string ToString()
         {
-            return $"Data Stream Name [{Name}], IsValid {IsValid()}, IsVirtual {IsVirtual()}";
+            return $"TimeSeries: Type {this.GetType().Name} Name {Name}, IsValid {IsValid()}, IsVirtual {IsVirtual()}";
         }
+
         //percentiles - min, 0.03, 5, 32, 50, 68, 95, 99.7, max
         public enum StaticsValue { Min, SD3Low, SD2Low, SD1Low, Median, SD1High, SD2High, SD3High, Max, StandardDeviation, Mean }
         private float[]? _percentiles;
@@ -65,7 +80,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (_percentiles == null)
             {
-                TimeValueList? data = GetData();
+                TimeValueList? data = GetData(forceCount: 0, forceJustMe: false);
                 if (data == null || data.Values.Length == 0)
                     return float.MinValue;
 

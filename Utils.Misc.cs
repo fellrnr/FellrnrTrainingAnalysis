@@ -1,5 +1,6 @@
 ﻿using de.schumacher_bw.Strava.Model;
 using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.UI;
 using GMap.NET;
 using GMap.NET.WindowsForms;
 using Microsoft.VisualBasic.Logging;
@@ -123,7 +124,7 @@ namespace FellrnrTrainingAnalysis.Utils
             const uint INTERVAL = 30;
             if (dataStream != null)
             {
-                AlignedTimeLocationSeries? aligned = AlignedTimeLocationSeries.Align(locationStream, dataStream);
+                AlignedTimeLocationSeries? aligned = AlignedTimeLocationSeries.Align(locationStream, dataStream, forceCount: 0, forceJustMe: false);
 
                 if (aligned != null)
                 {
@@ -260,6 +261,109 @@ namespace FellrnrTrainingAnalysis.Utils
 
             public string TaskName { get => taskName; set => taskName = value; }
             public int Maximum { get => maximum; set => maximum = value; }
+        }
+
+
+        public static void IntegrityCheck(Database database, StringBuilder sb)
+        {
+            CheckCalendar(database, sb);
+            CheckForNaN(database, sb);
+        }
+
+        private static void CheckForNaN(Database database, StringBuilder sb)
+        {
+            Athlete athlete = database.CurrentAthlete;
+            foreach(KeyValuePair<DateTime, Model.Day> kvp in athlete.Days)
+            {
+                CheckData(sb, kvp.Value);
+            }
+            foreach (KeyValuePair<string, Model.Activity> kvp in athlete.Activities)
+            {
+                CheckData(sb, kvp.Value);
+            }
+            foreach (KeyValuePair<string, Model.Activity> kvp in athlete.Activities)
+            {
+                CheckTimeSeries(sb, kvp.Value);
+            }
+        }
+
+        private static void CheckTimeSeries(StringBuilder sb, Activity activity)
+        {
+            foreach(KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
+            {
+                TimeSeriesBase timeSeriesBase = kvp.Value;
+                if(timeSeriesBase.IsValid())
+                {
+                    TimeValueList? tvl = timeSeriesBase.GetData(forceCount: 0, forceJustMe: false);
+                    if(tvl == null)
+                    {
+                        sb.AppendLine($"TimeSeries returned null for GetData when valid, {activity}, {timeSeriesBase}");
+                    }
+                    else
+                    {
+                        foreach(float f in tvl.Values)
+                        {
+                            if(float.IsNaN(f))
+                            {
+                                sb.AppendLine($"TimeSeries found NaN, {activity}, {timeSeriesBase}");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void CheckData(StringBuilder sb, Extensible extensible)
+        {
+            foreach (Datum d in extensible.DataValues)
+            {
+                if (d != null && d is TypedDatum<float>)
+                {
+                    TypedDatum<float> typedDatum = (TypedDatum<float>)d;
+                    if (float.IsNaN(typedDatum.Data))
+                    {
+                        sb.AppendLine($"Found Nan for {typedDatum} on {extensible}");
+                    }
+                }
+            }
+        }
+
+        private static void CheckCalendar(Database database, StringBuilder sb)
+        {
+            Dictionary<Activity, CalendarNode> integrityCheckCalendar = new Dictionary<Activity, CalendarNode>();
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
+            {
+                CheckCalendar(kvp.Value, integrityCheckCalendar, sb);
+            }
+
+        }
+        private static void CheckCalendar(CalendarNode node, Dictionary<Activity, CalendarNode> integrityCheckCalendar, StringBuilder sb)
+        {
+            foreach (KeyValuePair<DateTime, Extensible> kvp in node.Children)
+            {
+                if (kvp.Value is CalendarNode)
+                {
+                    CheckCalendar((CalendarNode)kvp.Value, integrityCheckCalendar, sb);
+                }
+                else if (kvp.Value is Activity)
+                {
+                    Activity activity = (Activity)kvp.Value;
+                    if (integrityCheckCalendar.ContainsKey(activity))
+                    {
+                        CalendarNode other = integrityCheckCalendar[activity];
+                        DateTime? utc = activity.StartDateTimeUTC;
+                        DateTime? local = activity.StartDateTimeLocal;
+
+
+                        sb.AppendLine($"Found duplicate {activity} in {node} and {other} {utc} {local}");
+                    }
+                    else
+                    {
+                        integrityCheckCalendar.Add(activity, node);
+                    }
+                }
+            }
         }
 
     }

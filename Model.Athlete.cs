@@ -101,7 +101,6 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackIgnore]
         public ReadOnlyDictionary<string, Activity> Activities { get { return _activities.AsReadOnly(); } }
 
-        public override Utils.DateTimeTree Id() { return new DateTimeTree(); } //HACK: Hack to see if tree works
 
         [MemoryPackInclude]
         private SortedDictionary<DateTime, Activity> _activitiesByUTCDateTime { get; set; } = new SortedDictionary<DateTime, Activity>(); //we sometimes need to access activities in date order
@@ -116,10 +115,16 @@ namespace FellrnrTrainingAnalysis.Model
         public ReadOnlyDictionary<DateTime, Activity> ActivitiesByUTCDateTime { get { return _activitiesByUTCDateTime.AsReadOnly(); } }
 
         [MemoryPackIgnore]
+        List<String>? _allTimeSeriesNamesCache = null;
+
+        [MemoryPackIgnore]
         public IReadOnlyCollection<String> AllTimeSeriesNames //generate dynamically, don't cache = new List<string>();
         { 
             get
             {
+                if(_allTimeSeriesNamesCache != null)
+                    return _allTimeSeriesNamesCache;
+
                 List<string> timeSeriesNames = new List<string>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
                 {
@@ -133,15 +138,52 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                 }
                 timeSeriesNames.Sort();
+                _allTimeSeriesNamesCache = timeSeriesNames;
                 return timeSeriesNames.AsReadOnly();
             }
         }
+
+        [MemoryPackIgnore]
+        List<String>? _allNonVirtualTimeSeriesNamesCache = null;
+
+        [MemoryPackIgnore]
+        public IReadOnlyCollection<String> AllNonVirtualTimeSeriesNames //generate dynamically, don't cache = new List<string>();
+        {
+            get
+            {
+                if (_allNonVirtualTimeSeriesNamesCache != null)
+                    return _allNonVirtualTimeSeriesNamesCache;
+
+                _allNonVirtualTimeSeriesNamesCache = new List<string>();
+                foreach (KeyValuePair<string, Activity> kvp in _activities)
+                {
+                    Activity activity = kvp.Value;
+                    foreach (KeyValuePair<string, TimeSeriesBase> kvp2 in activity.TimeSeries)
+                    {
+                        string name = kvp2.Key;
+                        TimeSeriesBase ts = kvp2.Value;
+                        if (!ts.IsVirtual()  && !_allNonVirtualTimeSeriesNamesCache.Contains(name))
+                        {
+                            _allNonVirtualTimeSeriesNamesCache.Add(name);
+                        }
+                    }
+                }
+                _allNonVirtualTimeSeriesNamesCache.Sort();
+                return _allNonVirtualTimeSeriesNamesCache.AsReadOnly();
+            }
+        }
+
+
+        [MemoryPackIgnore]
+        List<String>? _allActivityTypesCache = null;
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> AllActivityTypes //generate dynamically, don't cache = new List<string>();
         {
             get
             {
+                if(_allActivityTypesCache != null)
+                    return _allActivityTypesCache;
                 List<string> activityTypes = new List<string>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
                 {
@@ -153,17 +195,22 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                 }
                 activityTypes.Sort();
+                _allActivityTypesCache = activityTypes;
                 return activityTypes.AsReadOnly();
             }
         }
 
 
+        [MemoryPackIgnore]
+        List<Tuple<String, Type>>? _activityFieldMetaDataCache = null;
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<Tuple<String, Type>> ActivityFieldMetaData
         {
             get
             {
+                if(_activityFieldMetaDataCache != null)
+                    return _activityFieldMetaDataCache;
                 List<Tuple<String, Type>> activityFieldMetaData = new List<Tuple<string, Type>>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
                 {
@@ -178,6 +225,7 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                 }
                 activityFieldMetaData.Sort();
+                _activityFieldMetaDataCache = activityFieldMetaData;
                 return activityFieldMetaData.AsReadOnly();
             }
         }
@@ -185,56 +233,85 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         [MemoryPackIgnore]
-        private List<string>? activityFieldNames = null;
+        private List<string>? _activityFieldNamesCache = null;
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> ActivityFieldNames
         {
             get
             {
-                if (activityFieldNames != null)
-                    return activityFieldNames;
+                if (_activityFieldNamesCache != null)
+                    return _activityFieldNamesCache;
 
-                activityFieldNames = new List<string>();
+                _activityFieldNamesCache = new List<string>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
                 {
                     Activity activity = kvp.Value;
                     foreach (string s in activity.DataNames)
                     {
-                        if (!activityFieldNames.Contains(s))
+                        if (!_activityFieldNamesCache.Contains(s))
                         {
-                            activityFieldNames.Add(s);
+                            _activityFieldNamesCache.Add(s);
                         }
                     }
                 }
-                activityFieldNames.Sort();
-                return activityFieldNames.AsReadOnly();
+                _activityFieldNamesCache.Sort();
+                return _activityFieldNamesCache.AsReadOnly();
             }
         }
 
+
         [MemoryPackIgnore]
-        private List<string>? dayFieldNames = null;
+        private List<string>? _activityRecordedFieldNamesCache = null;
+        [MemoryPackIgnore]
+        public IReadOnlyCollection<String> ActivityRecordedFieldNames
+        {
+            get
+            {
+                if (_activityRecordedFieldNamesCache != null)
+                    return _activityRecordedFieldNamesCache;
+
+                _activityRecordedFieldNamesCache = new List<string>();
+                foreach (KeyValuePair<string, Activity> kvp in _activities)
+                {
+                    Activity activity = kvp.Value;
+                    foreach (Datum d in activity.DataValues)
+                    {
+                        if (d.Recorded && !_activityRecordedFieldNamesCache.Contains(d.Name))
+                        {
+                            _activityRecordedFieldNamesCache.Add(d.Name);
+                        }
+                    }
+                }
+                _activityRecordedFieldNamesCache.Sort();
+                return _activityRecordedFieldNamesCache.AsReadOnly();
+            }
+        }
+
+
+        [MemoryPackIgnore]
+        private List<string>? _dayFieldNamesCache = null;
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> DayFieldNames
         {
             get
             {
-                if (dayFieldNames != null)
-                    return dayFieldNames;
+                if (_dayFieldNamesCache != null)
+                    return _dayFieldNamesCache;
 
-                dayFieldNames = new List<string>();
+                _dayFieldNamesCache = new List<string>();
                 foreach (KeyValuePair<DateTime, Day> kvp in _days)
                 {
                     Day day = kvp.Value;
                     foreach (string s in day.DataNames)
                     {
-                        if (!dayFieldNames.Contains(s))
+                        if (!_dayFieldNamesCache.Contains(s))
                         {
-                            dayFieldNames.Add(s);
+                            _dayFieldNamesCache.Add(s);
                         }
                     }
                 }
-                dayFieldNames.Sort();
-                return dayFieldNames.AsReadOnly();
+                _dayFieldNamesCache.Sort();
+                return _dayFieldNamesCache.AsReadOnly();
             }
         }
 
@@ -438,6 +515,11 @@ namespace FellrnrTrainingAnalysis.Model
             return sb.ToString();
         }
 
+        public void DeleteActivityBeforeRecalcualte(Activity activity) //the name is a hint to force a recalculate
+        {
+            if (_activities.ContainsKey(activity.PrimaryKey()))
+                _activities.Remove(activity.PrimaryKey());
+        }
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
             Logging.Instance.TraceEntry($"Athlete.Recalculate {forceCount}, {forceJustMe}");
@@ -447,24 +529,49 @@ namespace FellrnrTrainingAnalysis.Model
             if (force)
             {
                 Logging.Instance.Debug("Athelete force recalculation clean");
-                base.Clean();
-                dayFieldNames = null;
-                activityFieldNames = null;
+                RefreshLists();
             }
-            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
-            int i = 0;
+            //don't report on calendar progress; it's too high level
+            //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities Entries ({Activities.Count})", Activities.Count+1));
+            Activity.CurrentRecalculateProgress = 0; //ugly hack for progress count
+            //int i = 0;
             foreach (KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
             {
                 CalendarNode calendarNode = kvp1.Value;
-                calendarNode.Recalculate(forceCount, forceJustMe); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
-                if (worker != null) worker.ReportProgress(++i);
+                calendarNode.Recalculate(forceCount, forceJustMe, worker); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
+                //if (worker != null) worker.ReportProgress(++i);
             }
 
             Logging.Instance.TraceLeave();
 
         }
 
+        //this shouldn't be needed, but it's possible for an activity to change start time (or maybe even id?) when refreshing from strava
+        private void RefreshLists()
+        {
+            Dictionary<string, Activity> oldList = _activities;
 
+            base.Clean();
+            _dayFieldNamesCache = null;
+            _activityFieldNamesCache = null;
+            _days = new SortedDictionary<DateTime, Day>();
+            _calendarTree = new SortedList<DateTime, CalendarNode>();
+            _activities = new Dictionary<string, Activity>();
+            _activitiesByUTCDateTime = new SortedDictionary<DateTime, Activity>();
+            _activitiesByLocalDateTime = new SortedDictionary<DateTime, Activity>();
+            _allTimeSeriesNamesCache = null;
+            _allActivityTypesCache = null;
+            _activityFieldMetaDataCache = null;
+
+            foreach(KeyValuePair<string, Activity> kvp in oldList) 
+            {
+                Activity activity = kvp.Value;
+                string id = activity.PrimaryKey();
+                _activities.Add(id, activity);
+                FinalizeAdd(activity);
+            }
+        }
 
         public void PostDeserialize()
         {
@@ -473,6 +580,15 @@ namespace FellrnrTrainingAnalysis.Model
                 kvp.Value.PostDeserialize(this);
             }
         }
+
+        public void PreSerialize()
+        {
+            foreach (KeyValuePair<string, Activity> kvp in _activities)
+            {
+                kvp.Value.PreSerialize(this);
+            }
+        }
+
         public const string AthleteIdTag = "AthleteId";
         public const string EmailAddressTag = "Email Address";
         public const string FirstNameTag = "First Name";

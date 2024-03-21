@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -67,7 +68,7 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<DateTime, Extensible> kvp in _children)
             {
                 Extensible child = kvp.Value;
-                child.Recalculate(force);
+                child.Recalculate(forceCount, forceJustMe, worker);
                 foreach (string name in child.DataNames)
                 {
                     Datum? datum = child.GetNamedDatum(name);
@@ -113,6 +114,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
+        public override string ToString()
+        {
+            return string.Format($"CalendarNode {Id()}");
+        }
 
     }
 }

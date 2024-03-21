@@ -14,10 +14,11 @@ namespace FellrnrTrainingAnalysis.Model
         protected TimeSeriesDelta()  //for use by memory pack deserialization only
         {
         }
-        public TimeSeriesDelta(string name, List<List<string>> requiredFields, Activity activity, float scalingFactor = 1, float? numerator = null, float? period = null, float? limit = null) : 
-            base(name, requiredFields, activity)
+        public TimeSeriesDelta(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null,
+                                float scalingFactor = 1, float? numerator = null, float? period = null, float? limit = null) : 
+            base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
-            if (requiredFields.Count != 1) throw new ArgumentException("TimeSeriesDelta must have only one required field");
+            if (requiredFields == null || requiredFields.Count != 1) throw new ArgumentException("TimeSeriesDelta must have only one required field");
             ScalingFactor = scalingFactor;
             Numerator = numerator;
             Period = period;
@@ -35,30 +36,31 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackInclude]
         float? Limit{ get; set; }
 
-        public override TimeValueList? CalculateData(bool forceJustMe)
+        public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
             if (forceJustMe)
                 Logging.Instance.Debug($"TimeSeriesDelta: Forced recalculating {this.Name}");
-            if (ParentActivity  == null) return null;
 
-            //Crude way of debugging a data stream deltas
+            //Crude way of debugging a data stream deltas. Just change the id
             bool extraDebug = false;
-            if (ParentActivity.PrimaryKey().Contains("10478327023") && Name == TimeSeriesFactory.GRADE_ADUJUSTED_PACE)
+            if (ParentActivity!.PrimaryKey().Contains("10478327023") && Name == TimeSeriesFactory.GRADE_ADUJUSTED_PACE)
             {
                 extraDebug = true;
             }
+            if(RequiredTimeSeries == null  || RequiredTimeSeries.Count != 1)
+            {
+                Logging.Instance.Error($"Somehow got no required time series for {this}, activity {this.ParentActivity}");
+                return null;
+            }
 
-            ReadOnlyDictionary<string, TimeSeriesBase> timeSeries = ParentActivity.TimeSeries;
             TimeSeriesBase dataStream = RequiredTimeSeries[0];
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
             if (data == null) { return null; }
 
             if (data.Values.Min() == 0 && data.Values.Max() == 0) //all zeros and we don't really have any data
                 return null;
 
             TimeValueList? newData;
-
-            
 
             if(Period == null || Period == 1)
             {
@@ -69,11 +71,6 @@ namespace FellrnrTrainingAnalysis.Model
                 newData = TimeValueList.SpanDeltas(data, ScalingFactor, Numerator, Limit, (float)Period, extraDebug);
             }
             return newData;
-        }
-
-        float InterpolateValue(float value1, float time1, float value2, float time2, float time)
-        {
-            return value1 + ((value2 - value1) * (time - time1)) / (time2 - time1);
         }
 
     }

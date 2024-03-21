@@ -45,6 +45,16 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string DisplayUnitsName { get; set; } = "";
 
+        public string ColorName = "";
+
+        public Color GetColor()
+        {
+            if (string.IsNullOrEmpty(ColorName))
+                return Color.Black;
+            else
+                return Color.FromName(ColorName);
+        }
+
         //Just to comment the CSV file
         public string Comment { get; set; } = "";
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using System.Xml.Linq;
@@ -87,11 +88,17 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         public TimeSpan GetAndStopTime(string name = "") { Timer(name).Stop(); TimeSpan retval = Timer(name).Elapsed; return retval; }
 
+
+        private const int MaxDebugLength = 1024 * 1024 * 10; //10Mb
         public void Debug(string message)
         {
             if (Options.Instance.LogLevel == Options.Level.Debug)
             {
-                if(Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
+                if (DebugStringBuilder.Length < MaxDebugLength)
+                {
+                    if (Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
+                }
+                
                 DebugFile.WriteLine(message);
                 DebugFile.Flush();
             }

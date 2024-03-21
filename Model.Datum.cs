@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.Model
         /// Override ToString() for display
         public override string ToString()
         {
-            return $"Name {Name.Replace("\n", "⏎")}, Value {Data}, type {typeof(T).Name}"; 
+            return $"TypedDatum: [Name {Name.Replace("\n", "⏎")}, Value {Data}, Recorded {Recorded} type {typeof(T).Name}]"; 
         }
 
         public override string DataAsString()

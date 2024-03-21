@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using FellrnrTrainingAnalysis.Model;
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -10,10 +11,11 @@ namespace FellrnrTrainingAnalysis.Utils
         List<DataQualityCheck> dataQualityCheckList = new List<DataQualityCheck>();
         public DataQuality()
         {
-            
+
             //No change is benign, and can be real if a very flat course
             //dataQualityCheckList.Add(new DataQualityCheckStuckValue("Altitude has no change for too far", "Altitude", "Distance", new DataRemediationNoAction(), 1000));
 
+            dataQualityCheckList.Add(new DataQualityHeartRate("Heart Rate Wrong", new DataRemediationNoAction(), minHrPwr: 20, maxHr: 190));
 
             dataQualityCheckList.Add(new DataQualityCheckFixedValue("Altitude fixed value (indoor?)", "Altitude", null, new DataRemediationNoAction()));
 
@@ -42,7 +44,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public ReadOnlyCollection<DataQualityCheck> CheckList { get {  return dataQualityCheckList.AsReadOnly(); } }
 
-        public List<String> FindBadTimeSeriess(Database database, DataQualityCheck? check = null, bool fix=false)
+        public List<String> FindBadTimeSeries(Database database, DataQualityCheck? check = null, bool fix=false)
         {
             List<String> badStreams = new List<String>();
 
@@ -52,7 +54,7 @@ namespace FellrnrTrainingAnalysis.Utils
             {
                 Activity activity = kvp.Value;
 
-                List<string> badActivitystreams = FindBadTimeSeriess(activity, check, fix);
+                List<string> badActivitystreams = FindBadTimeSeries(activity, check, fix);
 
 
                 badStreams.AddRange(badActivitystreams);
@@ -62,11 +64,10 @@ namespace FellrnrTrainingAnalysis.Utils
             return badStreams;
         }
 
-        public List<string> FindBadTimeSeriess(Activity activity, DataQualityCheck? check = null, bool fix = false)
+        public List<string> FindBadTimeSeries(Activity activity, DataQualityCheck? check = null, bool fix = false)
         {
             List<string> badStreams = new List<string>();
-            if (activity.DataQualityIssues != null)
-                activity.DataQualityIssues.Clear();
+            activity.ClearDataQualityIssues();
 
 
             if (check != null)
@@ -113,6 +114,85 @@ namespace FellrnrTrainingAnalysis.Utils
     }
 
 
+    public class DataQualityHeartRate : DataQualityCheck
+    {
+        public DataQualityHeartRate(string description, DataRemediation dataRemediation, float minHrPwr, float maxHr) : base(description, dataRemediation)
+        {
+            MaxHr = maxHr;
+            MinHrPwr = minHrPwr;
+        }
+        float MinHrPwr;
+        float MaxHr;
+
+        protected override List<string> FindBadData(Activity activity)
+        {
+            List<string> badStreams = new List<string>();
+
+            if(!activity.TimeSeries.ContainsKey(Activity.TagHeartRate))
+                return badStreams;
+
+            if (!activity.TimeSeries.ContainsKey(Activity.TagHrPwr))
+                return badStreams;
+
+            TimeSeriesBase hr = activity.TimeSeries[Activity.TagHeartRate];
+            TimeSeriesBase hrpwr = activity.TimeSeries[Activity.TagHrPwr];
+            TimeValueList? hrd = hr.GetData(forceCount: 0, forceJustMe: true);
+            TimeValueList? hrpwrd = hrpwr.GetData(forceCount: 0, forceJustMe: true);
+            if (hrd == null || hrpwrd == null)
+                return badStreams;
+
+            List<Tuple<uint, uint>> TooHigh = new List<Tuple<uint, uint>>();
+
+            uint startOfBad = 0;
+            int suspicion = 0;
+            bool inbad = false;
+            uint lastTime = 0;
+            for(int i=0; i < hrd.Length; i++)
+            {
+                if (hrd.Values[i] > MaxHr)
+                {
+                    if (!inbad)
+                        startOfBad = (uint)i;
+                    inbad = true;
+                    suspicion = 30;
+                }
+                else
+                {
+                    if (inbad)
+                    {
+                        int deltat = (int)hrd.Values[i] - (int)lastTime;
+                        suspicion -= deltat;
+                        if (suspicion < 0 || i == hrd.Length-1) //grab problems that go to the end
+                        {
+                            inbad = false;
+                            Tuple<uint, uint> area = new Tuple<uint, uint>(startOfBad, (uint)i);
+                            TooHigh.Add(area);
+                            hr.AddHighlight(area);
+                            badStreams.Add($"Over {MaxHr} from {startOfBad} to {i}, {activity}");
+                        }
+                    }
+                }
+                lastTime = hrd.Times[i];
+            }
+
+            if(badStreams.Count > 0)
+            {
+                if (activity.DataQualityIssues == null)
+                    activity.DataQualityIssues = badStreams;
+                else
+                    activity.DataQualityIssues.AddRange(badStreams);
+            }
+
+            return badStreams;
+        }
+
+        public override string Reason(Activity activity, TimeSeriesBase dataStream, string reason)
+        {
+            return string.Format("Activity {0}, stream {1}, reason {2}", activity.ToString(), dataStream.ToString(), reason);
+        }
+    }
+
+
     public abstract class DataQualityCheckStream : DataQualityCheck
     {
 
@@ -131,7 +211,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 return timeT;
             }
 
-            TimeValueList? data = dataStreamX.GetData();
+            TimeValueList? data = dataStreamX.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return timeT;
 
@@ -194,6 +274,10 @@ namespace FellrnrTrainingAnalysis.Utils
         }
     }
 
+
+
+
+
     public class DataQualityCheckStuckValue : DataQualityCheckStream
     {
         public DataQualityCheckStuckValue(string description, string target, string? xaxis, DataRemediation dataRemediation, float? maxAllowedXSpanWithNoYChange) : base(description, target, xaxis, dataRemediation)
@@ -204,7 +288,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -276,7 +360,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -326,7 +410,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -372,7 +456,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -403,7 +487,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -439,7 +523,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < 2)
                 return null;
 
@@ -542,7 +626,7 @@ namespace FellrnrTrainingAnalysis.Utils
             if (!activity.TimeSeries.ContainsKey(Target))
                 return;
             TimeSeriesBase dataStream = activity.TimeSeries[Target];
-            TimeValueList? data = dataStream.GetData();
+            TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
             if (data == null || data.Times.Length < Position)
                 return;
 
