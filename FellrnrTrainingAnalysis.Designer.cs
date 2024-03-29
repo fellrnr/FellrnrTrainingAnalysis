@@ -66,6 +66,7 @@
             scanForDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
             fixDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
             emailGoalsToolStripMenuItem = new ToolStripMenuItem();
+            exploreGlobalRelationshipsToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem1 = new ToolStripMenuItem();
             showOnlyToolStripMenuItem = new ToolStripMenuItem();
@@ -89,6 +90,7 @@
             overviewMap1 = new UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
             recalculateBackgroundWorker1 = new System.ComponentModel.BackgroundWorker();
+            experimentalToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -332,7 +334,7 @@
             // 
             // toolsToolStripMenuItem
             // 
-            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { findDataQualityIssuesToolStripMenuItem, rescanForDataQualityIssuesToolStripMenuItem, scanForDataQualityIssueToolStripMenuItem, fixDataQualityIssueToolStripMenuItem, emailGoalsToolStripMenuItem });
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { findDataQualityIssuesToolStripMenuItem, rescanForDataQualityIssuesToolStripMenuItem, scanForDataQualityIssueToolStripMenuItem, fixDataQualityIssueToolStripMenuItem, emailGoalsToolStripMenuItem, exploreGlobalRelationshipsToolStripMenuItem, experimentalToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             toolsToolStripMenuItem.Size = new Size(69, 35);
             toolsToolStripMenuItem.Text = "Tools";
@@ -369,6 +371,13 @@
             emailGoalsToolStripMenuItem.Size = new Size(392, 34);
             emailGoalsToolStripMenuItem.Text = "Email Goals";
             emailGoalsToolStripMenuItem.Click += emailGoalsToolStripMenuItem_Click;
+            // 
+            // exploreGlobalRelationshipsToolStripMenuItem
+            // 
+            exploreGlobalRelationshipsToolStripMenuItem.Name = "exploreGlobalRelationshipsToolStripMenuItem";
+            exploreGlobalRelationshipsToolStripMenuItem.Size = new Size(392, 34);
+            exploreGlobalRelationshipsToolStripMenuItem.Text = "Explore Global Relationships...";
+            exploreGlobalRelationshipsToolStripMenuItem.Click += exploreGlobalRelationshipsToolStripMenuItem_Click;
             // 
             // filterToolStripMenuItem
             // 
@@ -602,6 +611,13 @@
             recalculateBackgroundWorker1.ProgressChanged += backgroundWorker_ProgressChanged;
             recalculateBackgroundWorker1.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
+            // experimentalToolStripMenuItem
+            // 
+            experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
+            experimentalToolStripMenuItem.Size = new Size(392, 34);
+            experimentalToolStripMenuItem.Text = "Experimental...";
+            experimentalToolStripMenuItem.Click += experimentalToolStripMenuItem_Click;
+            // 
             // FellrnrTrainingAnalysisForm
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
@@ -702,5 +718,7 @@
         private ToolStripMenuItem recalculateActivitiesToolStripMenuItem;
         private System.ComponentModel.BackgroundWorker recalculateBackgroundWorker1;
         private ToolStripMenuItem validationToolStripMenuItem;
+        private ToolStripMenuItem exploreGlobalRelationshipsToolStripMenuItem;
+        private ToolStripMenuItem experimentalToolStripMenuItem;
     }
 }

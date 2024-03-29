@@ -1,10 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -18,13 +13,13 @@ namespace FellrnrTrainingAnalysis.Model
         public float[] Values;
 
         [MemoryPackIgnore]
-        public int Length { get {  return Times.Length; } }
+        public int Length { get { return Times.Length; } }
 
         public TimeValueList(uint[] times, float[] values)
         {
             Times = times;
             Values = values;
-            if(times.Length != values.Length) { throw new Exception($"TimesAndValues, counts don't match, times {Times.Length}, values {Values.Length}"); }
+            if (times.Length != values.Length) { throw new Exception($"TimesAndValues, counts don't match, times {Times.Length}, values {Values.Length}"); }
         }
 
         public override string ToString()
@@ -138,7 +133,7 @@ namespace FellrnrTrainingAnalysis.Model
             return newData;
         }
 
-        public static TimeValueList? ExtractWindow(TimeValueList data, uint start, uint end=0) //end of zero is to the finish
+        public static TimeValueList? ExtractWindow(TimeValueList data, uint start, uint end = 0) //end of zero is to the finish
         {
             List<uint> newtimes = new List<uint>();
             List<float> newvalues = new List<float>();
@@ -146,14 +141,14 @@ namespace FellrnrTrainingAnalysis.Model
             uint lastTime = data.Times.Last();
 
             //very occasionally, times don't start at zero. Huh. 
-            uint firstTime = data.Times.First(); 
+            uint firstTime = data.Times.First();
             start += firstTime;
             end += firstTime;
 
             if (start > lastTime)
                 return null;
 
-            for (int i = 1; i < data.Length && (end == 0 || data.Times[i] <= end); i++) 
+            for (int i = 1; i < data.Length && (end == 0 || data.Times[i] <= end); i++)
             {
                 if (data.Times[i] >= start)
                 {
@@ -161,7 +156,7 @@ namespace FellrnrTrainingAnalysis.Model
                     newvalues.Add(data.Values[i]);
                 }
             }
-            if(newtimes.Count == 0) { return null; }
+            if (newtimes.Count == 0) { return null; }
 
             TimeValueList newData = new TimeValueList(newtimes.ToArray(), newvalues.ToArray());
 

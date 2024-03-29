@@ -9,10 +9,10 @@ namespace FellrnrTrainingAnalysis.UI
         {
             InitializeComponent();
 
-            Definitions= definitions;
+            Definitions = definitions;
             objectListView1.SuspendLayout();
 
-            objectListView1.ShowGroups= false;
+            objectListView1.ShowGroups = false;
             objectListView1.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
             //Generator.GenerateColumns(objectListView1, definitions);
             Generator.GenerateColumns(this.objectListView1, typeof(TimeSeriesDefinition), true);

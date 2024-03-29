@@ -1,6 +1,5 @@
 ﻿using MemoryPack;
 using System.ComponentModel;
-using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -10,9 +9,9 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public partial class CalendarNode : Extensible
     {
-        public CalendarNode(Utils.DateTimeTree dateTimeTree) 
+        public CalendarNode(Utils.DateTimeTree dateTimeTree)
         {
-//            DateFormat = dateFormat;
+            //            DateFormat = dateFormat;
             DateTimeTree = dateTimeTree;
         }
 
@@ -25,7 +24,7 @@ namespace FellrnrTrainingAnalysis.Model
         public override Utils.DateTimeTree Id() { return DateTimeTree; } //Hack to see if tree works
 
         [MemoryPackInclude]
-        public Utils.DateTimeTree DateTimeTree { get; set;  } //setter for MemoryPack
+        public Utils.DateTimeTree DateTimeTree { get; set; } //setter for MemoryPack
 
         //public string DisplayString { get { return string.Format(DateFormat, DateTime); } }
 
@@ -74,7 +73,7 @@ namespace FellrnrTrainingAnalysis.Model
                     Datum? datum = child.GetNamedDatum(name);
                     if (datum == null)
                         continue;
-                    if (datum is TypedDatum<float>)  
+                    if (datum is TypedDatum<float>)
                     {
                         TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
                         if (!floatAccumulators.ContainsKey(name))

@@ -1,6 +1,5 @@
-﻿using MemoryPack;
-using System.Collections.ObjectModel;
-using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -15,7 +14,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
         }
         public TimeSeriesDelta(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null,
-                                float scalingFactor = 1, float? numerator = null, float? period = null, float? limit = null) : 
+                                float scalingFactor = 1, float? numerator = null, float? period = null, float? limit = null) :
             base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
             if (requiredFields == null || requiredFields.Count != 1) throw new ArgumentException("TimeSeriesDelta must have only one required field");
@@ -34,7 +33,7 @@ namespace FellrnrTrainingAnalysis.Model
         float? Period { get; set; }
 
         [MemoryPackInclude]
-        float? Limit{ get; set; }
+        float? Limit { get; set; }
 
         public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
@@ -47,7 +46,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 extraDebug = true;
             }
-            if(RequiredTimeSeries == null  || RequiredTimeSeries.Count != 1)
+            if (RequiredTimeSeries == null || RequiredTimeSeries.Count != 1)
             {
                 Logging.Instance.Error($"Somehow got no required time series for {this}, activity {this.ParentActivity}");
                 return null;
@@ -62,7 +61,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             TimeValueList? newData;
 
-            if(Period == null || Period == 1)
+            if (Period == null || Period == 1)
             {
                 newData = TimeValueList.SimpleDeltas(data, ScalingFactor, Numerator, Limit);
             }

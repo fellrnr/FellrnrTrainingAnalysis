@@ -11,7 +11,7 @@ namespace FellrnrTrainingAnalysis.UI
         public StravaAuthorizeForm(string callbackUrl)
         {
             InitializeComponent();
-            CallbackUrl= callbackUrl;
+            CallbackUrl = callbackUrl;
         }
 
         string CallbackUrl { get; set; }

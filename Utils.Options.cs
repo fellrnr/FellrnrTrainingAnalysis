@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
-using System.ComponentModel;
-using static FellrnrTrainingAnalysis.Utils.TimeSeries;
+﻿using System.ComponentModel;
+using System.Text.Json;
+using static FellrnrTrainingAnalysis.Utils.TimeSeriesUtils;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -112,20 +112,32 @@ namespace FellrnrTrainingAnalysis.Utils
         //                                              _/ |                                              
         //                                             |__/                                               
 
+        [Description("Multiplier for X^5where X is the slope")]
+        public float GradeAdjustmentX5 { get; set; } = 0;
+
+        [Description("Multiplier for X^4 where X is the slope")]
+        public float GradeAdjustmentX4 { get; set; } = 0;
+
+        [Description("Multiplier for X^3 where X is the slope")]
+        public float GradeAdjustmentX3 { get; set; } = 0;
+
         [Description("Multiplier for X squared where X is the slope")]
-        public double GradeAdjustmentX2 { get; set; } = 15.14;
+        public float GradeAdjustmentX2 { get; set; } = 15.14f;
 
         [Description("Multiplier for X where X is the slope")]
-        public double GradeAdjustmentX { get; set; } = 2.896;
+        public float GradeAdjustmentX { get; set; } = 2.896f;
 
-        [Description("Offset for grade adjustment")]
-        public double GradeAdjustmentOffset { get; set; } = 1.00; //was 1.0098 but that's silly as flat has to be 1.0
+        [Description("Divide by the factor to get the cost ratio")]
+        public float GradeAdjustmentFactor { get; set; } = 1;
+
+        [Description("Add the offset to get the cost ")]
+        public float GradeAdjustmentOffset { get; set; } = 0;
 
         [Description("Min slope (GPX can have noise that creates silly slopes)")]
-        public double MinSlope { get; set; } = -0.5;
+        public float MinSlope { get; set; } = -0.5f;
 
         [Description("Max slope (GPX can have noise that creates silly slopes)")]
-        public double MaxSlope { get; set; } = 0.5;
+        public float MaxSlope { get; set; } = 0.5f;
 
         [Description("How to do the elevation smoothing")]
         public SmoothingOptions GADSmoothingType { get; set; } = SmoothingOptions.SimpleExponential;
@@ -149,13 +161,13 @@ namespace FellrnrTrainingAnalysis.Utils
         public bool InMemory { get; set; } = true;
 
         [Description("Fit performance debug is fairly cheap and just gives how long it took for each file")]
-        public bool DebugFitPerformance { get; set;  } = false; //This is fairly cheap, but still adds 40 seconds to a 7 minute import
+        public bool DebugFitPerformance { get; set; } = false; //This is fairly cheap, but still adds 40 seconds to a 7 minute import
 
         [Description("Fit field debug is fairly cheap and gives a summary of all the fields found in the files loaded")]
         public bool DebugFitFields { get; set; } = true;
 
         [Description("Fit loading debug is expensive and gives a lot of details")]
-        public bool DebugFitLoading { get; set;  } = false; //This is very expensive!
+        public bool DebugFitLoading { get; set; } = false; //This is very expensive!
 
         [Description("Fit extra details debug is wildly expensive and gives a lot of details of the things we don't look at")]
         public bool DebugFitExtraDetails { get; set; } = false; //This is very expensive!
@@ -222,6 +234,9 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Offset from Resting Heart Rate to Standing Heart Rate, normally 26")]
         public int RestingHeartRateToStanding { get; set; } = 26;
 
+        [Description("Starting point (in the absense of daily values) for W', AKA W Prime, in jules")]
+        public float StartingWPrime { get; set; } = 15000.0f;
+
         //    _____  _           _             
         //   |  __ \(_)         | |            
         //   | |  | |_ ___ _ __ | | __ _ _   _ 
@@ -234,9 +249,17 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Seperate Activity Graphs rather than overlaying them")]
         public bool SpaceOutActivityGraphs { get; set; } = false;
 
+        [Description("How much to seperate Activity Graphs (-ve is overlap)")]
+        public int SpaceOutOffset { get; set; } = 5;
+
         [Description("The activity types to show")]
         public string OnlyShowActivityTypes { get; set; } = "";
 
+        [Description("How opaque the graph lines are 255=solid, 0=invivislbe")]
+        public int ActivityGraphAlpha { get; set; } = 255;
+
+        [Description("Copy an image of the goals to the clipboard")]
+        public bool CopyGoalsToClibboard { get; set; } = false;
 
     }
 }

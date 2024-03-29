@@ -1,11 +1,5 @@
-﻿using FellrnrTrainingAnalysis.UI;
-using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using static FellrnrTrainingAnalysis.Utils.TimeSeries;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -25,7 +19,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
         private const string WEIGHT = "Weight";
         [MemoryPackIgnore]
-        private float Weight { get { return Parameter(WEIGHT); } set { Parameter(WEIGHT, value); } }
+        private float Weight { get { return ParameterOrZero(WEIGHT); } set { Parameter(WEIGHT, value); } }
 
 
         public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
@@ -44,7 +38,7 @@ namespace FellrnrTrainingAnalysis.Model
             Athlete athlete = ParentActivity!.ParentAthlete!;
             if (Weight == 0)
             {
-                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.WeightTag, Options.Instance.StartingWeight);
+                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.TagWeight, Options.Instance.StartingWeight);
             }
 
             TimeValueList retval = new TimeValueList(new uint[gapData.Times.Length], new float[gapData.Times.Length]);

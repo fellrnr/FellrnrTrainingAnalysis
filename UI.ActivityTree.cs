@@ -33,7 +33,7 @@ namespace FellrnrTrainingAnalysis.UI
 
         public void Display(Database database)
         {
-            if(!HasBeenShown) { Logging.Instance.Debug("UI.ActivityTree.Display, !HasBeenShown, returning"); return;  }
+            if (!HasBeenShown) { Logging.Instance.Debug("UI.ActivityTree.Display, !HasBeenShown, returning"); return; }
             Logging.Instance.TraceEntry("ActivityTree.Display");
             DataTreeListView dataTreeListView_debug = dataTreeListView; //make this a local to simplify debugging
 
@@ -47,9 +47,9 @@ namespace FellrnrTrainingAnalysis.UI
             myTable.Columns.Add(Create(ParentId, typeof(Utils.DateTimeTree)));
             myTable.Columns.Add(Create(DateTreeColumn, typeof(Utils.DateTimeTree)));
 
-            if (database.CurrentAthlete != null && 
-                database.CurrentAthlete.CalendarTree != null && 
-                database.CurrentAthlete.CalendarTree.Count > 0 && 
+            if (database.CurrentAthlete != null &&
+                database.CurrentAthlete.CalendarTree != null &&
+                database.CurrentAthlete.CalendarTree.Count > 0 &&
                 database.CurrentAthlete.CalendarTree.First().Value.DataNames != null)
             {
                 Logging.Instance.TraceEntry("ActivityTree.Display-datatable");
@@ -61,7 +61,7 @@ namespace FellrnrTrainingAnalysis.UI
                     IReadOnlyCollection<string> dataNames = calendarNode.DataNames;
                     foreach (string s in dataNames)
                     {
-                        if(!masterDataNames.Contains(s))
+                        if (!masterDataNames.Contains(s))
                             masterDataNames.Add(s);
                     }
                 }
@@ -121,7 +121,7 @@ namespace FellrnrTrainingAnalysis.UI
                             }
                             else
                             {
-                                if(activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                                if (activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
                                     column.TextAlign = HorizontalAlignment.Right;
                                 column.IsVisible = true;
                                 int positionInTree = (int)activityDatumMetadata.PositionInTree;
@@ -176,7 +176,7 @@ namespace FellrnrTrainingAnalysis.UI
                     if (activityDatumMetadata != null && activityDatumMetadata.PositionInTree != null && !activityDatumMetadata.Invisible.GetValueOrDefault(false))
                         dataRow[d.Name] = DatumFormatter.FormatForGrid(d, activityDatumMetadata);
 
-                        //dataRow[d.Name] = d.ToString();
+                    //dataRow[d.Name] = d.ToString();
                 }
             }
 

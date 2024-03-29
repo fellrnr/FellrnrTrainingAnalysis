@@ -1,17 +1,57 @@
-﻿using de.schumacher_bw.Strava.Model;
-using FellrnrTrainingAnalysis.Model;
-using FellrnrTrainingAnalysis.UI;
+﻿using FellrnrTrainingAnalysis.Model;
 using GMap.NET;
 using GMap.NET.WindowsForms;
-using Microsoft.VisualBasic.Logging;
 using System.IO.Compression;
 using System.Text;
-using static FellrnrTrainingAnalysis.Utils.TimeSeries;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
     public class Misc //the class of misfit toys
     {
+
+        static List<Color> DefaultColorMap = new List<Color>() {
+            Color.FromArgb(0xFF, 0, 0xFF, 0) ,//Green
+            Color.FromArgb(0xFF, 0xFF, 0xFF, 0) ,//Yellow
+            Color.FromArgb(0xFF, 0xFF, 0, 0), //Red
+            };
+
+        public static Color GetColorForValue(double val, double maxVal, int alpha, List<Color>? ColorMap)
+        {
+            if (ColorMap == null)
+                ColorMap = DefaultColorMap;
+
+            if (val <= 0)
+                return fromColor(alpha, ColorMap[0]);
+            if (val >= maxVal)
+                return fromColor(alpha, ColorMap[ColorMap.Count - 1]);
+
+            double valPerc = val / maxVal;// value%
+            double colorPerc = 1d / (ColorMap.Count - 1);// % of each block of color. the last is the "100% Color"
+            double blockOfColor = valPerc / colorPerc;// the integer part repersents how many block to skip
+            int blockIdx = (int)Math.Truncate(blockOfColor);// Idx of 
+            double valPercResidual = valPerc - (blockIdx * colorPerc);//remove the part represented of block 
+            double percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
+
+            Color cTarget = ColorMap[blockIdx];
+            Color cNext = ColorMap[blockIdx + 1];
+
+            var deltaR = cNext.R - cTarget.R;
+            var deltaG = cNext.G - cTarget.G;
+            var deltaB = cNext.B - cTarget.B;
+
+            var R = cTarget.R + (deltaR * percOfColor);
+            var G = cTarget.G + (deltaG * percOfColor);
+            var B = cTarget.B + (deltaB * percOfColor);
+
+            Color c = ColorMap[0];
+            c = Color.FromArgb(alpha, (byte)R, (byte)G, (byte)B);
+            return c;
+        }
+
+        private static Color fromColor(int alpha, Color color)
+        {
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
 
         public static void RunCommand(string target)
         {
@@ -130,7 +170,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 {
                     points = Utils.Misc.SampleLocations(aligned.Time, aligned.Lats, aligned.Lons, INTERVAL);
 
-                    GMapRouteColored routeColored = new GMapRouteColored(points, "Route", aligned.Secondary, alpha, width, 
+                    GMapRouteColored routeColored = new GMapRouteColored(points, "Route", aligned.Secondary, alpha, width,
                         dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2High),
                         dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2Low));
 
@@ -273,7 +313,7 @@ namespace FellrnrTrainingAnalysis.Utils
         private static void CheckForNaN(Database database, StringBuilder sb)
         {
             Athlete athlete = database.CurrentAthlete;
-            foreach(KeyValuePair<DateTime, Model.Day> kvp in athlete.Days)
+            foreach (KeyValuePair<DateTime, Model.Day> kvp in athlete.Days)
             {
                 CheckData(sb, kvp.Value);
             }
@@ -289,21 +329,21 @@ namespace FellrnrTrainingAnalysis.Utils
 
         private static void CheckTimeSeries(StringBuilder sb, Activity activity)
         {
-            foreach(KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
+            foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
             {
                 TimeSeriesBase timeSeriesBase = kvp.Value;
-                if(timeSeriesBase.IsValid())
+                if (timeSeriesBase.IsValid())
                 {
                     TimeValueList? tvl = timeSeriesBase.GetData(forceCount: 0, forceJustMe: false);
-                    if(tvl == null)
+                    if (tvl == null)
                     {
                         sb.AppendLine($"TimeSeries returned null for GetData when valid, {activity}, {timeSeriesBase}");
                     }
                     else
                     {
-                        foreach(float f in tvl.Values)
+                        foreach (float f in tvl.Values)
                         {
-                            if(float.IsNaN(f))
+                            if (float.IsNaN(f))
                             {
                                 sb.AppendLine($"TimeSeries found NaN, {activity}, {timeSeriesBase}");
                                 break;

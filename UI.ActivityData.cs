@@ -2,9 +2,7 @@
 using FellrnrTrainingAnalysis.Utils;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using System.Configuration;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -167,7 +165,7 @@ namespace FellrnrTrainingAnalysis.UI
                         row.Avg.Text = values.Average().ToString();
                         row.Max.Text = values.Max().ToString();
                         string last = tuple.Times.Count() > 0 ? $"{Utils.Misc.FormatTime(tuple.Times.Last())}" : "No Times";
-                        row.Notes.Text = $"IsVirtual {dataStream.IsVirtual()}, t {last}";
+                        row.Notes.Text = $"IsVirtual {dataStream.IsVirtual()}, t {last}, {dataStream.ToStatisticsString()}";
                     }
                 }
             }

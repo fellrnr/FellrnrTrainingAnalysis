@@ -5,8 +5,8 @@
 // NOTICE: dlg.krakow.pl permits you to use, modify, and distribute this file
 // in accordance with the terms of the license agreement accompanying it.
 // ==========================================================================
-using System.Xml;
 using System.Globalization;
+using System.Xml;
 
 namespace FellrnrTrainingAnalysis.Utils.Gpx
 {

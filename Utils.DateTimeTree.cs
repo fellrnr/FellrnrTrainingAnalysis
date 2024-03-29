@@ -11,13 +11,13 @@ namespace FellrnrTrainingAnalysis.Utils
         public enum DateTreeType { Root, Year, Month, Day, Time };
 
         [MemoryPackInclude]
-        public DateTreeType Type { get; set;} = DateTreeType.Time;
+        public DateTreeType Type { get; set; } = DateTreeType.Time;
 
         [MemoryPackInclude]
-        public DateTime DateTime { get; set;}
-        
-        public DateTimeTree(DateTime dateTime, DateTreeType type) 
-        { 
+        public DateTime DateTime { get; set; }
+
+        public DateTimeTree(DateTime dateTime, DateTreeType type)
+        {
             DateTime = dateTime;
             Type = type;
         }
@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public override string ToString()
         {
-            switch(Type)
+            switch (Type)
             {
                 case DateTreeType.Root:
                     return "DateTreeType.Root";
@@ -71,15 +71,15 @@ namespace FellrnrTrainingAnalysis.Utils
             }
 
             DateTimeTree other = (DateTimeTree)obj;
-            if(other.Type!= Type) 
-            { 
-                return false;  
-            }
-            
-            //roots are always the same
-            if(other.Type == DateTreeType.Root) 
+            if (other.Type != Type)
             {
-                return true; 
+                return false;
+            }
+
+            //roots are always the same
+            if (other.Type == DateTreeType.Root)
+            {
+                return true;
             }
             return this.DateTime == other.DateTime;
         }

@@ -1,8 +1,6 @@
-﻿using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
-using System.Text.Json;
+﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json.Serialization;
-using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -118,12 +116,12 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 string[] strings = list.Split(',');
                 ListOfDates = new List<DateTime>();
-                foreach(string s in strings)
+                foreach (string s in strings)
                 {
                     string ds = s.Trim();
                     if (string.IsNullOrEmpty(ds)) continue;
                     DateTime dateTime;
-                    if(DateTime.TryParse(ds, out dateTime))
+                    if (DateTime.TryParse(ds, out dateTime))
                         ListOfDates.Add(dateTime);
                 }
             }
@@ -203,13 +201,13 @@ namespace FellrnrTrainingAnalysis.Model
                             addIt = true;
                         break;
                     case "in":
-                        if(dateTime.HasValue && ListOfDates != null && ListOfDates.Count > 0)
+                        if (dateTime.HasValue && ListOfDates != null && ListOfDates.Count > 0)
                         {
-                            foreach(DateTime dt in ListOfDates)
+                            foreach (DateTime dt in ListOfDates)
                             {
-                                if(dt.Date == dateTime.Value.Date)
+                                if (dt.Date == dateTime.Value.Date)
                                 {
-                                    addIt= true; break;
+                                    addIt = true; break;
                                 }
                             }
                         }
@@ -310,9 +308,9 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public class FilterTimeSeries : FilterBase
     {
-        public static readonly string[] FilterCommands = new string[] { "", 
-            "max <", "max <=", "max =", "max >=", "max >", "max between", 
-            "avg <", "avg <=", "avg =", "avg >=", "avg >", "avg between", 
+        public static readonly string[] FilterCommands = new string[] { "",
+            "max <", "max <=", "max =", "max >=", "max >", "max between",
+            "avg <", "avg <=", "avg =", "avg >=", "avg >", "avg between",
             "min <", "min <=", "min =", "min >=", "min >", "min between", "has", "missing" };
 
 
@@ -351,7 +349,7 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     TimeSeriesBase datastream = activity.TimeSeries[FieldName];
                     TimeValueList? dataTuple = datastream.GetData(forceCount: 0, forceJustMe: false);
-                    if(dataTuple == null)
+                    if (dataTuple == null)
                     {
                         value = null;
                     }
@@ -476,7 +474,7 @@ namespace FellrnrTrainingAnalysis.Model
                         if (Value1 != null && value != null)
                         {
                             string[] inList = Value1.Split(',');
-                            foreach(string s in inList)
+                            foreach (string s in inList)
                             {
                                 if (value.ToLower() == s.ToLower())
                                 {
@@ -522,7 +520,7 @@ namespace FellrnrTrainingAnalysis.Model
                 switch (Command)
                 {
                     case HasBadValueTag:
-                        if(activity.DataQualityIssues != null && activity.DataQualityIssues.Count > 0)
+                        if (activity.DataQualityIssues != null && activity.DataQualityIssues.Count > 0)
                             addIt = true;
                         break;
                     default:

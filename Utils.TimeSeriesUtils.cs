@@ -1,13 +1,11 @@
 ﻿using pi.science.smoothing;
 using pi.science.statistic;
-using System.Text;
 using static pi.science.smoothing.PIMovingAverageSmoothing;
-using FellrnrTrainingAnalysis.Model;
 
 
 namespace FellrnrTrainingAnalysis.Utils
 {
-    public class TimeSeries
+    public class TimeSeriesUtils
     {
         public enum SmoothingOptions { AverageWindow, SimpleExponential, InterpolateOnly, None };
 
@@ -231,6 +229,6 @@ namespace FellrnrTrainingAnalysis.Utils
 
 
 
-    
+
     }
 }

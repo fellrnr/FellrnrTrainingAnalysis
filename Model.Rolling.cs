@@ -1,12 +1,4 @@
-﻿using de.schumacher_bw.Strava.Endpoint;
-using FellrnrTrainingAnalysis.Utils;
-using ScottPlot.Drawing.Colormaps;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -61,7 +53,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public enum ModeEnum { Sum, Avg }
 
-        private ModeEnum Mode {  get; set; }
+        private ModeEnum Mode { get; set; }
 
         public override void Recalculate(Day day)
         {
@@ -141,7 +133,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
     }
 
-    public class RollingRatio: RollingSimple
+    public class RollingRatio : RollingSimple
     {
         public RollingRatio(List<string> sportsToInclude, string fieldNameToAdd, string firstField, string secondField) : base(sportsToInclude, fieldNameToAdd)
         {
@@ -228,7 +220,7 @@ namespace FellrnrTrainingAnalysis.Model
                     if (value1 != null && value1 != 0)
                     {
                         float percent = (float)value1 / max * 100.0f;
-                        if(percent > 1) //less than one we ignore
+                        if (percent > 1) //less than one we ignore
                             day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, percent));
                     }
                 }
@@ -265,6 +257,7 @@ namespace FellrnrTrainingAnalysis.Model
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "Avg HrPwr 5 Min", "Avg HrPwr 5 Min", RollingRollUpActivityToDay.ModeEnum.Avg),
                 new RollingPercentMax(Activity.ActivityTypeRun, "HrPwr%", "Avg HrPwr 5 Min"),
                 //new RollingForceOverwrite(new List<string>(), Day.RestingHeartRateTag, 45.0f), //hack to correct problems
+                //new RollingForceOverwrite(new List<string>(), Day.TagWPrime, 15000), //hack to correct problems
             };
 
         }

@@ -1,7 +1,6 @@
 ﻿using Dynastream.Fit;
-using FellrnrTrainingAnalysis.Utils;
 using FellrnrTrainingAnalysis.Model;
-using System.Diagnostics;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -27,7 +26,7 @@ namespace FellrnrTrainingAnalysis.Action
         private class AccumulationData
         {
             public AccumulationData(FellrnrTrainingAnalysis.Model.Activity activity) { this.activity = activity; }
-            public FellrnrTrainingAnalysis.Model.Activity activity; 
+            public FellrnrTrainingAnalysis.Model.Activity activity;
 
             public Dictionary<string, KeyValuePair<List<uint>, List<float>>> timeSeriesSet = new Dictionary<string, KeyValuePair<List<uint>, List<float>>>();
             public Dictionary<string, uint> lastElapsedTime = new Dictionary<string, uint>();
@@ -70,7 +69,7 @@ namespace FellrnrTrainingAnalysis.Action
         }
         public static void SummaryErrors() //For optimization, only output the summary of the errors or the log file becomes too verbose
         {
-            foreach(KeyValuePair<string, int> kvp in AccumulationData.fieldCounts)
+            foreach (KeyValuePair<string, int> kvp in AccumulationData.fieldCounts)
                 Logging.Instance.Debug(string.Format("Found key {0}, count {1}", kvp.Key, kvp.Value));
         }
 
@@ -133,8 +132,8 @@ namespace FellrnrTrainingAnalysis.Action
             FileInfo fi = new FileInfo(filepath);
             long size = fi.Length / 1024;
             double relativeTime = Calculation.Overall.Elapsed.TotalMicroseconds / fi.Length;
-            if (Options.Instance.DebugFitPerformance) 
-                Logging.Instance.Log(String.Format("{4}: {5} Kb, {6:f1} us/Kb, {0} Finished in {3:f1}s, Read {7:f1}, Record {9:f1}, Other {8:f1}, reading {1} from {2} ", 
+            if (Options.Instance.DebugFitPerformance)
+                Logging.Instance.Log(String.Format("{4}: {5} Kb, {6:f1} us/Kb, {0} Finished in {3:f1}s, Read {7:f1}, Record {9:f1}, Other {8:f1}, reading {1} from {2} ",
                     System.DateTime.Now, filepath, Accumulation.activity.StartDateTimeLocal, Calculation.Overall.Elapsed.TotalSeconds, CalculationData.Processed, size, relativeTime,
                     Calculation.Read.Elapsed.TotalSeconds, Calculation.Other.Elapsed.TotalSeconds, Calculation.InRecord.Elapsed.TotalSeconds));
             if (Calculation.Overall.Elapsed.TotalSeconds > 10)
@@ -166,11 +165,11 @@ namespace FellrnrTrainingAnalysis.Action
             System.DateTime activityStart = (System.DateTime)Calculation.activityStartUTC!;
             uint elapsedTime = (uint)((recordTime - activityStart).TotalSeconds - Calculation.totalStopped);
             if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
-                Logging.Instance.Debug(String.Format("RecordMesgEvent: elapsedTime {0}, recordTime {1} activityStart {2}, totalStopped {3}", 
+                Logging.Instance.Debug(String.Format("RecordMesgEvent: elapsedTime {0}, recordTime {1} activityStart {2}, totalStopped {3}",
                     elapsedTime, recordTime, Calculation.activityStartUTC, Calculation.totalStopped));
 
 
-            foreach (var field in myRecordMesg.Fields) 
+            foreach (var field in myRecordMesg.Fields)
             {
                 if (field.Num == RecordMesg.FieldDefNum.Timestamp)
                     continue; //handled above
@@ -178,7 +177,7 @@ namespace FellrnrTrainingAnalysis.Action
                 ProcessFitRecordField(recordTime, elapsedTime, field);
             }
 
-            foreach (var field in myRecordMesg.DeveloperFields) 
+            foreach (var field in myRecordMesg.DeveloperFields)
             {
                 ProcessFitRecordField(recordTime, elapsedTime, field);
             }
@@ -314,7 +313,7 @@ namespace FellrnrTrainingAnalysis.Action
                 values.RemoveAt(values.Count - 1);
             }
             times.Add(elapsedTime);
-            values.Add(data );
+            values.Add(data);
             Accumulation.lastElapsedTime[name] = elapsedTime;
 
         }
@@ -418,7 +417,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             string fieldName = e.mesg.Name; //normally "Sport"
 
-            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, 
+            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile,
                 ActivityDatumMapping.LevelType.Activity, fieldName);
             if (activityDatumMapping == null || !activityDatumMapping.Import)
             {
@@ -453,7 +452,7 @@ namespace FellrnrTrainingAnalysis.Action
                 return;
             }
 
-            if (myEventMesg.GetEventType() != null )
+            if (myEventMesg.GetEventType() != null)
             {
                 if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug(String.Format(">>GetEventType is {0}", myEventMesg.GetEventType().ToString()));
@@ -478,7 +477,7 @@ namespace FellrnrTrainingAnalysis.Action
                     if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                         Logging.Instance.Debug("Start Timer Event");
                     System.DateTime restartTime = myEventMesg.GetTimestamp().GetDateTime();
-                    
+
                     //the first start is the start of the activity (the activity event comes at the end of the file)
                     if (Calculation.activityStartUTC == null)
                         Calculation.activityStartUTC = restartTime;
@@ -487,7 +486,7 @@ namespace FellrnrTrainingAnalysis.Action
                     {
 
                         double stoppage = (restartTime - Calculation.lastStop).TotalSeconds;
-                        if(stoppage > 0) { stoppage--; } //otherwise we end up with the next even on the same second
+                        if (stoppage > 0) { stoppage--; } //otherwise we end up with the next even on the same second
                         Calculation.totalStopped += stoppage;
                         if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                             Logging.Instance.Debug(String.Format("Stop Timer while stopped, ReStartTime {0}, stoppage {1}, totalStopped {2}", restartTime, stoppage, Calculation.totalStopped));

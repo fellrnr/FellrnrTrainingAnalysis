@@ -1,11 +1,10 @@
 ﻿using CsvHelper;
+using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.Globalization;
-using FellrnrTrainingAnalysis.Utils;
 using static FellrnrTrainingAnalysis.Model.ActivityDatumMapping;
-using FellrnrTrainingAnalysis.Model;
-using FellrnrTrainingAnalysis.UI;
-using System.ComponentModel;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -24,7 +23,7 @@ namespace FellrnrTrainingAnalysis.Action
             LoadAthletesFromStravaArchive(profileCsvPath, database);
 
             int count = LoadActivitiesFromStravaArchive(profileCsvPath, database, worker);
-            
+
             return count;
         }
 
@@ -51,7 +50,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             //load the activities from the CSV
             List<Dictionary<string, Datum>> spreadsheetOfActivites = ImportFromCSV(activitiesCsvPath, LevelType.Activity);
-            List<Activity> activities = new List<Activity>();  
+            List<Activity> activities = new List<Activity>();
             foreach (Dictionary<string, Datum> activityRow in spreadsheetOfActivites)
             {
                 DateTime estimatedStartDateTime = Activity.EstimatedStartDateTime(activityRow);
@@ -135,7 +134,7 @@ namespace FellrnrTrainingAnalysis.Action
                 {
                     fitReader.ReadFitFromStravaArchive();
                 }
-                catch(Exception e) { Logging.Instance.Debug($"Exception thrown reading FIT file {filepath}, {e}"); }
+                catch (Exception e) { Logging.Instance.Debug($"Exception thrown reading FIT file {filepath}, {e}"); }
                 CountFitFiles++;
             }
             else if (filepath.ToLower().EndsWith(".gpx") || filepath.ToLower().EndsWith(".gpx.gz"))
@@ -146,7 +145,7 @@ namespace FellrnrTrainingAnalysis.Action
                 CountGpxFiles++;
             }
             else
-            { 
+            {
                 if (Options.Instance.DebugFitLoading) //the string.format is expensive, so don't call it if not needed
                     Logging.Instance.Debug("Activity file is not recognized type " + filepath);
                 CountBadFiles++;
@@ -158,7 +157,7 @@ namespace FellrnrTrainingAnalysis.Action
 
         public List<Dictionary<string, Datum>> ImportFromCSV(string csvPath, LevelType levelType)
         {
-            List<Dictionary<string, Datum>> spreadsheet= new List<Dictionary<string, Datum>>();
+            List<Dictionary<string, Datum>> spreadsheet = new List<Dictionary<string, Datum>>();
 
             using (var reader = new StreamReader(File.OpenRead(csvPath)))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))

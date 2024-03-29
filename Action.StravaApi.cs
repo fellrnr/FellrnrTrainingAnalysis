@@ -1,5 +1,4 @@
 ﻿using de.schumacher_bw.Strava;
-using de.schumacher_bw.Strava.Endpoint;
 using de.schumacher_bw.Strava.Model;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
@@ -40,10 +39,10 @@ namespace FellrnrTrainingAnalysis.Action
 
         public bool IsConnected
         {
-            get 
+            get
             {
                 Scopes currentScope = StravaApiV3Sharp.Authentication.Scope;
-                return (currentScope == DesiredScope); 
+                return (currentScope == DesiredScope);
             }
         }
 
@@ -67,10 +66,10 @@ namespace FellrnrTrainingAnalysis.Action
             if (database == null || database.CurrentAthlete == null)
             {
                 Logging.Instance.Debug(string.Format("Database or CurrentAthlete is null"));
-                return new Tuple<int,int>(0,0);
+                return new Tuple<int, int>(0, 0);
             }
             DateTime? onlyAfter = null;
-            if(database !=null && database.CurrentAthlete != null && database.CurrentAthlete.CalendarTree != null && database.CurrentAthlete.CalendarTree.Count > 0) 
+            if (database != null && database.CurrentAthlete != null && database.CurrentAthlete.CalendarTree != null && database.CurrentAthlete.CalendarTree.Count > 0)
             {
                 onlyAfter = database.CurrentAthlete.GetLatestActivityDateTime(); //This will also refresh the last day's activities we have
                 ////HACK: get the next activity
@@ -81,18 +80,18 @@ namespace FellrnrTrainingAnalysis.Action
                 onlyAfter = Options.Instance.OnlyLoadAfter;
 
             SummaryActivity[] newActivities = StravaApiV3Sharp.Activities.GetLoggedInAthleteActivities(null, onlyAfter);
-            if(newActivities == null)
+            if (newActivities == null)
             {
                 return new Tuple<int, int>(-1, -1);
             }
             int counter = 0;
             foreach (SummaryActivity stravaActivity in newActivities)
             {
-                if(stravaActivity.Id == null)
+                if (stravaActivity.Id == null)
                 {
                     Logging.Instance.Error(string.Format("Retrieved activity from strava with null id"));
                     //ActivityDataFromProperties(stravaActivity); //if there's no id, there's not much we can do with the activity data
-                } 
+                }
                 else
                 {
                     GetActivityFromStrava(database!, stravaActivity.Id.Value);
@@ -114,7 +113,7 @@ namespace FellrnrTrainingAnalysis.Action
         private Activity? GetActivityFromStrava(Database database, long stravaId)
         {
             DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.GetActivityById(stravaId);
-            if(Options.Instance.DebugStravaAPI)
+            if (Options.Instance.DebugStravaAPI)
                 Logging.Instance.Debug(string.Format("\r\n\r\n>>>DetailedActivity\r\n\r\n"));
             Dictionary<string, Datum> activityDataFromProperties = ActivityDataFromProperties(detailedActivity);
             Activity? activity = database!.CurrentAthlete!.InitialAddOrUpdateActivity(activityDataFromProperties);
@@ -156,7 +155,7 @@ namespace FellrnrTrainingAnalysis.Action
                 updatableActivity.Name = name;
             }
             long stravaId;
-            if(long.TryParse(activity.PrimaryKey(), out stravaId))
+            if (long.TryParse(activity.PrimaryKey(), out stravaId))
             {
                 try
                 {
@@ -215,7 +214,7 @@ namespace FellrnrTrainingAnalysis.Action
             int sleep = 5 * 1000;
             int timeout = 10;
             int counter = 0;
-            while( counter < timeout && upload.Error == null && upload.ActivityId == null)
+            while (counter < timeout && upload.Error == null && upload.ActivityId == null)
             {
                 Thread.Sleep(sleep);
                 Logging.Instance.Debug($"Polling upload status {counter}");
@@ -272,12 +271,12 @@ namespace FellrnrTrainingAnalysis.Action
             uint previous = time[0];
             uint largestGap = 0;
             uint timerPauses = 0;
-            int totalPauseCount= 0;
-            for(int i=0; i<time.Length; i++)
+            int totalPauseCount = 0;
+            for (int i = 0; i < time.Length; i++)
             {
                 uint t = time[i];
                 uint gap = t - previous;
-                if(gap > Options.Instance.StravaMaximumGap)
+                if (gap > Options.Instance.StravaMaximumGap)
                 {
                     //we have to guess where the timer pauses are, so if there's a big gap, we'll cut it out. Typically we see a data point every 1-2 seconds. 
                     timerPauses += gap - 1; //turn the gap into a one second gap
@@ -312,7 +311,7 @@ namespace FellrnrTrainingAnalysis.Action
             if (streamSet.Distance != null)
                 AddTimeSeries(activity, "Distance", time, streamSet.Distance.Data);
             if (streamSet.Latlng != null)
-                AddTimeSeries(activity, time, streamSet.Latlng.Data); 
+                AddTimeSeries(activity, time, streamSet.Latlng.Data);
             if (streamSet.Altitude != null)
                 AddTimeSeries(activity, "Altitude", time, streamSet.Altitude.Data);
             if (streamSet.VelocitySmooth != null)
@@ -333,7 +332,7 @@ namespace FellrnrTrainingAnalysis.Action
         private void AddTimeSeries(Activity activity, string name, uint[] time, int[] data)
         {
             if (data == null)
-                return; 
+                return;
             float[] values = Array.ConvertAll(data, x => (float)x);
             if (values.Min() == 0 && values.Max() == 0)
             {
@@ -383,14 +382,14 @@ namespace FellrnrTrainingAnalysis.Action
             var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
             if (Options.Instance.DebugStravaAPI)
-                Logging.Instance.Debug(string.Format("Type is: {0}, underlying {1}", type.Name, underlyingType.Name ));
+                Logging.Instance.Debug(string.Format("Type is: {0}, underlying {1}", type.Name, underlyingType.Name));
             PropertyInfo[] props = type.GetProperties();
             if (Options.Instance.DebugStravaAPI)
                 Logging.Instance.Debug(string.Format("Properties (N = {0}):", props.Length));
             foreach (var prop in props)
             {
                 var underlyingPropertyType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-                if(prop == null)
+                if (prop == null)
                 {
                     if (Options.Instance.DebugStravaAPI)
                         Logging.Instance.Debug(string.Format("   got a null property"));
@@ -421,7 +420,7 @@ namespace FellrnrTrainingAnalysis.Action
                     }
                     else
                     {
-                        if (Options.Instance.DebugStravaAPI) 
+                        if (Options.Instance.DebugStravaAPI)
                             Logging.Instance.Debug(string.Format("   Mapping data type {0}, external name {1}, internal name {2}, import {3}",
                             activityDatumMapping.DataType, activityDatumMapping.ExternalName, activityDatumMapping.InternalName, activityDatumMapping.Import));
 
@@ -437,7 +436,7 @@ namespace FellrnrTrainingAnalysis.Action
                             //    }
                             //    break;
                             case DataTypeEnum.DateTime:
-                                if(underlyingPropertyType == typeof(DateTime))
+                                if (underlyingPropertyType == typeof(DateTime))
                                 {
                                     activityData.Add(activityDatumMapping.InternalName, new TypedDatum<DateTime>(activityDatumMapping.InternalName, true, (DateTime)propertyValue));
                                 }
@@ -459,7 +458,7 @@ namespace FellrnrTrainingAnalysis.Action
                             case DataTypeEnum.TimeSpan:
                                 if (underlyingPropertyType == typeof(TimeSpan))
                                 {
-                                    TimeSpan timeSpan= (TimeSpan)propertyValue;
+                                    TimeSpan timeSpan = (TimeSpan)propertyValue;
                                     float timeInSeconds = (float)timeSpan.TotalSeconds;
                                     activityData.Add(activityDatumMapping.InternalName, new TypedDatum<float>(activityDatumMapping.InternalName, true, timeInSeconds));
                                 }

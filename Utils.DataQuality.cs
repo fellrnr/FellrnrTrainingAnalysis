@@ -1,7 +1,5 @@
-﻿using MemoryPack;
-using FellrnrTrainingAnalysis.Model;
+﻿using FellrnrTrainingAnalysis.Model;
 using System.Collections.ObjectModel;
-using System.Text;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -15,7 +13,7 @@ namespace FellrnrTrainingAnalysis.Utils
             //No change is benign, and can be real if a very flat course
             //dataQualityCheckList.Add(new DataQualityCheckStuckValue("Altitude has no change for too far", "Altitude", "Distance", new DataRemediationNoAction(), 1000));
 
-            dataQualityCheckList.Add(new DataQualityHeartRate("Heart Rate Wrong", new DataRemediationNoAction(), minHrPwr: 20, maxHr: 190));
+            dataQualityCheckList.Add(new DataQualityHeartRate("Heart Rate Wrong", new DataRemediationNoAction(), minHrPwr: 20, maxHr: 160));
 
             dataQualityCheckList.Add(new DataQualityCheckFixedValue("Altitude fixed value (indoor?)", "Altitude", null, new DataRemediationNoAction()));
 
@@ -42,9 +40,9 @@ namespace FellrnrTrainingAnalysis.Utils
             dataQualityCheckList.Add(new DataQualityCheckRapidChange("Heart Rate recovery too fast (60 in 90)", "Heart Rate", null, new DataRemediationRemoveStream("Heart Rate"), maxDecreaseAllowed: -60, period: 90));
         }
 
-        public ReadOnlyCollection<DataQualityCheck> CheckList { get {  return dataQualityCheckList.AsReadOnly(); } }
+        public ReadOnlyCollection<DataQualityCheck> CheckList { get { return dataQualityCheckList.AsReadOnly(); } }
 
-        public List<String> FindBadTimeSeries(Database database, DataQualityCheck? check = null, bool fix=false)
+        public List<String> FindBadTimeSeries(Database database, DataQualityCheck? check = null, bool fix = false)
         {
             List<String> badStreams = new List<String>();
 
@@ -101,7 +99,7 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             List<string> retval = FindBadData(activity);
 
-            if(fix && retval.Count > 0)
+            if (fix && retval.Count > 0)
             {
                 DataRemediation.Clean(activity);
             }
@@ -128,7 +126,7 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             List<string> badStreams = new List<string>();
 
-            if(!activity.TimeSeries.ContainsKey(Activity.TagHeartRate))
+            if (!activity.TimeSeries.ContainsKey(Activity.TagHeartRate))
                 return badStreams;
 
             if (!activity.TimeSeries.ContainsKey(Activity.TagHrPwr))
@@ -141,15 +139,20 @@ namespace FellrnrTrainingAnalysis.Utils
             if (hrd == null || hrpwrd == null)
                 return badStreams;
 
+            AlignedTimeSeries? aligned = AlignedTimeSeries.Align(hrd, hrpwrd);
+            if (aligned == null)
+                return badStreams;
+
+
             List<Tuple<uint, uint>> TooHigh = new List<Tuple<uint, uint>>();
 
             uint startOfBad = 0;
             int suspicion = 0;
             bool inbad = false;
             uint lastTime = 0;
-            for(int i=0; i < hrd.Length; i++)
+            for (int i = 0; i < aligned.Length; i++)
             {
-                if (hrd.Values[i] > MaxHr)
+                if (aligned.Primary[i] >= MaxHr && aligned.Secondary[i] < MinHrPwr)
                 {
                     if (!inbad)
                         startOfBad = (uint)i;
@@ -160,9 +163,10 @@ namespace FellrnrTrainingAnalysis.Utils
                 {
                     if (inbad)
                     {
-                        int deltat = (int)hrd.Values[i] - (int)lastTime;
+                        uint thisTime = aligned.Time[i];
+                        int deltat = (int)thisTime - (int)lastTime;
                         suspicion -= deltat;
-                        if (suspicion < 0 || i == hrd.Length-1) //grab problems that go to the end
+                        if (suspicion < 0 || i == aligned.Length - 1) //grab problems that go to the end
                         {
                             inbad = false;
                             Tuple<uint, uint> area = new Tuple<uint, uint>(startOfBad, (uint)i);
@@ -172,10 +176,10 @@ namespace FellrnrTrainingAnalysis.Utils
                         }
                     }
                 }
-                lastTime = hrd.Times[i];
+                lastTime = aligned.Time[i];
             }
 
-            if(badStreams.Count > 0)
+            if (badStreams.Count > 0)
             {
                 if (activity.DataQualityIssues == null)
                     activity.DataQualityIssues = badStreams;
@@ -397,7 +401,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
     public class DataQualityCheckRapidChange : DataQualityCheckStream
     {
-        public DataQualityCheckRapidChange(string description, string target, string? xaxis, DataRemediation dataRemediation, 
+        public DataQualityCheckRapidChange(string description, string target, string? xaxis, DataRemediation dataRemediation,
             float? maxIncreaseAllowed = null, float? maxDecreaseAllowed = null, float? period = null) : base(description, target, xaxis, dataRemediation)
         {
             MaxIncreaseAllowed = maxIncreaseAllowed;
@@ -617,7 +621,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
     public class DataRemediationBackCopyStream : DataRemediation
     {
-        public DataRemediationBackCopyStream(string target, int position) { Target = target; Position = position;  }
+        public DataRemediationBackCopyStream(string target, int position) { Target = target; Position = position; }
         string Target;
         int Position;
 

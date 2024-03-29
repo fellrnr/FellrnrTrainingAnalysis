@@ -1,5 +1,4 @@
-﻿using FellrnrTrainingAnalysis.Model;
-using GMap.NET;
+﻿using GMap.NET;
 using System.Drawing.Drawing2D;
 
 namespace FellrnrTrainingAnalysis.Utils
@@ -25,7 +24,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         private float[] ZValues;
         private float Top { get; set; }
-        private float Bottom {  get; set; }
+        private float Bottom { get; set; }
         private int Alpha { get; }
         private int Width { get; }
 
@@ -36,26 +35,8 @@ namespace FellrnrTrainingAnalysis.Utils
             Color? previousColor = null;
             for (int i = 0; i < LocalPoints.Count - 1; i++)
             {
-
-                int red = 255;
-                int green = 255;
-                int blue = 255;
-                Color c;
-                float diff = Top - Bottom;
-                if (i < ZValues.Length)
-                {
-                    float z = ZValues[i];
-                    if (z > Top)
-                        z = Top;
-                    if(z < Bottom)
-                        z = Bottom;
-                    c = GetColorForValue(z-Bottom, diff, Alpha);
-                }
-                else
-                {
-                    c = Color.FromArgb(255, red, green, blue);
-                }
-                if(previousColor ==  null) { previousColor = c; }
+                Color c = ColorForRange(i);
+                if (previousColor == null) { previousColor = c; }
 
                 long x1 = LocalPoints[i].X;
                 long x2 = LocalPoints[i + 1].X;
@@ -64,7 +45,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
 
                 int margin = 4;
-                if ((x1 > x2+margin || x1 < x2 - margin) &&
+                if ((x1 > x2 + margin || x1 < x2 - margin) &&
                     (y1 > y2 + margin || y1 < y2 - margin))
                 {
                     using (LinearGradientBrush linGrBrush = new LinearGradientBrush(new Point((int)x1, (int)y1), new Point((int)x2, (int)y2), previousColor.Value, c))
@@ -82,6 +63,30 @@ namespace FellrnrTrainingAnalysis.Utils
                 }
                 previousColor = c;
             }
+        }
+
+        private Color ColorForRange(int i)
+        {
+            int red = 255;
+            int green = 255;
+            int blue = 255;
+            Color c;
+            float diff = Top - Bottom;
+            if (i < ZValues.Length)
+            {
+                float z = ZValues[i];
+                if (z > Top)
+                    z = Top;
+                if (z < Bottom)
+                    z = Bottom;
+                c = Utils.Misc.GetColorForValue(z - Bottom, diff, Alpha, ColorsOfMap);
+            }
+            else
+            {
+                c = Color.FromArgb(255, red, green, blue);
+            }
+
+            return c;
         }
 
         private static void initColorsBlocks()
@@ -105,40 +110,7 @@ namespace FellrnrTrainingAnalysis.Utils
         }
 
 
-        private static Color fromColor(int alpha, Color color)
-        {
-            return Color.FromArgb(alpha, color.R, color.G, color.B);
-        }
 
-        private static Color GetColorForValue(double val, double maxVal, int alpha)
-        {
-            if (val <= 0)
-                return fromColor(alpha, ColorsOfMap[0]);
-            if (val >= maxVal)
-                return fromColor(alpha, ColorsOfMap[ColorsOfMap.Count-1]);
-
-            double valPerc = val / maxVal;// value%
-            double colorPerc = 1d / (ColorsOfMap.Count - 1);// % of each block of color. the last is the "100% Color"
-            double blockOfColor = valPerc / colorPerc;// the integer part repersents how many block to skip
-            int blockIdx = (int)Math.Truncate(blockOfColor);// Idx of 
-            double valPercResidual = valPerc - (blockIdx * colorPerc);//remove the part represented of block 
-            double percOfColor = valPercResidual / colorPerc;// % of color of this block that will be filled
-
-            Color cTarget = ColorsOfMap[blockIdx];
-            Color cNext = ColorsOfMap[blockIdx + 1];
-
-            var deltaR = cNext.R - cTarget.R;
-            var deltaG = cNext.G - cTarget.G;
-            var deltaB = cNext.B - cTarget.B;
-
-            var R = cTarget.R + (deltaR * percOfColor);
-            var G = cTarget.G + (deltaG * percOfColor);
-            var B = cTarget.B + (deltaB * percOfColor);
-
-            Color c = ColorsOfMap[0];
-            c = Color.FromArgb(alpha, (byte)R, (byte)G, (byte)B);
-            return c;
-        }
         public static List<Color> ColorsOfMap = new List<Color>();
 
     }

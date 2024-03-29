@@ -1,6 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils.Gpx;
-using GMap.NET.MapProviders;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -88,11 +87,11 @@ namespace FellrnrTrainingAnalysis.Action
             GpxPoint? previous = null;
             foreach (GpxPoint gpxPoint in gpxPoints)
             {
-                if(gpxPoint.Time == null)
+                if (gpxPoint.Time == null)
                 {
                     LocationTimes = null;// any point without time, kill the time stream
                 }
-                else 
+                else
                 {
                     DateTime dateTime = (DateTime)gpxPoint.Time;
                     if (LocationTimes != null)
@@ -103,7 +102,7 @@ namespace FellrnrTrainingAnalysis.Action
                         uint offset = (uint)timeSpan.TotalSeconds;
                         LocationTimes.Add(offset);
                     }
-                    if(previous != null)
+                    if (previous != null)
                     {
                         double distanceKm = gpxPoint.GetDistanceFromInKm(previous);
                         double distanceM = distanceKm * 1000.0;
@@ -116,13 +115,13 @@ namespace FellrnrTrainingAnalysis.Action
                     }
                     previous = gpxPoint;
 
-                    if(gpxPoint.Elevation == null)
+                    if (gpxPoint.Elevation == null)
                     {
                         LocationElev = null; //kill the stream
                     }
                     else
                     {
-                        if(LocationElev != null)
+                        if (LocationElev != null)
                             LocationElev.Add((float)gpxPoint.Elevation);
                     }
                 }

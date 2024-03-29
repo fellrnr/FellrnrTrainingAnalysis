@@ -1,11 +1,4 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -40,7 +33,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             Datum? datum = activity.GetNamedDatum(ActivityFieldname);
             //if we have a recorded non-zero datum and we don't override these, then return
-            if(OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data != 0)
+            if (OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data != 0)
             {
                 return;
             }
@@ -64,7 +57,7 @@ namespace FellrnrTrainingAnalysis.Model
             float? value = ExtractValue(activity, forceJustMe);
             if (value != null)
             {
-                if(forceJustMe) Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
+                if (forceJustMe) Logging.Instance.Debug($"Will replace/add datum {ActivityFieldname} with {value} on {activity}");
                 activity.AddOrReplaceDatum(new TypedDatum<float>(ActivityFieldname, false, value.Value));
             }
         }
@@ -79,7 +72,7 @@ namespace FellrnrTrainingAnalysis.Model
                                            float defaultValue,
                                            Mode extractionMode,
                                            bool overrideRecordedZeroOnly,
-                                           List<string>? sportsToInclude = null) : 
+                                           List<string>? sportsToInclude = null) :
             base(activityFieldname, overrideRecordedZeroOnly, sportsToInclude)
         {
             DependentFieldname = dependentFieldname;
@@ -108,7 +101,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             float? dependent = activity.GetNamedFloatDatum(DependentFieldname);
 
-            if(dependent != null && ExtractionMode == Mode.Multiply)
+            if (dependent != null && ExtractionMode == Mode.Multiply)
             {
                 dependent *= DefaultValue;
             }
@@ -120,7 +113,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     }
 
-    public class CalculateFieldSimpleMath: CalculateFieldSimple
+    public class CalculateFieldSimpleMath : CalculateFieldSimple
     {
         public CalculateFieldSimpleMath(string activityFieldname,
                                            string firstFieldName,

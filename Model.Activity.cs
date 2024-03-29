@@ -1,9 +1,7 @@
-﻿using MemoryPack;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 using System.Collections.ObjectModel;
-using FellrnrTrainingAnalysis.Utils;
-using System.IO;
 using System.ComponentModel;
-using de.schumacher_bw.Strava.Endpoint;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -265,10 +263,12 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     if (!this.timeSeries.ContainsKey(ts.Name)) //we've just removed all virtual ts, so the only ones left with the same name are recorded data
                     {
-                        if (ts.IsValid() && ts.GetData(forceCount, forceJustMe) != null)
+                        //We're calling GetData twice. Hummm. Let's change to make recalculate return true if we should add it. 
+                        //if (ts.IsValid() && ts.GetData(forceCount, forceJustMe) != null)
+                        if (ts.IsValid())
                         {
-                            ts.Recalculate(forceCount, forceJustMe);
-                            this.timeSeries.Add(ts.Name, ts);
+                            if(ts.Recalculate(forceCount, forceJustMe))
+                                this.timeSeries.Add(ts.Name, ts);
                         }
                     }
                 }

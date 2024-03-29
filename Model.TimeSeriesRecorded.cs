@@ -32,7 +32,7 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity
-        public override void Recalculate(int forceCount, bool forceJustMe) { LastForceCount = forceCount; return; }
+        public override bool Recalculate(int forceCount, bool forceJustMe) { LastForceCount = forceCount; return true; }
 
 
 

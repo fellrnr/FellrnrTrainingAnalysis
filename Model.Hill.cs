@@ -1,6 +1,6 @@
-﻿using MemoryPack;
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration.Attributes;
+using MemoryPack;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json.Serialization;
@@ -36,7 +36,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackInclude]
         [Name(" latitude")] //note leading space
-        public float Latitude { get; set;  }
+        public float Latitude { get; set; }
 
         [MemoryPackInclude]
         [Name(" longitude")] //note leading space
@@ -108,7 +108,7 @@ namespace FellrnrTrainingAnalysis.Model
                     {
                         Hill hill = new Hill(record.Name, record.Number, record.Latitude, record.Longitude, record.Elevation, new List<Activity>(), classifications);
                         string hillkey = hill.Name + classCsv;
-                        if(!sortedList.ContainsKey(hillkey))
+                        if (!sortedList.ContainsKey(hillkey))
                             sortedList.Add(hillkey, hill); //duplicate hill names, even with the classification added
                         if (Utils.Options.Instance.DebugHills)
                             Utils.Logging.Instance.Debug($"{record.Name}, #{record.Number}, {record.Latitude}/{record.Longitude}/{record.Elevation}m, {classCsv}");
@@ -126,9 +126,9 @@ namespace FellrnrTrainingAnalysis.Model
         public static void Dump(List<Hill> retval, string classification = "")
         {
             Utils.Logging.Instance.Debug($"Total {retval.Count} hills");
-            foreach(Hill hill in retval) 
-            { 
-                if(classification == "" || hill.IsA(classification))
+            foreach (Hill hill in retval)
+            {
+                if (classification == "" || hill.IsA(classification))
                     Utils.Logging.Instance.Debug(hill.ToString());
             }
         }

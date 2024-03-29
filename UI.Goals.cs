@@ -1,8 +1,8 @@
 ﻿using FellrnrTrainingAnalysis.Model;
-using System.Net.Mail;
-using System.Net;
-using System.Text;
 using FellrnrTrainingAnalysis.Utils;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.UI
 {
@@ -19,7 +19,7 @@ namespace FellrnrTrainingAnalysis.UI
         private DataGridView GoalsDataGridView;
         private TextBox GoalsTextBox;
 
-        public void SendGoals() 
+        public void SendGoals()
         {
             if (Database.CurrentAthlete.Activities.Count == 0) //don't bother if we don't have data. It won't end well. 
             {
@@ -144,14 +144,17 @@ namespace FellrnrTrainingAnalysis.UI
             }
             GoalsDataGridView.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
 
-            //save the image to the clipboard for use in other programs
-            var totalHeight = GoalsDataGridView.Rows.GetRowsHeight(DataGridViewElementStates.None) + GoalsDataGridView.ColumnHeadersHeight;
-            //Add 5 pixels through trial and error. Not happy. 
-            var totalWidth = GoalsDataGridView.Columns.GetColumnsWidth(DataGridViewElementStates.Visible) + 5 - GoalsDataGridView.RowHeadersWidth; //remove the width of the hidden row headers 
-            using (var bmp = new Bitmap(totalWidth, totalHeight))
+            if (Options.Instance.CopyGoalsToClibboard)
             {
-                GoalsDataGridView.DrawToBitmap(bmp, new Rectangle(0, 0, totalWidth, totalHeight));
-                Clipboard.SetImage(bmp);
+                //save the image to the clipboard for use in other programs
+                var totalHeight = GoalsDataGridView.Rows.GetRowsHeight(DataGridViewElementStates.None) + GoalsDataGridView.ColumnHeadersHeight;
+                //Add 5 pixels through trial and error. Not happy. 
+                var totalWidth = GoalsDataGridView.Columns.GetColumnsWidth(DataGridViewElementStates.Visible) + 5 - GoalsDataGridView.RowHeadersWidth; //remove the width of the hidden row headers 
+                using (var bmp = new Bitmap(totalWidth, totalHeight))
+                {
+                    GoalsDataGridView.DrawToBitmap(bmp, new Rectangle(0, 0, totalWidth, totalHeight));
+                    Clipboard.SetImage(bmp);
+                }
             }
         }
 

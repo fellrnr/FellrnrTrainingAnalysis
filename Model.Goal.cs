@@ -1,6 +1,4 @@
-﻿using de.schumacher_bw.Strava.Endpoint;
-using FellrnrTrainingAnalysis.Utils;
-using System.Collections.Generic;
+﻿using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -29,9 +27,9 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class VolumeGoal : Goal
     {
-        public VolumeGoal(List<string> sportsToInclude, string sportDescription, string targetColumn, float scalingFactor, string format, string units, float goalValue, string activityFieldname) 
+        public VolumeGoal(List<string> sportsToInclude, string sportDescription, string targetColumn, float scalingFactor, string format, string units, float goalValue, string activityFieldname)
             : base(sportsToInclude, sportDescription, targetColumn, activityFieldname)
-        { 
+        {
             ScalingFactor = scalingFactor;
             Format = format;
             Units = units;
@@ -50,7 +48,7 @@ namespace FellrnrTrainingAnalysis.Model
         public override string FormatResult(KeyValuePair<Model.Period, float> kvp)
         {
             int? days = kvp.Key.ApproxDays;
-            if(days.HasValue)
+            if (days.HasValue)
             {
                 return string.Format("{0} ({1})", FormatResult(kvp.Value), AsPercentTarget(kvp.Value, days.Value));
             }
@@ -122,18 +120,18 @@ namespace FellrnrTrainingAnalysis.Model
                     queue.Enqueue(new Tuple<DateTime, float>(day.Date, dailyAccumulator));
                     rolling[period] += dailyAccumulator;
 
-                    while(!period.IsWithinPeriod(queue.First().Item1, day.Date))
+                    while (!period.IsWithinPeriod(queue.First().Item1, day.Date))
                     {
-                        Tuple<DateTime, float> first = queue.Dequeue(); 
+                        Tuple<DateTime, float> first = queue.Dequeue();
                         rolling[period] -= first.Item2;
                     }
 
                     string goalActivityFieldname = FieldName(period);
                     day.AddOrReplaceDatum(new TypedDatum<float>(goalActivityFieldname, false, rolling[period])); //if we've done the hard work of calculation, replace regardless of force
-                    //if(day.Date == new DateTime(year:2024, month:2, day:27))
-                    //{
-                    //    Logging.Instance.Debug($"On {day.Date}, Period {period}, {rolling[period]}");
-                        
+                                                                                                                 //if(day.Date == new DateTime(year:2024, month:2, day:27))
+                                                                                                                 //{
+                                                                                                                 //    Logging.Instance.Debug($"On {day.Date}, Period {period}, {rolling[period]}");
+
                     //}
                 }
 

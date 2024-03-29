@@ -1,7 +1,6 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
 using System.ComponentModel;
-using System.Formats.Asn1;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -25,14 +24,14 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackOrder(20)] //start at 20 to avoid conflict with Activity
         protected Dictionary<string, Datum> Data { get; set; }
 
-        public virtual Utils.DateTimeTree Id() { return new DateTimeTree(); } 
+        public virtual Utils.DateTimeTree Id() { return new DateTimeTree(); }
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<string> DataNames { get { return Data.Keys.ToList().AsReadOnly(); } }
         [MemoryPackIgnore]
         public IReadOnlyCollection<Datum> DataValues { get { return Data.Values.ToList().AsReadOnly(); } }
 
-        public Datum? GetNamedDatum(string name) { if (Data.ContainsKey(name)) return Data[name]; else return null;  }
+        public Datum? GetNamedDatum(string name) { if (Data.ContainsKey(name)) return Data[name]; else return null; }
 
         public bool HasNamedDatum(string name) { return Data.ContainsKey(name); }
 
@@ -76,7 +75,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         protected virtual void NewDatumNameAdded(string name) { }
 
-        public void AddOrReplaceDatum(Datum datum) 
+        public void AddOrReplaceDatum(Datum datum)
         {
             if (!Data.ContainsKey(datum.Name))
             {
@@ -86,7 +85,7 @@ namespace FellrnrTrainingAnalysis.Model
             Data[datum.Name] = datum;
         }
 
-        public void ImportDatum<T>(string name, ActivityDatumMapping.DataSourceEnum source, ActivityDatumMapping.LevelType level, T data) 
+        public void ImportDatum<T>(string name, ActivityDatumMapping.DataSourceEnum source, ActivityDatumMapping.LevelType level, T data)
         {
             ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(source, level, name);
             if (activityDatumMapping != null && activityDatumMapping.Import)

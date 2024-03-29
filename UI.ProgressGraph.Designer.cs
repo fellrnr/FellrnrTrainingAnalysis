@@ -41,6 +41,7 @@
             label4 = new Label();
             label5 = new Label();
             label6 = new Label();
+            operationLabel = new Label();
             flowLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -129,7 +130,7 @@
             // 
             splitContainer1.Panel2.Controls.Add(tableLayoutPanel1);
             splitContainer1.Size = new Size(1028, 600);
-            splitContainer1.SplitterDistance = 783;
+            splitContainer1.SplitterDistance = 641;
             splitContainer1.TabIndex = 1;
             // 
             // formsPlotProgress
@@ -138,17 +139,19 @@
             formsPlotProgress.Location = new Point(0, 0);
             formsPlotProgress.Margin = new Padding(6, 5, 6, 5);
             formsPlotProgress.Name = "formsPlotProgress";
-            formsPlotProgress.Size = new Size(777, 595);
+            formsPlotProgress.Size = new Size(635, 595);
             formsPlotProgress.TabIndex = 0;
             // 
             // tableLayoutPanel1
             // 
             tableLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tableLayoutPanel1.AutoScroll = true;
-            tableLayoutPanel1.ColumnCount = 3;
+            tableLayoutPanel1.ColumnCount = 4;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.Controls.Add(operationLabel, 0, 0);
             tableLayoutPanel1.Controls.Add(label4, 0, 0);
             tableLayoutPanel1.Controls.Add(label5, 1, 0);
             tableLayoutPanel1.Controls.Add(label6, 2, 0);
@@ -156,7 +159,7 @@
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(235, 597);
+            tableLayoutPanel1.Size = new Size(377, 597);
             tableLayoutPanel1.TabIndex = 0;
             // 
             // label4
@@ -171,20 +174,29 @@
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(58, 0);
+            label5.Location = new Point(156, 0);
             label5.Name = "label5";
-            label5.Size = new Size(45, 25);
+            label5.Size = new Size(49, 25);
             label5.TabIndex = 1;
-            label5.Text = "Bar?";
+            label5.Text = "Type";
             // 
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(109, 0);
+            label6.Location = new Point(211, 0);
             label6.Name = "label6";
             label6.Size = new Size(76, 25);
             label6.TabIndex = 2;
             label6.Text = "Smooth";
+            // 
+            // operationLabel
+            // 
+            operationLabel.AutoSize = true;
+            operationLabel.Location = new Point(58, 0);
+            operationLabel.Name = "operationLabel";
+            operationLabel.Size = new Size(92, 25);
+            operationLabel.TabIndex = 3;
+            operationLabel.Text = "Operation";
             // 
             // ProgressGraph
             // 
@@ -220,5 +232,6 @@
         private Label label4;
         private Label label5;
         private Label label6;
+        private Label operationLabel;
     }
 }

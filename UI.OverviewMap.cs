@@ -1,8 +1,8 @@
 ﻿using FellrnrTrainingAnalysis.Model;
-using GMap.NET;
-using GMap.NET.WindowsForms.Markers;
-using GMap.NET.WindowsForms;
 using FellrnrTrainingAnalysis.Utils;
+using GMap.NET;
+using GMap.NET.WindowsForms;
+using GMap.NET.WindowsForms.Markers;
 
 namespace FellrnrTrainingAnalysis.UI
 {

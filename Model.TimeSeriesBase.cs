@@ -1,5 +1,5 @@
 ﻿using MemoryPack;
-using System.Formats.Asn1;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -13,6 +13,8 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(5, typeof(TimeSeriesCalculateAltitude))]
     [MemoryPackUnion(6, typeof(TimeSeriesCalculateDistance))]
     [MemoryPackUnion(7, typeof(TimeSeriesCalculatePower))]
+    [MemoryPackUnion(8, typeof(TimeSeriesWPrimeBalance))]
+    [MemoryPackUnion(9, typeof(TimeSeriesPowerEstimateError))]
     public abstract partial class TimeSeriesBase
     {
         //Note: there is an instance of each TimeSeries object for each activity
@@ -28,8 +30,8 @@ namespace FellrnrTrainingAnalysis.Model
             this.parent_ = parent_;
         }
 
-        
-        public abstract TimeValueList? GetData(int forceCount, bool forceJustMe);
+
+        public abstract TimeValueList? GetData(int forceCount = 0, bool forceJustMe = false);
 
         public abstract bool IsValid();
 
@@ -40,7 +42,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddHighlight(Tuple<uint, uint> area)
         {
-            if(Highlights == null)
+            if (Highlights == null)
                 Highlights = new List<Tuple<uint, uint>>();
             Highlights.Add(area);
         }
@@ -49,7 +51,7 @@ namespace FellrnrTrainingAnalysis.Model
         public string Name { get; set; } //Ohhh, memory pack requires a public setter! 
 
         //do a full recalculate (forced) if forceCount is greater than our LastForceCount OR if forceJustMe is true
-        public abstract void Recalculate(int forceCount, bool forceJustMe);
+        public abstract bool Recalculate(int forceCount, bool forceJustMe);
 
         public void PostDeserialize(Activity parent)
         {
@@ -74,11 +76,27 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         //percentiles - min, 0.03, 5, 32, 50, 68, 95, 99.7, max
-        public enum StaticsValue { Min, SD3Low, SD2Low, SD1Low, Median, SD1High, SD2High, SD3High, Max, StandardDeviation, Mean }
+        public enum StaticsValue { Min, SD3Low, SD2Low, SD1Low, Low10PC, Median, SD1High, High90PC, SD2High, SD3High, Max, StandardDeviation, Mean}
         private float[]? _percentiles;
+        private static int StaticsValueLength = Enum.GetNames(typeof(StaticsValue)).Length;
+        public static string[] StaticsValueNames = Enum.GetNames(typeof(StaticsValue));
+        public static StaticsValue StatisticsValueFromName(string s) { return (StaticsValue)Enum.Parse(typeof(StaticsValue), s);  }
+
+        public string ToStatisticsString()
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (string name in Enum.GetNames<StaticsValue>())
+            {  
+                stringBuilder.Append($"{name}, {Percentile(StatisticsValueFromName(name))}, ");
+            }
+
+            return stringBuilder.ToString();
+        }
+
         public float Percentile(StaticsValue staticsValue)
         {
-            if (_percentiles == null)
+            
+            if (_percentiles == null || _percentiles.Length != StaticsValueLength)
             {
                 TimeValueList? data = GetData(forceCount: 0, forceJustMe: false);
                 if (data == null || data.Values.Length == 0)
@@ -86,17 +104,18 @@ namespace FellrnrTrainingAnalysis.Model
 
                 List<float> sorted = data.Values.ToList();
                 sorted.Sort();
-                _percentiles = new float[Enum.GetNames(typeof(StaticsValue)).Length];
+                _percentiles = new float[StaticsValueLength];
                 _percentiles[(int)StaticsValue.Min] = sorted[0];
                 _percentiles[(int)StaticsValue.Max] = sorted[sorted.Count - 1];
-                _percentiles[(int)StaticsValue.SD3Low] = Utils.TimeSeries.Percentile(sorted, 0.03f);
-                _percentiles[(int)StaticsValue.SD2Low] = Utils.TimeSeries.Percentile(sorted, 5f);
-                _percentiles[(int)StaticsValue.SD1Low] = Utils.TimeSeries.Percentile(sorted, 32f);
-                _percentiles[(int)StaticsValue.SD1Low] = Utils.TimeSeries.Percentile(sorted, 32f);
-                _percentiles[(int)StaticsValue.Median] = Utils.TimeSeries.Percentile(sorted, 50f);
-                _percentiles[(int)StaticsValue.SD1High] = Utils.TimeSeries.Percentile(sorted, 68f);
-                _percentiles[(int)StaticsValue.SD2High] = Utils.TimeSeries.Percentile(sorted, 95f);
-                _percentiles[(int)StaticsValue.SD3High] = Utils.TimeSeries.Percentile(sorted, 99.7f);
+                _percentiles[(int)StaticsValue.SD3Low] = Utils.TimeSeriesUtils.Percentile(sorted, 0.03f);
+                _percentiles[(int)StaticsValue.SD2Low] = Utils.TimeSeriesUtils.Percentile(sorted, 5f);
+                _percentiles[(int)StaticsValue.SD1Low] = Utils.TimeSeriesUtils.Percentile(sorted, 32f);
+                _percentiles[(int)StaticsValue.Low10PC] = Utils.TimeSeriesUtils.Percentile(sorted, 10f);
+                _percentiles[(int)StaticsValue.Median] = Utils.TimeSeriesUtils.Percentile(sorted, 50f);
+                _percentiles[(int)StaticsValue.SD1High] = Utils.TimeSeriesUtils.Percentile(sorted, 68f);
+                _percentiles[(int)StaticsValue.High90PC] = Utils.TimeSeriesUtils.Percentile(sorted, 90f);
+                _percentiles[(int)StaticsValue.SD2High] = Utils.TimeSeriesUtils.Percentile(sorted, 95f);
+                _percentiles[(int)StaticsValue.SD3High] = Utils.TimeSeriesUtils.Percentile(sorted, 99.7f);
 
                 float average = sorted.Average();
                 _percentiles[(int)StaticsValue.Mean] = average;
@@ -107,7 +126,7 @@ namespace FellrnrTrainingAnalysis.Model
                     float diff = f - average;
                     sum += diff * diff;
                 }
-                float sd = (float)Math.Sqrt(sum);
+                float sd = (float)Math.Sqrt(sum / sorted.Count);
                 _percentiles[(int)StaticsValue.StandardDeviation] = sd;
             }
             return _percentiles[(int)staticsValue];

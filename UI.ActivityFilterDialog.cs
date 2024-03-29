@@ -160,7 +160,7 @@ new object[] { true });
 
             public void Clear()
             {
-                if(!string.IsNullOrEmpty(Filter.Text)) 
+                if (!string.IsNullOrEmpty(Filter.Text))
                 {
                     Filter.Text = string.Empty;
                 }

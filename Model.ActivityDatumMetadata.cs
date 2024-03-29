@@ -21,8 +21,8 @@ namespace FellrnrTrainingAnalysis.Model
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 
 
-        public bool InTree { get; set; } 
-        public bool InReport { get; set; }  
+        public bool InTree { get; set; }
+        public bool InReport { get; set; }
 
         public int? ColumnSize { get; set; } //null for resize dynamically
 
@@ -82,7 +82,7 @@ namespace FellrnrTrainingAnalysis.Model
         private static Dictionary<string, ActivityDatumMetadata>? ReadFromCsv()
         {
             Dictionary<string, ActivityDatumMetadata> returnMap = new Dictionary<string, ActivityDatumMetadata>();
-            if(!File.Exists(PathToCsv)) { return null; }
+            if (!File.Exists(PathToCsv)) { return null; }
             using (var reader = new StreamReader(PathToCsv))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
@@ -135,10 +135,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static int LastPositionInReport()
         {
-            if(_maxReportColumn != int.MinValue) return _maxReportColumn+1;
+            if (_maxReportColumn != int.MinValue) return _maxReportColumn + 1;
 
             _maxReportColumn = 0;
-            foreach(KeyValuePair<string, ActivityDatumMetadata> kvp in Map)
+            foreach (KeyValuePair<string, ActivityDatumMetadata> kvp in Map)
             {
                 if (kvp.Value.PositionInReport != null)
                 {
@@ -146,7 +146,7 @@ namespace FellrnrTrainingAnalysis.Model
                     _maxReportColumn = Math.Max(_maxReportColumn, positionInReport);
                 }
             }
-            return _maxReportColumn +1; //positions are zero indexed
+            return _maxReportColumn + 1; //positions are zero indexed
         }
 
 

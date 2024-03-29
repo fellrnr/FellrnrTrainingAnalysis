@@ -8,14 +8,14 @@ namespace FellrnrTrainingAnalysis.UI
         public static string FormatForGrid(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
         {
             string retval = Format(datum, activityDatumMetadata);
-            if(Utils.Options.Instance.DebugAddRawDataToGrids)
+            if (Utils.Options.Instance.DebugAddRawDataToGrids)
             {
-                if (datum == null) 
+                if (datum == null)
                 {
                     retval += " dnull";
                     //retval += " (datum null)"; 
                 }
-                else if(activityDatumMetadata == null)
+                else if (activityDatumMetadata == null)
                 {
                     retval += " mnull";
                     //retval += " (meta null)";
@@ -38,8 +38,8 @@ namespace FellrnrTrainingAnalysis.UI
 
         private static string Format(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
         {
-            if (datum == null) { return "";  }
-            if(activityDatumMetadata == null) { return datum.DataAsString()!; }
+            if (datum == null) { return ""; }
+            if (activityDatumMetadata == null) { return datum.DataAsString()!; }
 
             float value = 0;
 

@@ -1,5 +1,6 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
+using Microsoft.Extensions.Hosting;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -12,13 +13,13 @@ namespace FellrnrTrainingAnalysis.Model
         {
         }
 
-        public TimeSeriesHeartRatePower(string name, 
-                                        Activity parent, 
-                                        bool persistCache, 
-                                        List<string>? requiredFields, 
-                                        List<string>? opposingFields = null, 
+        public TimeSeriesHeartRatePower(string name,
+                                        Activity parent,
+                                        bool persistCache,
+                                        List<string>? requiredFields,
+                                        List<string>? opposingFields = null,
                                         List<string>? sportsToInclude = null,
-                                        float offset = 0, 
+                                        float offset = 0,
                                         float ignoreStart = 0) :
             base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
@@ -31,11 +32,11 @@ namespace FellrnrTrainingAnalysis.Model
 
         private const string RHR = "RestingHeartRate";
         [MemoryPackIgnore]
-        private float RestingHeartRate { get { return Parameter(RHR); } set { Parameter(RHR, value); } }
+        private float RestingHeartRate { get { return ParameterOrZero(RHR); } set { Parameter(RHR, value); } }
 
         private const string WEIGHT = "Weight";
         [MemoryPackIgnore]
-        private float Weight { get { return Parameter(WEIGHT); } set { Parameter(WEIGHT, value); } }
+        private float Weight { get { return ParameterOrZero(WEIGHT); } set { Parameter(WEIGHT, value); } }
 
         public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
@@ -54,12 +55,12 @@ namespace FellrnrTrainingAnalysis.Model
             Athlete athlete = ParentActivity.ParentAthlete;
             if (Weight == 0)
             {
-                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.WeightTag, Options.Instance.StartingWeight);
+                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.TagWeight, Options.Instance.StartingWeight);
             }
 
             if (RestingHeartRate == 0)
             {
-                RestingHeartRate = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.RestingHeartRateTag, Options.Instance.StartingRestingHeartRate);
+                RestingHeartRate = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.TagRestingHeartRate, Options.Instance.StartingRestingHeartRate);
             }
 
             AlignedTimeSeries? alignedTimeSeries = AlignedTimeSeries.Align(hrData, pwrData);
@@ -67,7 +68,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             TimeValueList retval = new TimeValueList(new uint[alignedTimeSeries.Time.Length], new float[alignedTimeSeries.Time.Length]);
 
-            int ignoreStart = (int)Parameter(IGNORESTART);
+            int ignoreStart = (int)ParameterOrZero(IGNORESTART);
             uint lastTime = alignedTimeSeries.Time.Last();
 
             if (ignoreStart > lastTime)
@@ -75,7 +76,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             float w = Weight;
             float rhr = RestingHeartRate;
-            float rhroffset = Parameter(OFFSET);
+            float rhroffset = ParameterOrZero(OFFSET);
             float orhr = rhr + rhroffset;
             float prev_hrpwr = 0;
             float first_hrpwr = -1;
@@ -94,7 +95,7 @@ namespace FellrnrTrainingAnalysis.Model
                     {
                         retval.Values[i] = hrpwr;
                         prev_hrpwr = hrpwr;
-                        if(first_hrpwr < 0)
+                        if (first_hrpwr < 0)
                             first_hrpwr = hrpwr;
                     }
                     else
@@ -109,20 +110,8 @@ namespace FellrnrTrainingAnalysis.Model
                 retval.Values[i] = first_hrpwr;
             }
 
-            AlignedTimeSeries.LinearRegressionResults? regression = alignedTimeSeries.LinearRegression(false);
-            if (regression != null)
-            {
-                ParentActivity.AddOrReplaceDatum(new TypedDatum<float>($"{Name}-Slope", false, (float)regression.Slope));
-                ParentActivity.AddOrReplaceDatum(new TypedDatum<float>($"{Name}-YIntercept", false, (float)regression.YIntercept));
-                ParentActivity.AddOrReplaceDatum(new TypedDatum<float>($"{Name}-RSquared", false, (float)regression.RSquared));
-                //if(force)
-                //{
-                //    string s = alignedTimeSeries.ToCsv();
-                //    Clipboard.SetText(s, TextDataFormat.Text);
-                //    LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(s);
-                //    largeTextDialogForm.ShowDialog();
-                //}
-            }
+            LinearRegression? regression = LinearRegression.EvaluateLinearRegression(alignedTimeSeries, false);
+            if(regression != null) { regression.Save(ParentActivity, Name);  }
             Logging.Instance.PauseAccumulator("GetHrPwr");
 
             return retval;

@@ -22,7 +22,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public abstract string DataAsString();
 
-        public override string ToString() { return "";  }
+        public override string ToString() { return ""; }
     }
 
     [MemoryPackable]
@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.Model
         /// Override ToString() for display
         public override string ToString()
         {
-            return $"TypedDatum: [Name {Name.Replace("\n", "⏎")}, Value {Data}, Recorded {Recorded} type {typeof(T).Name}]"; 
+            return $"TypedDatum: [Name {Name.Replace("\n", "⏎")}, Value {Data}, Recorded {Recorded} type {typeof(T).Name}]";
         }
 
         public override string DataAsString()

@@ -1,11 +1,8 @@
-﻿using System.Text;
-using System.Text.Json.Serialization;
-using System.Collections.ObjectModel;
-using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
-using de.schumacher_bw.Strava.Endpoint;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -28,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
         public Day GetOrAddDay(DateTime date)
         {
             DateTime dateNoTime = date.Date; //just in case
-            if(!_days.ContainsKey(dateNoTime))
+            if (!_days.ContainsKey(dateNoTime))
                 _days.Add(dateNoTime, new Day(dateNoTime));
             return _days[dateNoTime];
         }
@@ -50,7 +47,7 @@ namespace FellrnrTrainingAnalysis.Model
             Logging.Instance.ContinueAccumulator("FindRecentDayWithDatum(search)");
             DateTime start = Days.Keys.First();
             DateTime scan = dateNoTime;
-            while(scan > start)
+            while (scan > start)
             {
                 scan = scan.AddDays(-1);
 
@@ -76,12 +73,12 @@ namespace FellrnrTrainingAnalysis.Model
             Logging.Instance.ContinueAccumulator("FindDailyValueOrDefault");
 
             float? retval = FindRecentDayWithDatum(dateNoTime, name); ;
-            if (retval == null) 
+            if (retval == null)
             {
                 //simple optimization = add the values to the dates so next time around we'll be fast
                 Day day = GetOrAddDay(dateNoTime);
                 day.AddOrReplaceDatum(new TypedDatum<float>(name, true, defaultValue));
-                retval = defaultValue; 
+                retval = defaultValue;
             }
 
             Logging.Instance.PauseAccumulator("FindDailyValueOrDefault");
@@ -119,10 +116,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackIgnore]
         public IReadOnlyCollection<String> AllTimeSeriesNames //generate dynamically, don't cache = new List<string>();
-        { 
+        {
             get
             {
-                if(_allTimeSeriesNamesCache != null)
+                if (_allTimeSeriesNamesCache != null)
                     return _allTimeSeriesNamesCache;
 
                 List<string> timeSeriesNames = new List<string>();
@@ -162,7 +159,7 @@ namespace FellrnrTrainingAnalysis.Model
                     {
                         string name = kvp2.Key;
                         TimeSeriesBase ts = kvp2.Value;
-                        if (!ts.IsVirtual()  && !_allNonVirtualTimeSeriesNamesCache.Contains(name))
+                        if (!ts.IsVirtual() && !_allNonVirtualTimeSeriesNamesCache.Contains(name))
                         {
                             _allNonVirtualTimeSeriesNamesCache.Add(name);
                         }
@@ -182,7 +179,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             get
             {
-                if(_allActivityTypesCache != null)
+                if (_allActivityTypesCache != null)
                     return _allActivityTypesCache;
                 List<string> activityTypes = new List<string>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
@@ -209,7 +206,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             get
             {
-                if(_activityFieldMetaDataCache != null)
+                if (_activityFieldMetaDataCache != null)
                     return _activityFieldMetaDataCache;
                 List<Tuple<String, Type>> activityFieldMetaData = new List<Tuple<string, Type>>();
                 foreach (KeyValuePair<string, Activity> kvp in _activities)
@@ -326,7 +323,7 @@ namespace FellrnrTrainingAnalysis.Model
             string stravaId = Activity.ExpectedPrimaryKey(activityData);
             if (_activities.ContainsKey(stravaId))
             {
-                Activity activity= _activities[stravaId];
+                Activity activity = _activities[stravaId];
                 foreach (KeyValuePair<string, Datum> kvp in activityData)
                 {
                     activity.AddOrReplaceDatum(kvp.Value);
@@ -365,13 +362,13 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
             AddActivityToCalenderTree(activity);
-            if(_activitiesByUTCDateTime.ContainsKey(activity.StartDateTimeUTC.Value))
+            if (_activitiesByUTCDateTime.ContainsKey(activity.StartDateTimeUTC.Value))
                 _activitiesByUTCDateTime[activity.StartDateTimeUTC.Value] = activity;
             else
                 _activitiesByUTCDateTime.Add(activity.StartDateTimeUTC.Value, activity);
 
             if (_activitiesByLocalDateTime.ContainsKey(activity.StartDateTimeLocal.Value))
-                _activitiesByLocalDateTime[activity.StartDateTimeLocal!.Value] = activity; 
+                _activitiesByLocalDateTime[activity.StartDateTimeLocal!.Value] = activity;
             else
                 _activitiesByLocalDateTime.Add(activity.StartDateTimeLocal!.Value, activity);
             Day day = GetOrAddDay(activity.StartDateTimeLocal.Value.Date);
@@ -433,7 +430,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public DateTime? GetLatestActivityDateTime()
         {
-            if(_activitiesByUTCDateTime.Count > 0) //whatever's really the last
+            if (_activitiesByUTCDateTime.Count > 0) //whatever's really the last
             {
                 return _activitiesByUTCDateTime.Last().Key;
             }
@@ -510,7 +507,7 @@ namespace FellrnrTrainingAnalysis.Model
                     sb.Append(string.Format(">> {0}\r\n", field));
                 }
             }
-            
+
 
             return sb.ToString();
         }
@@ -533,7 +530,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
             //don't report on calendar progress; it's too high level
             //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
-            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities Entries ({Activities.Count})", Activities.Count+1));
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities Entries ({Activities.Count})", Activities.Count + 1));
             Activity.CurrentRecalculateProgress = 0; //ugly hack for progress count
             //int i = 0;
             foreach (KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
@@ -564,7 +561,7 @@ namespace FellrnrTrainingAnalysis.Model
             _allActivityTypesCache = null;
             _activityFieldMetaDataCache = null;
 
-            foreach(KeyValuePair<string, Activity> kvp in oldList) 
+            foreach (KeyValuePair<string, Activity> kvp in oldList)
             {
                 Activity activity = kvp.Value;
                 string id = activity.PrimaryKey();

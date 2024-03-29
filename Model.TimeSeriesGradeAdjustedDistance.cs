@@ -1,8 +1,5 @@
-﻿using MemoryPack;
-using System.Collections.ObjectModel;
-using FellrnrTrainingAnalysis.Utils;
-using static FellrnrTrainingAnalysis.Utils.TimeSeries;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -17,9 +14,28 @@ namespace FellrnrTrainingAnalysis.Model
         {
         }
 
-        public TimeSeriesGradeAdjustedDistance(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null) :
+        public TimeSeriesGradeAdjustedDistance(string name, 
+                                    Activity parent, 
+                                    bool persistCache, 
+                                    List<string>? requiredFields, 
+                                    List<string>? opposingFields = null, 
+                                    List<string>? sportsToInclude = null,
+                                    float? gradeAdjustmentX2 = null,
+                                    float? gradeAdjustmentX3 = null,
+                                    float? gradeAdjustmentX4 = null,
+                                    float? gradeAdjustmentX5 = null,
+                                    float? gradeAdjustmentX = null,
+                                    float? gradeAdjustmentFactor = null,
+                                    float? gradeAdjustmentOffset = null) :
             base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
+            if (gradeAdjustmentX2 != null) Parameter("gradeAdjustmentX2", gradeAdjustmentX2.Value);
+            if (gradeAdjustmentX3 != null) Parameter("gradeAdjustmentX3", gradeAdjustmentX3.Value);
+            if (gradeAdjustmentX4 != null) Parameter("gradeAdjustmentX4", gradeAdjustmentX4.Value);
+            if (gradeAdjustmentX5 != null) Parameter("gradeAdjustmentX5", gradeAdjustmentX5.Value);
+            if (gradeAdjustmentX != null) Parameter("gradeAdjustmentX", gradeAdjustmentX.Value);
+            if (gradeAdjustmentFactor != null) Parameter("gradeAdjustmentFactor", gradeAdjustmentFactor.Value);
+            if (gradeAdjustmentOffset != null) Parameter("gradeAdjustmentOffset", gradeAdjustmentOffset.Value);
         }
 
         public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
@@ -34,7 +50,7 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
             }
 
-            TimeSeriesBase altitudeStream = RequiredTimeSeries[1]; 
+            TimeSeriesBase altitudeStream = RequiredTimeSeries[1];
             TimeValueList? altitudeData = altitudeStream.GetData(forceCount, forceJustMe);
             if (altitudeData == null || altitudeData.Length < 1)
             {
@@ -45,7 +61,7 @@ namespace FellrnrTrainingAnalysis.Model
             uint finalTimeAltitude = altitudeData.Times.Last();
             uint finalTimeDistance = distanceData.Times.Last();
             uint finalTimeDistance90 = finalTimeDistance * 90 / 100;
-            if(finalTimeAltitude < finalTimeDistance90)
+            if (finalTimeAltitude < finalTimeDistance90)
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"altitude less than 90 distance, {finalTimeAltitude}, {finalTimeDistance}, {finalTimeDistance90}");
                 return distanceData;
@@ -67,8 +83,22 @@ namespace FellrnrTrainingAnalysis.Model
                 if (forceJustMe) Logging.Instance.TraceLeave($"No altitude, return distance {distanceData}");
                 return distanceData;
             }
+            float? gradeAdjustmentX2 = ParameterOrNull("gradeAdjustmentX2");
+            float? gradeAdjustmentX3 = ParameterOrNull("gradeAdjustmentX3");
+            float? gradeAdjustmentX4 = ParameterOrNull("gradeAdjustmentX4");
+            float? gradeAdjustmentX5 = ParameterOrNull("gradeAdjustmentX5");
+            float? gradeAdjustmentX = ParameterOrNull("gradeAdjustmentX");
+            float? gradeAdjustmentFactor = ParameterOrNull("gradeAdjustmentFactor");
+            float? gradeAdjustmentOffset = ParameterOrNull("gradeAdjustmentOffset");
 
-            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(aligned);
+            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(aligned,
+                        gradeAdjustmentX2,
+                        gradeAdjustmentX3,
+                        gradeAdjustmentX4,
+                        gradeAdjustmentX5,
+                        gradeAdjustmentX,
+                        gradeAdjustmentFactor,
+                        gradeAdjustmentOffset);
 
             TimeValueList retval = gradeAdjustedDistance.GetGradeAdjustedDistance();
 

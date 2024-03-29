@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using FellrnrTrainingAnalysis.Utils;
 using System.Globalization;
 
 namespace FellrnrTrainingAnalysis.Model
@@ -45,14 +46,21 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string DisplayUnitsName { get; set; } = "";
 
-        public string ColorName = "";
+        public string ColorName { get; set; } = "";
 
         public Color GetColor()
         {
+            Color retval;
             if (string.IsNullOrEmpty(ColorName))
-                return Color.Black;
+                retval = Color.Black;
             else
-                return Color.FromName(ColorName);
+                retval = Color.FromName(ColorName);
+            if(retval.R == 255 && retval.G == 255 && retval.B == 255)
+                retval = Color.DarkGray;
+
+            retval = Color.FromArgb(Options.Instance.ActivityGraphAlpha, retval);
+
+            return retval;
         }
 
         //Just to comment the CSV file
@@ -102,7 +110,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static void WriteToCsv()
         {
-            if(map == null)
+            if (map == null)
                 return;
             List<TimeSeriesDefinition> definitions = map.Values.ToList();
             using (var writer = new StreamWriter(PathToCsv))

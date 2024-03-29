@@ -1,11 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
-using GMap.NET.MapProviders;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -47,7 +41,7 @@ namespace FellrnrTrainingAnalysis.Action
 
                 if (!processedTags.Contains(tag))
                 {
-                    if(forceJustMe) Logging.Instance.Debug($"processedTags [{processedTags}] doesn't contain {tag}, so needs to be actioned");
+                    if (forceJustMe) Logging.Instance.Debug($"processedTags [{processedTags}] doesn't contain {tag}, so needs to be actioned");
                     if (!ProcessTag(activity, tag, forceCount, forceJustMe))
                     {
                         Logging.Instance.Error($"ProcessTag failed, activity {activity}");
@@ -135,7 +129,7 @@ namespace FellrnrTrainingAnalysis.Action
                 activity.AddOrReplaceDatum(new TypedDatum<float>(target, true, amount)); //set recorded to true, otherwise we'll delete them on recalculate and ignore the override becaseu we've saved the processed tags
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag Override {target} datum to {amount}");
 
-                if(activity.TimeSeries.ContainsKey(target))
+                if (activity.TimeSeries.ContainsKey(target))
                 {
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag Deleting TimeSeries with same name as Override {target}");
                     activity.RemoveTimeSeries(target);

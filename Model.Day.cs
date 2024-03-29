@@ -1,7 +1,6 @@
-﻿using MemoryPack;
-using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Utils;
+using MemoryPack;
 using System.ComponentModel;
-using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -28,7 +27,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (_activities == null)
                 _activities = new List<Activity>();
-            if(!_activities.Contains(activity))
+            if (!_activities.Contains(activity))
                 _activities.Add(activity);
         }
 
@@ -41,8 +40,11 @@ namespace FellrnrTrainingAnalysis.Model
                 base.Clean();
         }
 
-        public const string WeightTag = "Weight";
-        public const string RestingHeartRateTag = "Resting Heart Rate";
+        public const string TagWeight = "Weight";
+        public const string TagRestingHeartRate = "Resting Heart Rate";
+        public const string TagCriticalPower = "Critical Power";
+        public const string TagWPrime = "W Prime";
+
 
         public override string ToString()
         {

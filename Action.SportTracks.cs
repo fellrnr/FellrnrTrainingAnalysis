@@ -1,17 +1,8 @@
-﻿using System;
-using System.Drawing.Printing;
+﻿using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Security.Policy;
 using System.Text;
 using System.Xml;
-using System.Xml.Linq;
-using de.schumacher_bw.Strava.Endpoint;
-using FellrnrTrainingAnalysis.Model;
-using FellrnrTrainingAnalysis.Utils;
-using GMap.NET.MapProviders;
-using Microsoft.Extensions.Primitives;
-using Microsoft.VisualBasic.Logging;
 
 //taken from https://github.com/ffes/fitlog2tcx/tree/master
 
@@ -113,14 +104,14 @@ namespace FellrnrTrainingAnalysis.Action
 
         public void AddFromFitlog(Database database, Athlete athlete)
         {
-            foreach(SportTracksActivity act in ActivitiesToUpload)
+            foreach (SportTracksActivity act in ActivitiesToUpload)
             {
                 DateTime start = act._startTime;
                 //2002_07_08_12_40_40.fit
                 string filenameGuess = start.ToString("yyyy_MM_dd_HH_mm_ss") + ".fit";
                 string folder = @"C:\Users\jfsav\OneDrive\Jonathan\Fellrnr Export Missing Workouts";
                 string path = Path.Combine(folder, filenameGuess);
-                if(File.Exists(path))
+                if (File.Exists(path))
                 {
                     Logging.Instance.Log($"Trying filename [{path}]");
 
@@ -128,7 +119,7 @@ namespace FellrnrTrainingAnalysis.Action
 
                     //activity has been added to athlete by upload
                     StravaApi.UploadResult result = StravaApi.Instance.UploadActivityFromFit(database, fileInfo, act._name, act._notes, act._treadmill);
-                    if(result.Activity != null)
+                    if (result.Activity != null)
                     {
                         DialogResult dialogResult = MessageBox.Show($"Uploaded activity {result.Activity.PrimaryKey()} for {start}. {result.Usage}. Open or cancel?", "Continue, open, or quit?", MessageBoxButtons.YesNoCancel);
                         if (dialogResult != DialogResult.No) //open on cancel
@@ -141,9 +132,9 @@ namespace FellrnrTrainingAnalysis.Action
                             return;
                         }
                     }
-                    else if(result.Error != null)
+                    else if (result.Error != null)
                     {
-                        if(result.Error.ToLower().Contains("duplicate of "))
+                        if (result.Error.ToLower().Contains("duplicate of "))
                         {
                             DialogResult dialogResult = MessageBox.Show($"We got a duplicate, error {result.Error}. Continue?", "Do More?", MessageBoxButtons.YesNo);
                             if (dialogResult == DialogResult.No)
@@ -153,13 +144,13 @@ namespace FellrnrTrainingAnalysis.Action
                         }
                         else
                         {
-                            if(MessageBox.Show($"We got an error {result.Error}. Continue?", "Do More?", MessageBoxButtons.YesNo) == DialogResult.No)
+                            if (MessageBox.Show($"We got an error {result.Error}. Continue?", "Do More?", MessageBoxButtons.YesNo) == DialogResult.No)
                             {
                                 return;
                             }
                         }
 
-                    } 
+                    }
                     else
                     {
                         if (MessageBox.Show($"No error, but no activity. Huh. Continue?", "Do More?", MessageBoxButtons.YesNo) == DialogResult.No)
@@ -177,7 +168,7 @@ namespace FellrnrTrainingAnalysis.Action
 
         public void ReadFitlogFolder(string folder)
         {
-            
+
             string[] files = Directory.GetFiles(folder, "*.fitlog");
 
             foreach (string file in files)
@@ -195,7 +186,7 @@ namespace FellrnrTrainingAnalysis.Action
             // Move to the first node of DOM and get some attributes.
             XmlElement? root = doc.DocumentElement;
 
-            if(root == null )
+            if (root == null)
             {
                 stringBuilderResults.AppendLine($"No XML found in {filename}");
                 return;
@@ -214,7 +205,7 @@ namespace FellrnrTrainingAnalysis.Action
                         if (node.Name == "Activity")
                         {
                             SportTracksActivity act = new SportTracksActivity();
-                            if(act.ParseXML(node, stringBuilder))
+                            if (act.ParseXML(node, stringBuilder))
                                 AllActivitesParsed.Add(act);
                         }
                     }
@@ -289,7 +280,7 @@ namespace FellrnrTrainingAnalysis.Action
                             act._treadmillAngle = angle;
                         }
 
-                        if(act._notes.ToLower().StartsWith("treadmill") && !act._hasGps)
+                        if (act._notes.ToLower().StartsWith("treadmill") && !act._hasGps)
                         {
                             act._treadmill = true;
                         }
@@ -343,7 +334,7 @@ namespace FellrnrTrainingAnalysis.Action
             foreach (SportTracksActivity act in AllActivitesParsed)
             {
                 Verify(athlete, act, stringBuilder);
-                if(act._startTime > lastInFitlog)
+                if (act._startTime > lastInFitlog)
                     lastInFitlog = act._startTime;
 
                 totalCount++;
@@ -351,7 +342,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             foreach (SportTracksActivity act in AllActivitesParsed)
             {
-                if(act.matchingActivity != null && act._guid != null)
+                if (act.matchingActivity != null && act._guid != null)
                 {
                     act.matchingActivity.AddOrReplaceDatum(new TypedDatum<string>(SportsTracksGUID, true, act._guid));
                 }
@@ -620,7 +611,7 @@ namespace FellrnrTrainingAnalysis.Action
                 {
                     if (WithinMargin(stravaDuration, act._lastTime, 60.0))
                     {
-                        stringBuilder.Append($"Duration matches lastTime Strava {stravaDuration}/{s2hms(stravaDuration)} Fitlog {act._totalDuration}/{s2hms(act._totalDuration)} last {act._lastTime}/{s2hms(act._lastTime)} {stravaDuration-act._lastTime} ");
+                        stringBuilder.Append($"Duration matches lastTime Strava {stravaDuration}/{s2hms(stravaDuration)} Fitlog {act._totalDuration}/{s2hms(act._totalDuration)} last {act._lastTime}/{s2hms(act._lastTime)} {stravaDuration - act._lastTime} ");
                     }
                     else
                     {
@@ -651,9 +642,9 @@ namespace FellrnrTrainingAnalysis.Action
                 }
                 else
                 {
-                    if(!WithinMargin(stravaDistance, act._totalDistance, 500.0)) //500 meters
+                    if (!WithinMargin(stravaDistance, act._totalDistance, 500.0)) //500 meters
                     {
-                        if(!WithinMargin(stravaDistance, act._lastDistance, 500.0))
+                        if (!WithinMargin(stravaDistance, act._lastDistance, 500.0))
                         {
                             stringBuilder.Append($"No distance matches Strava {stravaDistance} Fitlog declared {act._totalDistance} Fitlog last track {act._lastDistance} ");
                             distanceDoesntMatchAtAll++;
@@ -690,7 +681,7 @@ namespace FellrnrTrainingAnalysis.Action
             else
             {
                 allgood = false;
-                if(UnmatchedDetails)
+                if (UnmatchedDetails)
                     showmsg = true;
                 missingCount++;
                 if (act._hasHR)
@@ -725,7 +716,7 @@ namespace FellrnrTrainingAnalysis.Action
                         missingOnlyMatched++;
                     }
                     else
-                    { 
+                    {
                         missingUnmatchedExist++;
                     }
                 }
@@ -736,8 +727,8 @@ namespace FellrnrTrainingAnalysis.Action
                 }
             }
 
-            if (showmsg) { stringBuilderAddTo.AppendLine(stringBuilder.ToString()); } 
-            if(allgood) { goodCount++; }
+            if (showmsg) { stringBuilderAddTo.AppendLine(stringBuilder.ToString()); }
+            if (allgood) { goodCount++; }
             ExtractDecline(act);
         }
 

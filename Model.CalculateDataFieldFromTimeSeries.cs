@@ -1,8 +1,4 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -92,7 +88,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromTimeSeriesSimple : CalculateDataFieldFromTimeSeriesBase
     {
-        public CalculateDataFieldFromTimeSeriesSimple(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) : 
+        public CalculateDataFieldFromTimeSeriesSimple(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
@@ -124,7 +120,7 @@ namespace FellrnrTrainingAnalysis.Model
     }
     public class CalculateDataFieldFromTimeSeriesThreashold : CalculateDataFieldFromTimeSeriesBase
     {
-        public CalculateDataFieldFromTimeSeriesThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName, List<string>? sportsToInclude = null) : 
+        public CalculateDataFieldFromTimeSeriesThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName, List<string>? sportsToInclude = null) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
@@ -133,7 +129,7 @@ namespace FellrnrTrainingAnalysis.Model
         public enum Mode { AboveAbs, BelowAbs, AbovePercent, BelowPercent }
         Mode ExtractionMode { get; set; }
 
-        float Threashold {  get; set; }
+        float Threashold { get; set; }
 
         protected override float ExtractValue(TimeValueList data, bool forceJustMe)
         {
@@ -165,7 +161,7 @@ namespace FellrnrTrainingAnalysis.Model
                 lastTime = data.Times[i];
             }
 
-            if(ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
+            if (ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
             {
                 float percent = (pastThreashold * 100.0f) / ((float)lastTime);
                 return percent;
@@ -179,7 +175,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromTimeSeriesAUC : CalculateDataFieldFromTimeSeriesBase
     {
-        public CalculateDataFieldFromTimeSeriesAUC(string activityFieldname, bool negate, float min, float? max, string sourceStreamName, List<string>? sportsToInclude = null) : 
+        public CalculateDataFieldFromTimeSeriesAUC(string activityFieldname, bool negate, float min, float? max, string sourceStreamName, List<string>? sportsToInclude = null) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             Negate = negate; Min = min; Max = max;
@@ -201,7 +197,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 uint time = data.Times[i];
                 double value = data.Values[i];
-                if(Negate)
+                if (Negate)
                     value = -value;
                 if (value > Min)
                 {

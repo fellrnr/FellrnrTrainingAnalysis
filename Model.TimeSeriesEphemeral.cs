@@ -1,8 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
-using System.Windows.Forms;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -19,8 +16,8 @@ namespace FellrnrTrainingAnalysis.Model
     {
         //Note: there is an instance of each TimeSeries object for each activity
         [MemoryPackConstructor]
-        protected TimeSeriesEphemeral() 
-        { 
+        protected TimeSeriesEphemeral()
+        {
             ParameterDictionary = new Dictionary<string, float>();
         } //for use by memory pack deserialization only
 
@@ -64,7 +61,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (ParentActivity == null) return false;
 
             //check activity doesn't have a recorded version of this
-            if(ParentActivity.TimeSeries.ContainsKey(Name) && !ParentActivity.TimeSeries[Name].IsVirtual())
+            if (ParentActivity.TimeSeries.ContainsKey(Name) && !ParentActivity.TimeSeries[Name].IsVirtual())
             {
                 return false;
             }
@@ -111,7 +108,9 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackInclude]
         protected Dictionary<string, float> ParameterDictionary { get; set; } //can't be private 'cos mempack
 
-        protected float Parameter(string name) { if (ParameterDictionary.ContainsKey(name)) return ParameterDictionary[name]; else return 0; }
+        protected float ParameterOrZero(string name) { if (ParameterDictionary.ContainsKey(name)) return ParameterDictionary[name]; else return 0; }
+
+        protected float? ParameterOrNull(string name) { if (ParameterDictionary.ContainsKey(name)) return ParameterDictionary[name]; else return null; }
 
         protected void Parameter(string name, float value) { ParameterDictionary[name] = value; ; }
 
@@ -132,13 +131,13 @@ namespace FellrnrTrainingAnalysis.Model
                 Logging.Instance.PauseAccumulator($"GetData-CalculateData:{Name}");
             }
             CacheValid = true; //cache a null result
-            //if (CachedData == null)
-            //    Logging.Instance.Debug($"No data returned from CalcualteData {this}");
-            
+                               //if (CachedData == null)
+                               //    Logging.Instance.Debug($"No data returned from CalcualteData {this}");
+
             return CachedData;
         }
 
-        public override void Recalculate(int forceCount, bool forceJustMe) 
+        public override bool Recalculate(int forceCount, bool forceJustMe)
         {
             Logging.Instance.ContinueAccumulator($"TimeSeriesEphemeral");
             Logging.Instance.ContinueAccumulator($"TimeSeriesEphemeral{Name}");
@@ -154,6 +153,8 @@ namespace FellrnrTrainingAnalysis.Model
             }
             Logging.Instance.PauseAccumulator($"TimeSeriesEphemeral");
             Logging.Instance.PauseAccumulator($"TimeSeriesEphemeral{Name}");
+
+            return CachedData != null;
         }
 
         public override string ToString()

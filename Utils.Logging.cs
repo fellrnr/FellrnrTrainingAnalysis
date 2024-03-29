@@ -1,14 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
-using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
     public class Logging
     {
-        private Logging() 
+        private Logging()
         {
         }
 
@@ -75,16 +72,16 @@ namespace FellrnrTrainingAnalysis.Utils
         }
 
 
-        public string GetAndResetTime(string name = "") 
-        { 
-            Timer(name).Stop(); 
-            TimeSpan retval = Timer(name).Elapsed; 
-            Timer(name).Reset(); 
+        public string GetAndResetTime(string name = "")
+        {
+            Timer(name).Stop();
+            TimeSpan retval = Timer(name).Elapsed;
+            Timer(name).Reset();
             Timer(name).Start();
-            
+
             string seconds = new string('#', (int)retval.TotalSeconds);
-            
-            return $"{retval} {seconds}"; 
+
+            return $"{retval} {seconds}";
         }
         public TimeSpan GetAndStopTime(string name = "") { Timer(name).Stop(); TimeSpan retval = Timer(name).Elapsed; return retval; }
 
@@ -98,7 +95,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 {
                     if (Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
                 }
-                
+
                 DebugFile.WriteLine(message);
                 DebugFile.Flush();
             }
@@ -115,12 +112,12 @@ namespace FellrnrTrainingAnalysis.Utils
         }
 
         //Errors also get writting to the Log
-        public void Error(string message) 
+        public void Error(string message)
         {
             HasErrors = true;
-            if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: " ).Append(new string('>', depth)).Append(message).Append("\r\n");
+            if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: ").Append(new string('>', depth)).Append(message).Append("\r\n");
             ErrorFile.WriteLine(message);
-            Log(message); 
+            Log(message);
         }
 
         public string Debug() { return DebugStringBuilder.ToString(); }

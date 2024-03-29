@@ -1,12 +1,9 @@
-﻿using System.Diagnostics;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
-using FellrnrTrainingAnalysis.Utils;
-using System.Text.Json;
+﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
-using de.schumacher_bw.Strava.Endpoint;
-using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -35,11 +32,11 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void MasterRecalculate(bool forceActivities, bool forceHills, bool forceGoals, BackgroundWorker? worker = null)
         {
-            if(forceActivities)
+            if (forceActivities)
                 RecalculateActivities(forceActivities, worker);
-            if(forceHills)
+            if (forceHills)
                 RecalculateHills(forceHills, worker);
-            if(forceGoals)
+            if (forceGoals)
                 RecalculateGoals(forceGoals, worker);
         }
 
@@ -48,16 +45,16 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("RecalculateActivities");
 
-            LastForceCount = force ? LastForceCount +1 : LastForceCount;
+            LastForceCount = force ? LastForceCount + 1 : LastForceCount;
 
-            foreach (KeyValuePair<string,Athlete> kvp in Athletes)
+            foreach (KeyValuePair<string, Athlete> kvp in Athletes)
             {
                 Athlete athlete = kvp.Value;
                 athlete.Recalculate(LastForceCount, false, worker);
             }
 
             //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities ({CurrentAthlete.Activities.Count})", CurrentAthlete.Activities.Count));
-                //if (worker != null) worker.ReportProgress(++i);
+            //if (worker != null) worker.ReportProgress(++i);
 
             Logging.Instance.TraceLeave();
         }
@@ -78,7 +75,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
             i = 0;
-            List<Rolling> rollings  = RollingFactory.GetRollings();
+            List<Rolling> rollings = RollingFactory.GetRollings();
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Rolling Data ({rollings.Count})", rollings.Count));
             foreach (Rolling rolling in rollings)
             {
@@ -93,7 +90,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("RecalculateHills");
 
-            if(force || Hills == null)
+            if (force || Hills == null)
                 Hills = Hill.Reload();
 
 
@@ -116,7 +113,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public Athlete FindOrCreateAthlete(string id)
         {
-            if(Athletes.ContainsKey(id))
+            if (Athletes.ContainsKey(id))
             {
                 return Athletes[id];
             }
@@ -140,7 +137,7 @@ namespace FellrnrTrainingAnalysis.Model
             SaveToMemoryPack(path);
         }
 
- 
+
         public void SaveToBinaryFile(string path)
         {
             Logging.Instance.TraceEntry("Database.SaveToFile");
@@ -153,7 +150,7 @@ namespace FellrnrTrainingAnalysis.Model
                 File.Move(path, newPath);
             }
             IFormatter formatter = new BinaryFormatter();
-            using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None)) 
+            using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             {
 #pragma warning disable SYSLIB0011
                 formatter.Serialize(stream, this);
@@ -163,7 +160,7 @@ namespace FellrnrTrainingAnalysis.Model
 
 
             //clean up old backup files (keep 5)
-            FileInfo fileInfo= new FileInfo(path);
+            FileInfo fileInfo = new FileInfo(path);
             if (fileInfo.DirectoryName != null)
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(fileInfo.DirectoryName);
@@ -181,7 +178,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public  void SaveToMemoryPack(string path)
+        public void SaveToMemoryPack(string path)
         {
             Logging.Instance.TraceEntry("Database.SaveToMemoryPack");
 

@@ -1,10 +1,5 @@
-﻿using GMap.NET.WindowsForms.Markers;
-using GMap.NET;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using GMap.NET;
+using GMap.NET.WindowsForms.Markers;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -35,7 +30,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 g.DrawString(_caption, _font, Brushes.Black, localPoint);
             }
 
-            if(BoxPen != null)
+            if (BoxPen != null)
             {
                 g.DrawRectangle(BoxPen, base.LocalPosition.X, base.LocalPosition.Y, base.Size.Width, base.Size.Height);
             }

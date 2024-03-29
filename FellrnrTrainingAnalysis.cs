@@ -1,19 +1,12 @@
-using System.Text;
+using CsvHelper;
+using FellrnrTrainingAnalysis.Action;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.UI;
 using FellrnrTrainingAnalysis.Utils;
 using System.Collections.ObjectModel;
-using CsvHelper;
-using System.Globalization;
-using FellrnrTrainingAnalysis.Action;
 using System.ComponentModel;
-using de.schumacher_bw.Strava.Endpoint;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
-using System.Windows.Forms;
-using System;
-using System.Linq;
-using System.Xml.Linq;
-using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -566,7 +559,7 @@ namespace FellrnrTrainingAnalysis
                             float weight = record.Recorded;
 
                             Model.Day day = Database.CurrentAthlete.GetOrAddDay(date);
-                            day.AddOrReplaceDatum(new TypedDatum<float>(Model.Day.WeightTag, true, weight));
+                            day.AddOrReplaceDatum(new TypedDatum<float>(Model.Day.TagWeight, true, weight));
                         }
                     }
                 }
@@ -667,7 +660,7 @@ namespace FellrnrTrainingAnalysis
 
             Logging.Instance.TraceEntry("loadStravaCsvBackgroundWorker_DoWork");
 
-            Database.MasterRecalculate(forceActivities: recalcs[0], forceHills: recalcs[1], forceGoals: recalcs[2], worker); 
+            Database.MasterRecalculate(forceActivities: recalcs[0], forceHills: recalcs[1], forceGoals: recalcs[2], worker);
 
             Logging.Instance.TraceLeave();
 
@@ -766,7 +759,10 @@ namespace FellrnrTrainingAnalysis
         }
         private void forceRecalculationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            RecalculateAsync(forceActivities: true, forceHills: true, forceGoals: true);
+            if (MessageBox.Show("Recalculate all?", "Sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                RecalculateAsync(forceActivities: true, forceHills: true, forceGoals: true);
+            }
         }
 
 
@@ -801,6 +797,60 @@ namespace FellrnrTrainingAnalysis
             ltdf.ShowDialog();
         }
 
+        private void exploreGlobalRelationshipsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ActivityCorrelation activityCorrelation = new ActivityCorrelation(Database!, null);
+            activityCorrelation.Show();
+        }
+
+        private void experimentalToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Athlete athlete = Database.CurrentAthlete;
+
+            double sumTime = 0;
+            double sumCount = 0;
+            int countOne = 0;
+            int countNon = 0;
+            int countVOne = 0;
+            int countVNon = 0;
+            foreach (var kvp in athlete.Activities)
+            {
+                Activity activity = kvp.Value as Activity;
+                foreach(var kvp2 in activity.TimeSeries)
+                {
+                    TimeSeriesBase timeSeriesBase = kvp2.Value as TimeSeriesBase;
+
+                    if(timeSeriesBase != null && timeSeriesBase.IsValid() && !timeSeriesBase.IsVirtual())
+                    {
+                        TimeValueList? timeValueList = timeSeriesBase.GetData();
+                        if(timeValueList != null)
+                        {
+                            uint lastTime = timeValueList.Times.Last();
+                            int count = timeValueList.Length;
+                            if (count == lastTime)
+                                countOne++;
+                            else
+                                countNon++;
+                            sumCount += count;
+                            sumTime += lastTime;
+
+                            for(int i=1; i < count; i++)
+                            {
+                                if (timeValueList.Times[i] == timeValueList.Times[i-1]+1)
+                                    countVOne++;
+                                else
+                                    countVNon++;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            double avg = sumTime / sumCount;
+            double percentOne = ((double)countVOne) / (double)(countVNon + countVOne);
+            MessageBox.Show($"Average seconds per recording is {avg:f2}, #1 {countOne:N0}. #!1 {countNon:N0}, %1 sec {percentOne:P}, countVOne {countVOne:N0}, countVNon {countVNon:N0}, count {sumCount:N0}, sum time {sumTime:N0}");
+        }
     }
 
 }

@@ -1,10 +1,7 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using pi.science.regression;
 using System.Text;
-using System.Threading.Tasks;
-using static FellrnrTrainingAnalysis.Utils.TimeSeries;
+using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -70,7 +67,7 @@ namespace FellrnrTrainingAnalysis.Model
             return aligned;
         }
 
-        public AlignedTimeSeries(uint[] time, float[] primary, float[] secondary)
+        private AlignedTimeSeries(uint[] time, float[] primary, float[] secondary)
         {
             Time = time;
             Primary = primary;
@@ -95,62 +92,7 @@ namespace FellrnrTrainingAnalysis.Model
             return sb.ToString();
         }
 
-        public class LinearRegressionResults
-        {
-            public float RSquared;
-            public float YIntercept;
-            public float Slope;
-        }
 
-
-        public LinearRegressionResults? LinearRegression(bool primaryIsX)
-        {
-            LinearRegressionResults retval = new LinearRegressionResults();
-
-            float sumOfX = 0;
-            float sumOfY = 0;
-            float sumOfXSq = 0;
-            float sumOfYSq = 0;
-            float ssX = 0;
-            float ssY = 0;
-            float sumCodeviates = 0;
-            float sCo = 0;
-            float count = this.Length;
-            for (int i = 0; i < count; i++)
-            {
-                float p = this.Primary[i];
-                float s = this.Secondary[i];
-                float x = primaryIsX ? p : s;
-                float y = !primaryIsX ? p : s;
-                sumCodeviates += x * y;
-                sumOfX += x;
-                sumOfY += y;
-                sumOfXSq += x * x;
-                sumOfYSq += y * y;
-            }
-            ssX = sumOfXSq - ((sumOfX * sumOfX) / count);
-            ssY = sumOfYSq - ((sumOfY * sumOfY) / count);
-            float RNumerator = (count * sumCodeviates) - (sumOfX * sumOfY);
-            float RDenom = (count * sumOfXSq - (sumOfX * sumOfX))
-             * (count * sumOfYSq - (sumOfY * sumOfY));
-            sCo = sumCodeviates - ((sumOfX * sumOfY) / count);
-
-            float meanX = sumOfX / count;
-            float meanY = sumOfY / count;
-            float dblR = RNumerator / (float)Math.Sqrt(RDenom);
-
-            retval.RSquared = dblR * dblR;
-            retval.YIntercept = meanY - ((sCo / ssX) * meanX);
-            retval.Slope = sCo / ssX;
-
-            if (!float.IsNormal(retval.RSquared))
-                return null;
-            if (!float.IsNormal(retval.YIntercept))
-                return null;
-            if (!float.IsNormal(retval.Slope))
-                return null;
-            return retval;
-        }
 
     }
 }
