@@ -58,22 +58,22 @@ namespace FellrnrTrainingAnalysis.Model
                 return distanceData;
             }
 
-            uint finalTimeAltitude = altitudeData.Times.Last();
-            uint finalTimeDistance = distanceData.Times.Last();
-            uint finalTimeDistance90 = finalTimeDistance * 90 / 100;
+            int finalTimeAltitude = altitudeData.Length;
+            int finalTimeDistance = distanceData.Length;
+            int finalTimeDistance90 = finalTimeDistance * 90 / 100;
             if (finalTimeAltitude < finalTimeDistance90)
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"altitude less than 90 distance, {finalTimeAltitude}, {finalTimeDistance}, {finalTimeDistance90}");
                 return distanceData;
             }
 
-            uint firstTimeAltitude = altitudeData.Times.First();
-            uint firstTimeDistance = distanceData.Times.First();
-            if (firstTimeAltitude > firstTimeDistance + 5 * 60)
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"altitude starts more than 5 min after distance, {firstTimeAltitude}, {firstTimeDistance}");
-                return distanceData;
-            }
+            //uint firstTimeAltitude = altitudeData.Times.First();
+            //uint firstTimeDistance = distanceData.Times.First();
+            //if (firstTimeAltitude > firstTimeDistance + 5 * 60)
+            //{
+            //    if (forceJustMe) Logging.Instance.TraceLeave($"altitude starts more than 5 min after distance, {firstTimeAltitude}, {firstTimeDistance}");
+            //    return distanceData;
+            //}
 
 
             AlignedTimeSeries? aligned = AlignedTimeSeries.Align(distanceData, altitudeData);

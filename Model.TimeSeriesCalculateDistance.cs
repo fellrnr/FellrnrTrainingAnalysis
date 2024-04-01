@@ -40,16 +40,14 @@ namespace FellrnrTrainingAnalysis.Model
             int seconds = (int)elapsed;
 
             float[] dists = new float[seconds]; //tempting to add this as a data stream, but probably should be a new computation
-            uint[] times = new uint[seconds];
             for (uint i = 0; i < seconds; i++)
             {
                 float t = (float)i;
                 float d = t / elapsed * distance;
                 dists[i] = d;
-                times[i] = i;
             }
 
-            TimeValueList retval = new TimeValueList(times, dists);
+            TimeValueList retval = new TimeValueList(dists);
             if (forceJustMe) Logging.Instance.Debug($"TimeSeriesCalculateDistance: Forced recalculating effective distance {retval}");
             Logging.Instance.PauseAccumulator("TimeSeriesCalculateDistance.CalculateData");
             return retval;

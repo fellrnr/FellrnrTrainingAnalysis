@@ -53,7 +53,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                 Logging.Instance.PauseAccumulator("TimeSeriesCalculateAltitude.CalculateData");
 
-                TimeValueList retval = new TimeValueList(DistanceData.Times, altitudes);
+                TimeValueList retval = new TimeValueList(altitudes);
 
                 if (forceJustMe)
                     Logging.Instance.Debug($"TimeSeriesCalculateAltitude.CalculateData Forced  retval {retval}");
@@ -79,17 +79,15 @@ namespace FellrnrTrainingAnalysis.Model
 
                 float[] dists = new float[seconds]; //tempting to add this as a data stream, but probably should be a new computation
                 float[] altitudes = new float[seconds];
-                uint[] times = new uint[seconds];
                 for (uint i = 0; i < seconds; i++)
                 {
                     float d = ((float)i / seconds) * distance;
                     float alt = d * angle / 100f;
                     altitudes[i] = alt;
                     dists[i] = d;
-                    times[i] = i;
                 }
 
-                TimeValueList retval = new TimeValueList(times, altitudes);
+                TimeValueList retval = new TimeValueList(altitudes);
                 if (forceJustMe)
                     Logging.Instance.Debug($"Forced recalculating altude {retval}");
                 Logging.Instance.PauseAccumulator("TimeSeriesCalculateAltitude.CalculateData");

@@ -7,24 +7,44 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public partial class TimeValueList
     {
+        [MemoryPackIgnore]
+        public uint[] TimesX
+        {
+            get
+            {
+                uint[] retval = new uint[Length];
+                for(uint i = 0; i < Length; i++) { retval[i] = i; }
+                return retval;
+            }
+        }
         [MemoryPackInclude]
-        public uint[] Times;
-        [MemoryPackInclude]
-        public float[] Values;
+        public float[] Values { get; set; }
 
         [MemoryPackIgnore]
-        public int Length { get { return Times.Length; } }
+        public int Length { get { return Values.Length; } }
 
-        public TimeValueList(uint[] times, float[] values)
+        public static TimeValueList TimeValueListFromTimed(uint[] times, float[] values)
         {
-            Times = times;
-            Values = values;
-            if (times.Length != values.Length) { throw new Exception($"TimesAndValues, counts don't match, times {Times.Length}, values {Values.Length}"); }
+            List<float> to1sec = Utils.TimeSeriesUtils.InterpolateToOneSecond(times, values);
+            TimeValueList result = new TimeValueList(to1sec);
+            return result;
         }
+
+        [MemoryPackConstructor]
+        public TimeValueList(float[] values)
+        {
+            Values = values;
+        }
+
+        public TimeValueList(List<float> values) //convenience method
+        {
+            Values = values.ToArray();
+        }
+
 
         public override string ToString()
         {
-            return $"TimeValueList {Times.Length} count, total time {Times.Last()}, avg value {Values.Average()}";
+            return $"TimeValueList {Values.Length} count/seconds, total time {Misc.s2hms(Values.Length)}, avg value {Values.Average()}";
         }
 
 
@@ -32,38 +52,27 @@ namespace FellrnrTrainingAnalysis.Model
         //supports scaling and inverting the values
         public static TimeValueList? SimpleDeltas(TimeValueList data, float ScalingFactor, float? Numerator, float? Limit)
         {
-            uint[] elapsedTime = data.Times;
+            //uint[] elapsedTime = data.Times;
             float[] values = data.Values;
-            float[] deltas = new float[elapsedTime.Length];
+            float[] deltas = new float[data.Length];
             float lastValue = values[0];
-            float lastTime = 0;
 
-
-            for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
+            for (int i = 1; i < data.Length; i++) //note starting from one as we handle the first entry above
             {
-                float deltaTime = elapsedTime[i] - lastTime;
-                if (deltaTime == 0) //seems to happen for the last entry
-                {
-                    deltas[i] = 0;
-                }
-                else
-                {
-                    float deltasValue = (values[i] - lastValue) / deltaTime;
-                    deltas[i] = deltasValue;
+                float deltasValue = (values[i] - lastValue); //one second times
+                deltas[i] = deltasValue;
 
-                    //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
-                    if (i == 1)
-                        deltas[0] = deltasValue;
-                    if (Numerator != null && deltas[i] != 0)
-                        deltas[i] = Numerator.Value / deltas[i];
-                    deltas[i] = deltas[i] * ScalingFactor;
-                    if (Limit != null && Math.Abs(deltas[i]) > Limit)
-                        return null;
-                    lastValue = values[i];
-                    lastTime = elapsedTime[i];
-                }
+                //first value has no predecessor, so it has to be zero, but that creates some odd results, so copy the first delta back
+                if (i == 1)
+                    deltas[0] = deltasValue;
+                if (Numerator != null && deltas[i] != 0)
+                    deltas[i] = Numerator.Value / deltas[i];
+                deltas[i] = deltas[i] * ScalingFactor;
+                if (Limit != null && Math.Abs(deltas[i]) > Limit)
+                    return null;
+                lastValue = values[i];
             }
-            TimeValueList newData = new TimeValueList(elapsedTime, deltas);
+            TimeValueList newData = new TimeValueList(deltas);
 
             return newData;
         }
@@ -71,34 +80,34 @@ namespace FellrnrTrainingAnalysis.Model
         //A more complex delta, using a time span for the change. Used for averaging over 60 seconds for instance. 
         public static TimeValueList? SpanDeltas(TimeValueList data, float scalingFactor, float? numerator, float? limit, float period, bool extraDebug)
         {
-            uint[] elapsedTime = data.Times;
+            //uint[] elapsedTime = data.Times;
             float[] values = data.Values;
-            float[] deltas = new float[elapsedTime.Length];
+            float[] deltas = new float[data.Length];
             float lastValue = values[0];
-            uint lastTime = 0;
+            //uint lastTime = 0;
             deltas[0] = 0; //first value has no predecessor, so it has to be zero
                            //List<uint> absoluteTimeStack = new List<uint>();
-            List<uint> incrementTimeStack = new List<uint>();
+            //List<uint> incrementTimeStack = new List<uint>();
             List<float> deltaStack = new List<float>();
 
             float deltaSum = 0;
-            uint timeSum = 0;
-            for (int i = 1; i < elapsedTime.Length; i++) //note starting from one as we handle the first entry above
+            //uint timeSum = 0;
+            for (int i = 1; i < data.Length; i++) //note starting from one as we handle the first entry above
             {
-                uint currentTime = elapsedTime[i];
-                uint timeIncrement = currentTime - lastTime;
+                //uint currentTime = elapsedTime[i];
+                //uint timeIncrement = 1; // currentTime - lastTime;
                 float currentValue = values[i];
                 float valueIncrement = currentValue - lastValue;
 
                 //absoluteTimeStack.Add(currentTime);
-                incrementTimeStack.Add(timeIncrement);
+                //incrementTimeStack.Add(timeIncrement);
                 deltaStack.Add(valueIncrement);
                 deltaSum += valueIncrement;
-                timeSum += timeIncrement;
+                //timeSum += timeIncrement;
 
 
                 //if the time sum is less than the period, all the delta applies. For instance, in the first 2 seconds we climb 2 meters, then our climb rate is 2 meters/minute, not 2/60 meters/minute
-                float timeProRata = timeSum > period ? timeSum / period : 1.0f;
+                float timeProRata = deltaStack.Count > period ? deltaStack.Count / period : 1.0f;
                 float currentDelta = deltaSum / timeProRata;
                 if (numerator != null && currentDelta != 0)
                     currentDelta = numerator.Value / currentDelta;
@@ -107,7 +116,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                 if (extraDebug)
                 {
-                    Logging.Instance.Log($"delta[{i}]: {currentDelta}, deltaSum {deltaSum}, timeProRata {timeProRata}, timeSum {timeSum}, currentValue {currentValue}, valueIncrement {valueIncrement} ");
+                    Logging.Instance.Log($"delta[{i}]: {currentDelta}, deltaSum {deltaSum}, timeProRata {timeProRata}, currentValue {currentValue}, valueIncrement {valueIncrement} ");
                 }
 
                 if (limit != null && Math.Abs(deltas[i]) > limit)
@@ -118,47 +127,51 @@ namespace FellrnrTrainingAnalysis.Model
                     deltas[0] = currentDelta;
 
                 //mop up
-                while (incrementTimeStack.Count > 0 && timeSum > period)
+                while (deltaStack.Count > period)
                 {
                     deltaSum -= deltaStack.First();
-                    timeSum -= incrementTimeStack.First();
-                    incrementTimeStack.RemoveAt(0);
                     deltaStack.RemoveAt(0);
                 }
 
                 lastValue = currentValue;
-                lastTime = currentTime;
             }
-            TimeValueList newData = new TimeValueList(elapsedTime, deltas);
+            TimeValueList newData = new TimeValueList(deltas);
             return newData;
         }
 
-        public static TimeValueList? ExtractWindow(TimeValueList data, uint start, uint end = 0) //end of zero is to the finish
+        public static TimeValueList? ExtractWindow(TimeValueList data, int start, int end = 0) //end of zero is to the finish
         {
-            List<uint> newtimes = new List<uint>();
-            List<float> newvalues = new List<float>();
+            float[] newvalues;
 
-            uint lastTime = data.Times.Last();
-
-            //very occasionally, times don't start at zero. Huh. 
-            uint firstTime = data.Times.First();
-            start += firstTime;
-            end += firstTime;
-
-            if (start > lastTime)
+            if (start > data.Values.Length || end > data.Values.Length)
                 return null;
 
-            for (int i = 1; i < data.Length && (end == 0 || data.Times[i] <= end); i++)
-            {
-                if (data.Times[i] >= start)
-                {
-                    newtimes.Add(data.Times[i]);
-                    newvalues.Add(data.Values[i]);
-                }
-            }
-            if (newtimes.Count == 0) { return null; }
+            if (end == 0)
+                newvalues = data.Values[start..];
+            else
+                newvalues = data.Values[start..end];
+            //List<float> newvalues = new List<float>();
 
-            TimeValueList newData = new TimeValueList(newtimes.ToArray(), newvalues.ToArray());
+            //uint lastTime = data.Times.Last();
+
+            ////very occasionally, times don't start at zero. Huh. 
+            //uint firstTime = data.Times.First();
+            //start += firstTime;
+            //end += firstTime;
+
+            //if (start > lastTime)
+            //    return null;
+
+            //for (int i = 1; i < data.Length && (end == 0 || data.Times[i] <= end); i++)
+            //{
+            //    if (data.Times[i] >= start)
+            //    {
+            //        newvalues.Add(data.Values[i]);
+            //    }
+            //}
+            //if (newvalues.Count == 0) { return null; }
+
+            TimeValueList newData = new TimeValueList(newvalues.ToArray());
 
             return newData;
         }

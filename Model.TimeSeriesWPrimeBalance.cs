@@ -120,7 +120,7 @@ namespace FellrnrTrainingAnalysis.Model
                 wPrimeBalanceValues[i] = W;
             }
 
-            TimeValueList retval = new TimeValueList(powerData.Times, wPrimeBalanceValues);
+            TimeValueList retval = new TimeValueList(wPrimeBalanceValues);
 
             if (forceJustMe) Logging.Instance.TraceLeave($"Done");
 

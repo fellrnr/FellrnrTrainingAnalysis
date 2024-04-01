@@ -27,10 +27,9 @@
             uint[] ptimes = primary.Times;
             float[] latvalues = primary.Latitudes;
             float[] lonvalues = primary.Longitudes;
-            uint[] stimes = sdata.Times;
             float[] svalues = sdata.Values;
 
-            if (ptimes.Length == stimes.Length)
+            if (ptimes.Length == sdata.Length)
             {
                 //let's assume they match
                 AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(ptimes, latvalues, lonvalues, svalues);
@@ -46,32 +45,35 @@
 
 
                 int si = 0;
-                for (int pi = 0; pi < ptimes.Length && si < stimes.Length; pi++)
+                for (int pi = 0; pi < ptimes.Length && si < sdata.Length; pi++)
                 {
-                    while (pi < ptimes.Length && ptimes[pi] < stimes[si])
+                    while (pi < ptimes.Length && ptimes[pi] < si)
                     {
                         pi++;
                     }
 
-                    while (si < stimes.Length && ptimes[pi] > stimes[si])
+                    while (si < sdata.Length && ptimes[pi] > si)
                     {
                         si++;
                     }
 
-                    if (ptimes[pi] == stimes[si])
+                    if (ptimes[pi] == si)
                     {
                         //all good
                         newTimes.Add(ptimes[pi]);
                         newLats.Add(latvalues[pi]);
                         newLons.Add(lonvalues[pi]);
                         newSecondary.Add(svalues[pi]);
-                        if (si < stimes.Length)
+                        if (si < sdata.Length)
                             si++;
                     }
                 }
 
 
-                AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(newTimes.ToArray(), newLats.ToArray(), newLons.ToArray(), newSecondary.ToArray());
+                AlignedTimeLocationSeries aligned = new AlignedTimeLocationSeries(newTimes.ToArray(),
+                                                                                  newLats.ToArray(),
+                                                                                  newLons.ToArray(),
+                                                                                  newSecondary.ToArray());
                 return aligned;
             }
         }

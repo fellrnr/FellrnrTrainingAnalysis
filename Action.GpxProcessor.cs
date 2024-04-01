@@ -1,4 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
+using FellrnrTrainingAnalysis.Utils;
 using FellrnrTrainingAnalysis.Utils.Gpx;
 
 namespace FellrnrTrainingAnalysis.Action
@@ -139,7 +140,8 @@ namespace FellrnrTrainingAnalysis.Action
             }
             else
             {
-                Activity.LocationStream = new LocationStream(null, LocationLats.ToArray(), LocationLons.ToArray());
+                Logging.Instance.Error($"Trying to load GPX, but no time data, {Activity}");
+                //Activity.LocationStream = new LocationStream(null, LocationLats.ToArray(), LocationLons.ToArray());
             }
 
         }

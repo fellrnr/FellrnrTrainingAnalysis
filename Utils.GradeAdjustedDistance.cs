@@ -16,7 +16,7 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             Logging.Instance.ContinueAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
             Aligned = aligned;
-            if (Aligned.Time.Length < 2)
+            if (Aligned.Length < 2)
                 throw new ArgumentException("need at least two distances to calculate GAP");
 
             //calculate the initial deltas for distance and altitude
@@ -104,19 +104,14 @@ namespace FellrnrTrainingAnalysis.Utils
         private float GradeAdjustmentOffset { get; set; }
         public TimeValueList GetGradeAdjustedDistance()
         {
-            TimeValueList gradeAdjustedDistance = new TimeValueList(Aligned.Time, _gradeAdjustedDistance);
-
-            if (gradeAdjustedDistance.Times.Length != gradeAdjustedDistance.Values.Length)
-            {
-                throw new Exception($"GetGradeAdjustedDistance times {gradeAdjustedDistance.Times.Length} and values {gradeAdjustedDistance.Values.Length} don't match counts");
-            }
+            TimeValueList gradeAdjustedDistance = new TimeValueList(_gradeAdjustedDistance);
 
             return gradeAdjustedDistance;
         }
 
         public TimeValueList GetGradeAdjustedPace()
         {
-            TimeValueList gradeAdjustedPace = new TimeValueList(Aligned.Time, _gradeAdjustedPace);
+            TimeValueList gradeAdjustedPace = new TimeValueList(_gradeAdjustedPace);
 
             return gradeAdjustedPace;
         }

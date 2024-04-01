@@ -155,16 +155,16 @@ namespace FellrnrTrainingAnalysis.UI
                 if (Rows.ContainsKey(entryName))
                 {
                     TimeSeriesBase dataStream = kvp.Value;
-                    TimeValueList? tuple = dataStream.GetData(forceCount: 0, forceJustMe: false);
-                    if (tuple != null)
+                    TimeValueList? tvl = dataStream.GetData(forceCount: 0, forceJustMe: false);
+                    if (tvl != null)
                     {
-                        float[] values = tuple.Values;
+                        float[] values = tvl.Values;
                         Row row = Rows[entryName];
                         row.Value.Text = "";
                         row.Min.Text = values.Min().ToString();
                         row.Avg.Text = values.Average().ToString();
                         row.Max.Text = values.Max().ToString();
-                        string last = tuple.Times.Count() > 0 ? $"{Utils.Misc.FormatTime(tuple.Times.Last())}" : "No Times";
+                        string last = tvl.Length > 0 ? $"{Utils.Misc.FormatTime(tvl.Length)}" : "No Times";
                         row.Notes.Text = $"IsVirtual {dataStream.IsVirtual()}, t {last}, {dataStream.ToStatisticsString()}";
                     }
                 }

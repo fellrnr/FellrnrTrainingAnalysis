@@ -547,14 +547,14 @@ namespace FellrnrTrainingAnalysis.Action
                             //if(WithinMargin(stravaDuration, act._totalDuration, 10.0))
                             //{
                             //    //good enough? Hopefully
-                            //    stringBuilder.Append($"Found close match {act._startTime} as {date} {hour}::{second} {activity.PrimaryKey()} declared {s2hms(stravaDuration)}/{s2hms(act._totalDuration)}: ");
+                            //    stringBuilder.Append($"Found close match {act._startTime} as {date} {hour}::{second} {activity.PrimaryKey()} declared {Utils.Misc.s2hms(stravaDuration)}/{Utils.Misc.s2hms(act._totalDuration)}: ");
                             //    return activity;
                             //}
 
                             //if (WithinMargin(stravaDuration, act._lastTime, 10.0))
                             //{
                             //    //good enough? Hopefully
-                            //    stringBuilder.Append($"Found close match {act._startTime} as {date} {hour}::{second} {activity.PrimaryKey()} last {s2hms(stravaDuration)}/{s2hms(act._lastTime)}: ");
+                            //    stringBuilder.Append($"Found close match {act._startTime} as {date} {hour}::{second} {activity.PrimaryKey()} last {Utils.Misc.s2hms(stravaDuration)}/{Utils.Misc.s2hms(act._lastTime)}: ");
                             //    return activity;
                             //}
 
@@ -611,11 +611,11 @@ namespace FellrnrTrainingAnalysis.Action
                 {
                     if (WithinMargin(stravaDuration, act._lastTime, 60.0))
                     {
-                        stringBuilder.Append($"Duration matches lastTime Strava {stravaDuration}/{s2hms(stravaDuration)} Fitlog {act._totalDuration}/{s2hms(act._totalDuration)} last {act._lastTime}/{s2hms(act._lastTime)} {stravaDuration - act._lastTime} ");
+                        stringBuilder.Append($"Duration matches lastTime Strava {stravaDuration}/{Utils.Misc.s2hms(stravaDuration)} Fitlog {act._totalDuration}/{Utils.Misc.s2hms(act._totalDuration)} last {act._lastTime}/{Utils.Misc.s2hms(act._lastTime)} {stravaDuration - act._lastTime} ");
                     }
                     else
                     {
-                        stringBuilder.Append($"Duration Strava {stravaDuration}/{s2hms(stravaDuration)} Fitlog {act._totalDuration}/{s2hms(act._totalDuration)} {stravaDuration - act._totalDuration} ");
+                        stringBuilder.Append($"Duration Strava {stravaDuration}/{Utils.Misc.s2hms(stravaDuration)} Fitlog {act._totalDuration}/{Utils.Misc.s2hms(act._totalDuration)} {stravaDuration - act._totalDuration} ");
                     }
                     durationCount++;
                     allgood = false;
@@ -999,15 +999,6 @@ namespace FellrnrTrainingAnalysis.Action
             }
         }
 
-        private string s2hms(double? secs)
-        {
-            if (secs == null) { return "null"; }
-            TimeSpan t = TimeSpan.FromSeconds(secs!.Value);
-
-            string answer = string.Format("{0:D2}h:{1:D2}m:{2:D2}s", t.Hours, t.Minutes, t.Seconds);
-
-            return answer;
-        }
 
         private bool WithinMargin(float? test1, double test2, double margin)
         {

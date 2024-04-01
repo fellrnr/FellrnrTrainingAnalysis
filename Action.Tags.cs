@@ -88,7 +88,7 @@ namespace FellrnrTrainingAnalysis.Action
                 }
                 TimeSeriesBase dataStream = activity.TimeSeries[target];
                 TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
-                if (data == null || data.Times.Length < amount)
+                if (data == null || data.Length < amount)
                 {
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack {target} is too short");
                     return retval;

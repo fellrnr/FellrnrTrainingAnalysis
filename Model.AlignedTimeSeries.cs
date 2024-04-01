@@ -12,71 +12,42 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.ContinueAccumulator("Utils.TimeSeries.AlignedTimeSeries");
 
-            uint[] ptimes = primary.Times;
-            float[] pvalues = primary.Values;
-            uint[] stimes = secondary.Times;
-            float[] svalues = secondary.Values;
-
-
             AlignedTimeSeries? aligned = null;
-            if (ptimes.Length == stimes.Length)
+            if (primary.Length == secondary.Length)
             {
                 //let's assume they match
-                aligned = new AlignedTimeSeries(ptimes, pvalues, svalues);
+                aligned = new AlignedTimeSeries(primary.Values, secondary.Values);
             }
             else
             {
-                List<uint> newTimes = new List<uint>();
-                List<float> newPrimary = new List<float>();
-                List<float> newSecondary = new List<float>();
-
-                int si = 0;
-                for (int pi = 0; pi < ptimes.Length && si < stimes.Length; pi++)
+                float[] p;
+                float[] s;
+                if(primary.Length < secondary.Length)
                 {
-                    while (pi < ptimes.Length && ptimes[pi] < stimes[si])
-                    {
-                        pi++;
-                    }
-
-                    while (si < stimes.Length && pi < ptimes.Length && ptimes[pi] > stimes[si]) //we incremented pi above, so could be over
-                    {
-                        si++;
-                    }
-
-                    if (si < stimes.Length && pi < ptimes.Length && ptimes[pi] == stimes[si]) // pi < ptimes.Length && si < stimes.Length
-                    {
-                        //all good
-                        newTimes.Add(ptimes[pi]);
-                        newPrimary.Add(pvalues[pi]);
-                        newSecondary.Add(svalues[si]);
-                        if (si < stimes.Length)
-                            si++;
-                    }
+                    p = primary.Values;
+                    s = secondary.Values[..(p.Length)];
+                }
+                else
+                {
+                    s = secondary.Values;
+                    p = primary.Values[..(s.Length)];
                 }
 
-                if (newTimes.Count != newPrimary.Count || newTimes.Count != newSecondary.Count)
-                {
-                    throw new Exception($"AlignedTimeSeries times {newTimes.Count} and primary {newPrimary.Count} secondary {newSecondary.Count} don't match counts");
-                }
-
-
-                aligned = new AlignedTimeSeries(newTimes.ToArray(), newPrimary.ToArray(), newSecondary.ToArray());
+                aligned = new AlignedTimeSeries(p, s);
             }
 
             Logging.Instance.PauseAccumulator("Utils.TimeSeries.AlignedTimeSeries");
             return aligned;
         }
 
-        private AlignedTimeSeries(uint[] time, float[] primary, float[] secondary)
+        private AlignedTimeSeries(float[] primary, float[] secondary)
         {
-            Time = time;
             Primary = primary;
             Secondary = secondary;
         }
 
-        public int Length { get { return Time.Length; } }
+        public int Length { get { return Primary.Length; } }
 
-        public uint[] Time { get; set; }
         public float[] Primary { get; set; }
         public float[] Secondary { get; set; }
 
@@ -87,7 +58,7 @@ namespace FellrnrTrainingAnalysis.Model
             sb.AppendLine("Time,Primary,Secondary");
             for (int i = 0; i < Length; i++)
             {
-                sb.AppendLine($"{Time[i]},{Primary[i]},{Secondary[i]}");
+                sb.AppendLine($"{i},{Primary[i]},{Secondary[i]}");
             }
             return sb.ToString();
         }

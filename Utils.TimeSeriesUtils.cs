@@ -1,5 +1,6 @@
 ﻿using pi.science.smoothing;
 using pi.science.statistic;
+using System.Diagnostics.Eventing.Reader;
 using static pi.science.smoothing.PIMovingAverageSmoothing;
 
 
@@ -8,6 +9,64 @@ namespace FellrnrTrainingAnalysis.Utils
     public class TimeSeriesUtils
     {
         public enum SmoothingOptions { AverageWindow, SimpleExponential, InterpolateOnly, None };
+
+
+        public static List<float> InterpolateToOneSecond(uint[] times, float[] values)
+        {
+            List<float> result = new List<float>();
+            List<uint> sanity = new List<uint>();
+
+            if (times.Length < 2)
+                return new List<float>(values);
+
+            if (times[0] != 0)
+            {
+                //fill in the first few values
+                for (int i = 0; i < times[0]; i++)
+                {
+                    result.Add(values[0]);
+                    sanity.Add((uint)i);
+                }
+            }
+
+            result.Add(values[0]);
+            sanity.Add(times[0]);
+            for (int i = 1; i < times.Length; i++) //start from one
+            {
+                if (times[i] != times[i - 1] + 1)
+                {
+                    //gap to fill
+                    uint timediff = times[i] - times[i - 1];
+                    float valuediff = values[i] - values[i - 1];
+                    float valuePerSec = (timediff != 0) ? valuediff / (float)timediff : (float)1;
+                    for (int j = 1; j <= timediff; j++) //start from one
+                    {
+                        float newval = values[i - 1] + valuePerSec * j;
+                        uint newtime = times[i - 1] + (uint)j;
+                        result.Add(newval);
+                        sanity.Add(newtime);
+                    }
+                }
+                else
+                {
+                    result.Add(values[i]);
+                    sanity.Add(times[i]);
+                }
+            }
+
+            for (int i = 0; i < sanity.Count; i++)
+            {
+                //Logging.Instance.Debug($"{i} is t {sanity[i]} v {result[i]}");
+                if (sanity[i] != i)
+                {
+                    Logging.Instance.Error($"Oops, time at {i} is {sanity[i]}");
+                    break;
+                }
+            }
+
+            return result;
+        }
+
 
         public static Tuple<List<double>, List<double>> Interpolate(List<double> listX, List<double> listY)
         {
@@ -101,36 +160,6 @@ namespace FellrnrTrainingAnalysis.Utils
                 if (val is null)
                     val = 0;
                 smoothed[i] = (double)val;
-            }
-
-            return smoothed;
-        }
-
-
-        public static double[] WindowSmoothedXXX(double[] rawData, int windowSize)
-        {
-            if (windowSize == 0)
-                return rawData;
-
-            double[] smoothed = new double[rawData.Length];
-            double[] buffer = new double[windowSize];
-
-
-            int bufferIndex = 0;
-            double sum = 0;
-            for (int i = 0; i < rawData.Length; i++)
-            {
-                double nextInput = rawData[i];
-                sum = sum - buffer[bufferIndex] + nextInput;
-
-                // overwrite the old value with the new one
-                buffer[bufferIndex] = nextInput;
-
-                // increment the buffer index 
-                bufferIndex = (bufferIndex + 1) % windowSize;
-
-                // calculate the average
-                smoothed[i] = ((double)sum) / windowSize;
             }
 
             return smoothed;

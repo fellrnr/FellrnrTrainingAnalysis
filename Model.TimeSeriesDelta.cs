@@ -13,8 +13,16 @@ namespace FellrnrTrainingAnalysis.Model
         protected TimeSeriesDelta()  //for use by memory pack deserialization only
         {
         }
-        public TimeSeriesDelta(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null,
-                                float scalingFactor = 1, float? numerator = null, float? period = null, float? limit = null) :
+        public TimeSeriesDelta(string name, 
+                        Activity parent, 
+                        bool persistCache, 
+                        List<string>? requiredFields, 
+                        List<string>? opposingFields = null, 
+                        List<string>? sportsToInclude = null,
+                        float scalingFactor = 1, 
+                        float? numerator = null, 
+                        float? period = null, 
+                        float? limit = null) :
             base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
             if (requiredFields == null || requiredFields.Count != 1) throw new ArgumentException("TimeSeriesDelta must have only one required field");

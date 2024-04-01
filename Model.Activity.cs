@@ -168,7 +168,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddTimeSeries(string name, uint[] times, float[] values)
         {
-            TimeSeriesRecorded activityTimeSeries = new TimeSeriesRecorded(name, new TimeValueList(times, values), this);
+            TimeValueList aTimeValueList = TimeValueList.TimeValueListFromTimed(times, values);
+            TimeSeriesRecorded activityTimeSeries = new TimeSeriesRecorded(name, aTimeValueList, this);
             if (!timeSeries.ContainsKey(name))
             {
                 timeSeries.Add(name, activityTimeSeries);

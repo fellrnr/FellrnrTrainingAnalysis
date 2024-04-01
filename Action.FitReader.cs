@@ -501,7 +501,8 @@ namespace FellrnrTrainingAnalysis.Action
         //This should be the start of the activity, giving us UTC and local times
         void OnActivityMesgEvent(object sender, MesgEventArgs e)
         {
-            Logging.Instance.Debug(String.Format("ActivityMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
+            if (Options.Instance.DebugFitLoading) 
+                Logging.Instance.Debug(String.Format("ActivityMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
             ActivityMesg? myActivityMesg = (ActivityMesg)e.mesg;
             if (myActivityMesg != null)
             {

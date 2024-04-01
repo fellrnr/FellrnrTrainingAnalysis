@@ -406,6 +406,20 @@ namespace FellrnrTrainingAnalysis.Utils
             }
         }
 
+        public static string s2hms(double? secs)
+        {
+            return s2hms((uint?)secs);
+        }
+        public static string s2hms(uint? secs)
+        {
+            if (secs == null) { return "null"; }
+            TimeSpan t = TimeSpan.FromSeconds(secs!.Value);
+
+            string answer = string.Format("{0:D2}h:{1:D2}m:{2:D2}s", t.Hours, t.Minutes, t.Seconds);
+
+            return answer;
+        }
+
     }
 
 }

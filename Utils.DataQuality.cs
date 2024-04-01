@@ -149,7 +149,7 @@ namespace FellrnrTrainingAnalysis.Utils
             uint startOfBad = 0;
             int suspicion = 0;
             bool inbad = false;
-            uint lastTime = 0;
+            int lastTime = 0; //TODO: adjust for one second times
             for (int i = 0; i < aligned.Length; i++)
             {
                 if (aligned.Primary[i] >= MaxHr && aligned.Secondary[i] < MinHrPwr)
@@ -163,8 +163,8 @@ namespace FellrnrTrainingAnalysis.Utils
                 {
                     if (inbad)
                     {
-                        uint thisTime = aligned.Time[i];
-                        int deltat = (int)thisTime - (int)lastTime;
+                        int thisTime = i;
+                        int deltat = thisTime - lastTime;
                         suspicion -= deltat;
                         if (suspicion < 0 || i == aligned.Length - 1) //grab problems that go to the end
                         {
@@ -176,7 +176,7 @@ namespace FellrnrTrainingAnalysis.Utils
                         }
                     }
                 }
-                lastTime = aligned.Time[i];
+                lastTime = i;
             }
 
             if (badStreams.Count > 0)
@@ -207,36 +207,6 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         private string TargetTimeSeries;
         private string? xAxisName;
-
-        protected float XValueAtTimeT(TimeSeriesBase? dataStreamX, int offsetEstimate, uint timeT, Activity activity)
-        {
-            if (dataStreamX == null)
-            {
-                return timeT;
-            }
-
-            TimeValueList? data = dataStreamX.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
-                return timeT;
-
-            uint[] times = data.Times;
-            float[] values = data.Values;
-
-            if (times[offsetEstimate] == timeT) //most likely, the time sequence for both data streams will match. If it does, we know which value to use
-                return values[offsetEstimate];
-
-
-            //if not, we have to search for the right time, but this can take an exponential time to complete
-            for (int i = 0; i < times.Length; i++)
-            {
-                if (timeT <= times[i])
-                {
-                    return values[i];
-                }
-            }
-
-            return timeT;
-        }
 
         protected override List<string> FindBadData(Activity activity)
         {
@@ -293,15 +263,14 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             //the X axis is either time or distance
 
-            uint[] times = data.Times;
             float[] yValues = data.Values;
             float lastYValue = yValues[0];
-            float lastXValue = XValueAtTimeT(dataStreamX, 0, times[0], activity);
+            float lastXValue = data.Values[0];
 
             if (yValues.Max() == yValues.Min()) //fixed values are not our problem
                 return null;
@@ -316,7 +285,7 @@ namespace FellrnrTrainingAnalysis.Utils
             for (int i = 1; i < yValues.Length; i++) //start from 1 as we're looking at the next value
             {
                 float currentYValue = yValues[i];
-                float currentXValue = XValueAtTimeT(dataStreamX, i, times[i], activity);
+                float currentXValue = data.Values[i];
 
                 if (MaxAllowedXSpanWithNoYChange != null)
                 {
@@ -330,7 +299,7 @@ namespace FellrnrTrainingAnalysis.Utils
                         {
                             maxFixedXSpan = currentXValue - xValueAtLastYChange;
                             yValueWhileFixed = currentYValue;
-                            timeAtEndOfFixedPeriod = times[i];
+                            timeAtEndOfFixedPeriod = i;
                             xAtEndOfFixedPeriod = currentXValue;
                         }
                     }
@@ -365,18 +334,17 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             //the X axis is either time or distance
 
 
 
-            uint[] times = data.Times;
             float[] yValues = data.Values;
 
             float lastYValue = yValues[0];
-            float lastXValue = XValueAtTimeT(dataStreamX, 0, times[0], activity);
+            float lastXValue = data.Values[0];
 
             if (yValues.Max() == yValues.Min()) //fixed values are not our problem
                 return null;
@@ -384,7 +352,7 @@ namespace FellrnrTrainingAnalysis.Utils
             for (int i = 1; i < yValues.Length && (OnlyScanFirstN == null || i < OnlyScanFirstN); i++) //start from 1 as we're looking at the next value
             {
                 float currentYValue = yValues[i];
-                float currentXValue = XValueAtTimeT(dataStreamX, i, times[i], activity);
+                float currentXValue = data.Values[i];
 
                 float valueDelta = Math.Abs(currentYValue - lastYValue);
                 float xValueDelta = currentXValue - lastXValue;
@@ -415,15 +383,13 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             //the X axis is either time or distance
 
 
 
-            uint[] times = data.Times;
-            float[] yValues = data.Values;
             TimeValueList? convertedToDelta;
 
             if (Period == null || Period == 1)
@@ -461,7 +427,7 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             float[] yValues = data.Values;
@@ -492,7 +458,7 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             float[] yValues = data.Values;
@@ -528,7 +494,7 @@ namespace FellrnrTrainingAnalysis.Utils
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < 2)
+            if (data == null || data.Length < 2)
                 return null;
 
             float[] values = data.Values;
@@ -631,7 +597,7 @@ namespace FellrnrTrainingAnalysis.Utils
                 return;
             TimeSeriesBase dataStream = activity.TimeSeries[Target];
             TimeValueList? data = dataStream.GetData(forceCount: 0, forceJustMe: false);
-            if (data == null || data.Times.Length < Position)
+            if (data == null || data.Length < Position)
                 return;
 
             float copyback = data.Values[Position];

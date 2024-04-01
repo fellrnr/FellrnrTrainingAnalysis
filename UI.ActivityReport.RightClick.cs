@@ -834,55 +834,6 @@ namespace FellrnrTrainingAnalysis
             activityCorrelation.Show();
         }
 
-            private void formsPlot1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (MouseCrosshair != null && CurrentlyDisplayedActivity != null)
-            {
-                StringBuilder stringBuilder = new StringBuilder();
-
-                (double cx, double cy) = formsPlot1.GetMouseCoordinates();
-                MouseCrosshair.X = cx;
-                MouseCrosshair.Y = cy;
-                formsPlot1.Refresh();
-
-                if (cx < 0)
-                {
-                    positionLabel.Text = "N/A";
-                    return; //happens when cursor moves too far left
-                }
-                uint time = (uint)cx;
-                DateTime dateTime = new DateTime();
-                dateTime = dateTime.AddSeconds(cx);
-                stringBuilder.Append($"Position {dateTime.ToShortTimeString()}");
-
-
-                foreach (KeyValuePair<string, TimeSeriesBase> kvp in CurrentlyDisplayedActivity.TimeSeries)
-                {
-                    TimeSeriesDefinition? dataStreamDefinition = TimeSeriesDefinition.FindTimeSeriesDefinition(kvp.Key);
-                    if (dataStreamDefinition != null && dataStreamDefinition.ShowReportGraph)
-                    {
-                        TimeSeriesBase dataStreamBase = kvp.Value;
-                        TimeValueList? data = dataStreamBase.GetData(forceCount: 0, forceJustMe: false);
-                        if (data != null)
-                        {
-                            uint[] times = data.Times;
-                            int offset = Array.BinarySearch(times, time);
-                            if (offset < 0)
-                                offset = ~offset;
-                            if (offset >= data.Values.Length)
-                                offset = data.Values.Length - 1;
-
-                            float value = data.Values[offset];
-                            string representation = dataStreamDefinition.Format(value);
-                            stringBuilder.Append($", {kvp.Key}: {representation}");
-                        }
-                    }
-                }
-
-                positionLabel.Text = stringBuilder.ToString();
-
-            }
-        }
 
     }
 }

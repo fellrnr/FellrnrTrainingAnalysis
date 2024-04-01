@@ -9,7 +9,6 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackConstructor]
         private TimeSeriesRecorded()
         {
-            Data = new TimeValueList(new uint[0], new float[0]);
         }
         public TimeSeriesRecorded(string name, TimeValueList data, Activity parent) : base(name, parent)
         {
@@ -18,17 +17,17 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //A "real" data stream is always valid. It's only the data streams computed on the fly that need other data streams to be valid.
-        public override bool IsValid() { return true; }
+        public override bool IsValid() { return Data != null; }
         public override bool IsVirtual() { return false; }
 
 
         //time offset to Datum
         //TODO: we need the absolute time for a datum as well. If the timer is stopped, the elapsed time stops, but it might be useful to know the actual time. Solution: This will be a data stream of DateTime. 
         [MemoryPackInclude]
-        private TimeValueList Data;
+        private TimeValueList? Data;
 
         //TODO: Potential optimisation - Share time between data streams 
-        public override TimeValueList GetData(int forceCount, bool forceJustMe) { return Data; }
+        public override TimeValueList? GetData(int forceCount, bool forceJustMe) { return Data; }
 
 
         //currently a data based data stream doesn't need to recalculate. This may change is we put averages and statistics on the activity

@@ -41,15 +41,15 @@ namespace FellrnrTrainingAnalysis.Model
                 Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.TagWeight, Options.Instance.StartingWeight);
             }
 
-            TimeValueList retval = new TimeValueList(new uint[gapData.Times.Length], new float[gapData.Times.Length]);
 
             float w = Weight;
-            for (int i = 0; i < gapData.Times.Length; i++)
+            float[] values = new float[gapData.Length];
+            for (int i = 0; i < gapData.Length; i++)
             {
                 float watts = w * gapData.Values[i];
-                retval.Values[i] = watts;
-                retval.Times[i] = gapData.Times[i];
+                values[i] = watts;
             }
+            TimeValueList retval = new TimeValueList(values);
 
             return retval;
         }

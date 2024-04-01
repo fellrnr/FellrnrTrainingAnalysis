@@ -66,10 +66,10 @@ namespace FellrnrTrainingAnalysis.Model
             AlignedTimeSeries? alignedTimeSeries = AlignedTimeSeries.Align(hrData, pwrData);
             if (alignedTimeSeries == null) { return null; }
 
-            TimeValueList retval = new TimeValueList(new uint[alignedTimeSeries.Time.Length], new float[alignedTimeSeries.Time.Length]);
+            float[] values = new float[alignedTimeSeries.Length];
 
             int ignoreStart = (int)ParameterOrZero(IGNORESTART);
-            uint lastTime = alignedTimeSeries.Time.Last();
+            int lastTime = alignedTimeSeries.Length;
 
             if (ignoreStart > lastTime)
                 return null;
@@ -80,9 +80,9 @@ namespace FellrnrTrainingAnalysis.Model
             float orhr = rhr + rhroffset;
             float prev_hrpwr = 0;
             float first_hrpwr = -1;
-            for (int i = 0; i < alignedTimeSeries.Time.Length; i++)
+            for (int i = 0; i < alignedTimeSeries.Length; i++)
             {
-                if (alignedTimeSeries.Time[i] > ignoreStart)
+                if (i > ignoreStart)
                 {
                     float hr = alignedTimeSeries.Primary[i];
                     float pwr = alignedTimeSeries.Secondary[i] * 1000.0f;
@@ -90,29 +90,31 @@ namespace FellrnrTrainingAnalysis.Model
                     float deltahr = hr - orhr;
 
                     float hrpwr = deltahr == 0 ? 0 : pwrkg / deltahr;
-                    retval.Times[i] = alignedTimeSeries.Time[i];
                     if (float.IsNormal(hrpwr) || hrpwr == 0)
                     {
-                        retval.Values[i] = hrpwr;
+                        values[i] = hrpwr;
                         prev_hrpwr = hrpwr;
                         if (first_hrpwr < 0)
                             first_hrpwr = hrpwr;
                     }
                     else
                     {
-                        retval.Values[i] = prev_hrpwr;
+                        values[i] = prev_hrpwr;
                     }
                 }
             }
 
-            for (int i = 0; i < alignedTimeSeries.Time.Length && alignedTimeSeries.Time[i] <= ignoreStart; i++)
+            for (int i = 0; i < alignedTimeSeries.Length && i <= ignoreStart; i++)
             {
-                retval.Values[i] = first_hrpwr;
+                values[i] = first_hrpwr;
             }
 
             LinearRegression? regression = LinearRegression.EvaluateLinearRegression(alignedTimeSeries, false);
             if(regression != null) { regression.Save(ParentActivity, Name);  }
             Logging.Instance.PauseAccumulator("GetHrPwr");
+
+            TimeValueList retval = new TimeValueList(values);
+
 
             return retval;
 

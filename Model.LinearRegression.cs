@@ -42,6 +42,16 @@ namespace FellrnrTrainingAnalysis.Model
         double sumSqDiffX = 0;
         double sumSqDiffY = 0;
 
+
+        //working variables for debug
+        double RNumerator;
+        double RDenom;
+        double meanX;
+        double meanY;
+        double dblR;
+        double avgX;
+        double avgY;
+
         private void Evaluate(AlignedTimeSeries alignedTimeSeries, bool primaryIsX)
         {
             int length = alignedTimeSeries.Length;
@@ -50,8 +60,8 @@ namespace FellrnrTrainingAnalysis.Model
             float[] arrayY = !primaryIsX ? alignedTimeSeries.Primary : alignedTimeSeries.Secondary;
 
             //this isn't quite right; we really need the average of all time series, not doing it per list
-            double avgX = arrayX.Average();
-            double avgY = arrayX.Average();
+            avgX = arrayX.Average();
+            avgY = arrayX.Average();
             for (int i = 0; i < length; i++)
             {
                 double x = arrayX[i];
@@ -71,17 +81,32 @@ namespace FellrnrTrainingAnalysis.Model
             }
             ssX = sumOfXSq - ((sumOfX * sumOfX) / length);
             //ssY = sumOfYSq - ((sumOfY * sumOfY) / count);
-            double RNumerator = (length * sumCodeviates) - (sumOfX * sumOfY);
-            double RDenom = (length * sumOfXSq - (sumOfX * sumOfX)) * (length * sumOfYSq - (sumOfY * sumOfY));
+            RNumerator = (length * sumCodeviates) - (sumOfX * sumOfY);
+            RDenom = (length * sumOfXSq - (sumOfX * sumOfX)) * (length * sumOfYSq - (sumOfY * sumOfY));
             sCo = sumCodeviates - ((sumOfX * sumOfY) / length);
 
-            double meanX = sumOfX / length;
-            double meanY = sumOfY / length;
-            double dblR = RNumerator / (double)Math.Sqrt(RDenom);
+            meanX = sumOfX / length;
+            meanY = sumOfY / length;
 
-            RSquared = (float)(dblR * dblR);
+            if (RNumerator == 0 && RDenom == 0) //can happen when x is constant
+            {
+                RSquared = 0; 
+            }
+            else
+            {
+                dblR = RNumerator / (double)Math.Sqrt(RDenom);
+
+                RSquared = (float)(dblR * dblR);
+            }
             YIntercept = (float)(meanY - ((sCo / ssX) * meanX));
-            Slope = (float)(sCo / ssX);
+            if(sCo == 0 && ssX == 0)
+            {
+                Slope = 0;
+            }
+            else
+            {
+                Slope = (float)(sCo / ssX);
+            }
 
             XStandardDeviation = (float)Math.Sqrt(sumSqDiffX / Count);
             YStandardDeviation = (float)Math.Sqrt(sumSqDiffY / Count);

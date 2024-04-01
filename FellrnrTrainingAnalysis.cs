@@ -805,6 +805,7 @@ namespace FellrnrTrainingAnalysis
 
         private void experimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            /*
             Athlete athlete = Database.CurrentAthlete;
 
             double sumTime = 0;
@@ -850,6 +851,7 @@ namespace FellrnrTrainingAnalysis
             double avg = sumTime / sumCount;
             double percentOne = ((double)countVOne) / (double)(countVNon + countVOne);
             MessageBox.Show($"Average seconds per recording is {avg:f2}, #1 {countOne:N0}. #!1 {countNon:N0}, %1 sec {percentOne:P}, countVOne {countVOne:N0}, countVNon {countVNon:N0}, count {sumCount:N0}, sum time {sumTime:N0}");
+            */
         }
     }
 

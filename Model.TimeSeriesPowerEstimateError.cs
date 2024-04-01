@@ -55,22 +55,22 @@ namespace FellrnrTrainingAnalysis.Model
                 Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.TagWeight, Options.Instance.StartingWeight);
             }
 
-            uint finalTimegad = gadData.Times.Last();
-            uint finalTimepower = powerData.Times.Last();
-            uint finalTimepower90 = finalTimepower * 90 / 100;
+            int finalTimegad = gadData.Length;
+            int finalTimepower = powerData.Length;
+            int finalTimepower90 = finalTimepower * 90 / 100;
             if (finalTimegad < finalTimepower90)
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"gad less than 90 power, {finalTimegad}, {finalTimepower}, {finalTimepower90}");
                 return null;
             }
 
-            uint powerTimegad = gadData.Times.First();
-            uint powerTimepower = powerData.Times.First();
-            if (powerTimegad > powerTimepower + 5 * 60)
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"gad starts more than 5 min after power, {powerTimegad}, {powerTimepower}");
-                return null;
-            }
+            //uint powerTimegad = gadData.Times.First();
+            //uint powerTimepower = powerData.Times.First();
+            //if (powerTimegad > powerTimepower + 5 * 60)
+            //{
+            //    if (forceJustMe) Logging.Instance.TraceLeave($"gad starts more than 5 min after power, {powerTimegad}, {powerTimepower}");
+            //    return null;
+            //}
 
 
             AlignedTimeSeries? aligned = AlignedTimeSeries.Align(powerData, gadData);
@@ -92,7 +92,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
 
-            TimeValueList retval = new TimeValueList(aligned.Time, difs);
+            TimeValueList retval = new TimeValueList(difs);
 
             LinearRegression? regression = LinearRegression.EvaluateLinearRegression(aligned, false);
             if (regression != null) { regression.Save(ParentActivity, Name); }

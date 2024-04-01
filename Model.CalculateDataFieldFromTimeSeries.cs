@@ -136,34 +136,30 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesThreashold Forced ExtractValue {ActivityFieldname}");
             uint pastThreashold = 0;
-            uint lastTime = 0;
-            for (int i = 0; i < data.Times.Length; i++)
+            for (int i = 0; i < data.Length; i++)
             {
-                uint thisTime = data.Times[i] - lastTime;
                 float thisValue = data.Values[i];
                 if (ExtractionMode == Mode.AboveAbs && thisValue > Threashold)
                 {
-                    pastThreashold += thisTime;
+                    pastThreashold++;
                 }
                 else if (ExtractionMode == Mode.BelowAbs && thisValue < Threashold)
                 {
-                    pastThreashold += thisTime;
+                    pastThreashold++;
                 }
                 else if (ExtractionMode == Mode.AbovePercent && thisValue > Threashold)
                 {
-                    pastThreashold += thisTime;
+                    pastThreashold++;
                 }
                 else if (ExtractionMode == Mode.BelowPercent && thisValue < Threashold)
                 {
-                    pastThreashold += thisTime;
+                    pastThreashold++;
                 }
-
-                lastTime = data.Times[i];
             }
 
             if (ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
             {
-                float percent = (pastThreashold * 100.0f) / ((float)lastTime);
+                float percent = (pastThreashold * 100.0f) / ((float)data.Length);
                 return percent;
             }
             else
@@ -191,23 +187,20 @@ namespace FellrnrTrainingAnalysis.Model
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldname}");
 
             float sum = 0;
-            uint lastTime = 0;
 
-            for (int i = 0; i < data.Times.Length; i++)
+            for (int i = 0; i < data.Length; i++)
             {
-                uint time = data.Times[i];
                 double value = data.Values[i];
                 if (Negate)
                     value = -value;
                 if (value > Min)
                 {
-                    uint timespan = time - lastTime;
+                    uint timespan = 1;
                     double collared = Max is null ? value : Math.Min((double)Max, (double)value);
                     double offset = collared - Min;
                     double areaUnderCurve = offset * timespan;
                     sum += (float)areaUnderCurve;
                 }
-                lastTime = time;
             }
             return sum;
         }
@@ -216,7 +209,12 @@ namespace FellrnrTrainingAnalysis.Model
     public class CalculateDataFieldFromTimeSeriesWindow : CalculateDataFieldFromTimeSeriesBase
     {
         //zero end means to the end
-        public CalculateDataFieldFromTimeSeriesWindow(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude, uint start, uint end = 0) :
+        public CalculateDataFieldFromTimeSeriesWindow(string activityFieldname,
+                                                      Mode extractionMode,
+                                                      string sourceStreamName,
+                                                      List<string>? sportsToInclude,
+                                                      int start,
+                                                      int end = 0) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
@@ -226,8 +224,8 @@ namespace FellrnrTrainingAnalysis.Model
         public enum Mode { LastValue, Average, Min, Max }
         Mode ExtractionMode { get; set; }
 
-        uint Start { get; set; }
-        uint End { get; set; }
+        int Start { get; set; }
+        int End { get; set; }
 
         protected override float ExtractValue(TimeValueList data, bool forceJustMe)
         {
