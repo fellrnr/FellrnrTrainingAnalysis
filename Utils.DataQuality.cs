@@ -370,7 +370,7 @@ namespace FellrnrTrainingAnalysis.Utils
     public class DataQualityCheckRapidChange : DataQualityCheckStream
     {
         public DataQualityCheckRapidChange(string description, string target, string? xaxis, DataRemediation dataRemediation,
-            float? maxIncreaseAllowed = null, float? maxDecreaseAllowed = null, float? period = null) : base(description, target, xaxis, dataRemediation)
+            float? maxIncreaseAllowed = null, float? maxDecreaseAllowed = null, int? period = null) : base(description, target, xaxis, dataRemediation)
         {
             MaxIncreaseAllowed = maxIncreaseAllowed;
             MaxDecreaseAllowed = maxDecreaseAllowed;
@@ -378,7 +378,7 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         private float? MaxIncreaseAllowed;
         private float? MaxDecreaseAllowed;
-        private float? Period;
+        private int? Period;
 
         protected override string? CheckTimeSeries(TimeSeriesBase dataStream, TimeSeriesBase? dataStreamX, Activity activity)
         {
@@ -398,7 +398,7 @@ namespace FellrnrTrainingAnalysis.Utils
             }
             else
             {
-                convertedToDelta = TimeValueList.SpanDeltas(data, 1, null, null, (float)Period, false);
+                convertedToDelta = TimeValueList.SpanDeltas(data, 1, null, null, (int)Period, false);
             }
             if (convertedToDelta == null)
                 return null;

@@ -63,7 +63,7 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             //compare recorded power with estimated power
 
-
+            /*
             List<float> StandardDeviations = new List<float>();
             foreach (var kvp in Athlete.Activities)
             {
@@ -96,6 +96,8 @@ namespace FellrnrTrainingAnalysis.Utils
 
             float avgSD = StandardDeviations.Average();
             return avgSD;
+            */
+            return 0;
         }
 
         private float GetStandardDeviationOfError(Activity activity, AlignedTimeSeries alignedGapPower)

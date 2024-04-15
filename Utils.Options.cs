@@ -140,10 +140,10 @@ namespace FellrnrTrainingAnalysis.Utils
         public float MaxSlope { get; set; } = 0.5f;
 
         [Description("How to do the elevation smoothing")]
-        public SmoothingOptions GADSmoothingType { get; set; } = SmoothingOptions.SimpleExponential;
+        public SmoothingOptions GADSmoothingType { get; set; } = SmoothingOptions.None;
 
-        [Description("How big should the smoothing window be (in meters)")]
-        public int GADSmoothingWindow { get; set; } = 50;
+        [Description("How big should the smoothing window be (in seconds)")]
+        public int GADSmoothingWindow { get; set; } = 0;
 
         //Debug
         //    _____       _                 
@@ -183,6 +183,9 @@ namespace FellrnrTrainingAnalysis.Utils
 
         [Description("Debug strava API")]
         public bool DebugStravaAPI { get; set; } = false;
+
+        [Description("Debug Linear Regression")]
+        public bool DebugLinearRegression { get; set; } = false;
 
 
         //Email

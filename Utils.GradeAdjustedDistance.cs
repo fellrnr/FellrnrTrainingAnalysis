@@ -5,7 +5,8 @@ namespace FellrnrTrainingAnalysis.Utils
     public class GradeAdjustedDistance
     {
 
-        public GradeAdjustedDistance(AlignedTimeSeries aligned, 
+        public GradeAdjustedDistance(TimeValueList inclineData,
+                                    TimeValueList distanceData,
                                     float? gradeAdjustmentX2 = null, 
                                     float? gradeAdjustmentX3 = null, 
                                     float? gradeAdjustmentX4 = null, 
@@ -15,18 +16,12 @@ namespace FellrnrTrainingAnalysis.Utils
                                     float? gradeAdjustmentOffset= null)
         {
             Logging.Instance.ContinueAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
-            Aligned = aligned;
-            if (Aligned.Length < 2)
-                throw new ArgumentException("need at least two distances to calculate GAP");
-
-            //calculate the initial deltas for distance and altitude
-
-            _distanceDeltas = CalculateDelta(Aligned.Primary);
-
-            _altitudeDeltas = CalculateDelta(Aligned.Secondary);
-
+            _inclineData = inclineData.Values;
+            if (_inclineData.Length < 2)
+                throw new ArgumentException("need at least two inclines to calculate GAP");
+            _distanceDeltas = CalculateDelta(distanceData.Values);
             //calcualte grade from distance and altitude deltas
-            _rawGrades = CalculateGrade(_distanceDeltas, _altitudeDeltas);
+            _rawGrades = inclineData.Values;
 
             //smoothing the grade is effectively the same a weighted grading the altitude, but simpler
             //we have to smooth the grade, as the cost is a polynomial of the grade, so it's too late to smooth then; any errors will be magnified 
@@ -81,14 +76,12 @@ namespace FellrnrTrainingAnalysis.Utils
 
             _gradeAdjustedPace = CalculateDelta(_gradeAdjustedDistance);
 
-
             Logging.Instance.PauseAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
         }
 
 
-        private AlignedTimeSeries Aligned { get; set; }
+        private float[] _inclineData;
         private float[] _distanceDeltas;
-        private float[] _altitudeDeltas;
         private float[] _rawGrades;
         private float[] _smoothedGrades;
         private float[] _costs;
@@ -168,6 +161,7 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         private float[] CalculateCost(float[] grades)
         {
+            Logging.Instance.ContinueAccumulator($"Utils.GradeAdjustedDistance.CalculateCost");
 
             float[] costs = new float[grades.Length];
 
@@ -180,12 +174,22 @@ namespace FellrnrTrainingAnalysis.Utils
                 //float cost = (float)Math.Pow(slope, 2) * 15.14 + slope * 2.896 + 1.0098;
                 //float cost = (float)((float)Math.Pow(grade, 2) * GradeAdjustmentX2 + grade * GradeAdjustmentX);
                 //
-                float costAbs = (float)Math.Pow(grade, 5) * GradeAdjustmentX5 + 
-                    (float)Math.Pow(grade, 4) * GradeAdjustmentX4 + 
-                    (float)Math.Pow(grade, 3) * GradeAdjustmentX3 + 
-                    (float)Math.Pow(grade, 2) * GradeAdjustmentX2 + 
-                    grade * GradeAdjustmentX + 
-                    GradeAdjustmentOffset;
+                float costAbs;
+                if (GradeAdjustmentX5 != 0 && GradeAdjustmentX4 != 0 && GradeAdjustmentX3 != 0)
+                {
+                    costAbs = (float)Math.Pow(grade, 5) * GradeAdjustmentX5 +
+                        (float)Math.Pow(grade, 4) * GradeAdjustmentX4 +
+                        (float)Math.Pow(grade, 3) * GradeAdjustmentX3 +
+                        (float)Math.Pow(grade, 2) * GradeAdjustmentX2 +
+                        grade * GradeAdjustmentX +
+                        GradeAdjustmentOffset;
+                }
+                else
+                {
+                    costAbs = grade * grade * GradeAdjustmentX2 +
+                              grade * GradeAdjustmentX +
+                              GradeAdjustmentOffset;
+                }
 
                 float costRel = costAbs / GradeAdjustmentFactor;
                 float cost = (float)costRel;
@@ -197,17 +201,19 @@ namespace FellrnrTrainingAnalysis.Utils
                     firstError = false; //only report once or we run out of memeory
                 }
             }
+            Logging.Instance.PauseAccumulator($"Utils.GradeAdjustedDistance.CalculateCost");
             return costs;
         }
         private bool firstError = true;
-        private float[] CalculateGradeAdjustedDistance(float[] dd, float[] costs)
+        private float[] CalculateGradeAdjustedDistance(float[] distanceDeltas, float[] costs)
         {
 
-            float[] gradeAdjustedDistance = new float[dd.Length];
             float currentDistance = 0;
-            for (int i = 0; i < dd.Length; i++)
+            int length = Math.Min(distanceDeltas.Length, costs.Length);
+            float[] gradeAdjustedDistance = new float[length];
+            for (int i = 0; i < length; i++)
             {
-                float distanceDelta = dd[i];
+                float distanceDelta = distanceDeltas[i];
                 float costAdjustment = costs[i];
                 float adjustedDistance = distanceDelta * costAdjustment;
                 currentDistance += adjustedDistance;

@@ -28,7 +28,7 @@ namespace FellrnrTrainingAnalysis.Action
             string description = descriptionDatum.Data;
 
             //change - only reprocess tags on forceJustMe, not every forced recalculate. 
-            TypedDatum<string>? processedDatum = (TypedDatum<string>?)activity.GetNamedDatum("Processed Tags");
+            TypedDatum<string>? processedDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagProcessedTags);
             string processedTags = (forceJustMe || processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
             bool processedTagsChanged = false;
 
@@ -53,11 +53,13 @@ namespace FellrnrTrainingAnalysis.Action
 
                 description = description.Substring(end + 1);
             }
-            if (processedTagsChanged && !force) //we weren't forced, but we need to force downstream processing
+            if (processedTagsChanged)
             {
                 if (forceJustMe) Logging.Instance.Debug($"processedTags is now {processedTags}");
-                activity.AddOrReplaceDatum(new TypedDatum<string>("Processed Tags", true, processedTags)); //set recorded to true as this isn't something we want to recreate all the time
-                return true;
+                activity.AddOrReplaceDatum(new TypedDatum<string>(Activity.TagProcessedTags, true, processedTags)); //set recorded to true as this isn't something we want to recreate all the time
+
+                if (!force) //we weren't forced, then we need to force downstream processing)
+                    return true;
             }
             return false;
         }
@@ -65,7 +67,6 @@ namespace FellrnrTrainingAnalysis.Action
         private bool ProcessTag(Activity activity, string tag, int forceCount, bool forceJustMe)
         {
             if (forceJustMe) Logging.Instance.Debug($"ProcessTag({tag})");
-            bool retval = false;
             string[] strings = tag.Split(MIDDLE);
             string target = strings[0];
             string command = strings[1];
@@ -75,7 +76,7 @@ namespace FellrnrTrainingAnalysis.Action
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag command: delete stream:{target}");
                 activity.RemoveNamedDatum(target);
                 activity.RemoveTimeSeries(target);
-                retval = true;
+                return true;
             }
             else if (command == "CopyBack")
             {
@@ -84,14 +85,14 @@ namespace FellrnrTrainingAnalysis.Action
                 if (!activity.TimeSeries.ContainsKey(target))
                 {
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack missing {target}");
-                    return retval;
+                    return false;
                 }
                 TimeSeriesBase dataStream = activity.TimeSeries[target];
                 TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
                 if (data == null || data.Length < amount)
                 {
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack {target} is too short");
-                    return retval;
+                    return false;
                 }
                 float copyback = data.Values[amount];
 
@@ -100,7 +101,7 @@ namespace FellrnrTrainingAnalysis.Action
                     data.Values[i] = copyback;
                 }
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack {target} Done");
-                retval = true;
+                return true;
             }
             else if (command == "Cap")
             {
@@ -111,7 +112,7 @@ namespace FellrnrTrainingAnalysis.Action
                 if (data == null)
                 {
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag Cap {target} no data");
-                    return retval;
+                    return false;
                 }
                 for (int i = 0; i < data.Values.Length; i++)
                 {
@@ -119,7 +120,7 @@ namespace FellrnrTrainingAnalysis.Action
                         data.Values[i] = amount;
                 }
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag Cap {target} Done");
-                retval = true;
+                return true;
             }
             else if (command == "Override")
             {
@@ -135,14 +136,13 @@ namespace FellrnrTrainingAnalysis.Action
                     activity.RemoveTimeSeries(target);
                 }
 
-                retval = true;
+                return true;
             }
             else
             {
                 Logging.Instance.Error($"ProcessTag unexpected command {command}");
-                retval = false;
+                return false;
             }
-            return retval;
         }
     }
 }

@@ -12,14 +12,17 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackConstructor]
         protected TimeSeriesGradeAdjustedDistance()  //for use by memory pack deserialization only
         {
+            InclineSeries = "Incline";
         }
+
 
         public TimeSeriesGradeAdjustedDistance(string name, 
                                     Activity parent, 
-                                    bool persistCache, 
+                                    bool persistCache,
                                     List<string>? requiredFields, 
                                     List<string>? opposingFields = null, 
                                     List<string>? sportsToInclude = null,
+                                    string? inclineSeries = null,
                                     float? gradeAdjustmentX2 = null,
                                     float? gradeAdjustmentX3 = null,
                                     float? gradeAdjustmentX4 = null,
@@ -36,11 +39,19 @@ namespace FellrnrTrainingAnalysis.Model
             if (gradeAdjustmentX != null) Parameter("gradeAdjustmentX", gradeAdjustmentX.Value);
             if (gradeAdjustmentFactor != null) Parameter("gradeAdjustmentFactor", gradeAdjustmentFactor.Value);
             if (gradeAdjustmentOffset != null) Parameter("gradeAdjustmentOffset", gradeAdjustmentOffset.Value);
+            if (inclineSeries != null)
+                InclineSeries = inclineSeries;
+            else
+                InclineSeries = "Incline";
         }
+
+        [MemoryPackInclude]
+        public string InclineSeries;
+
 
         public override TimeValueList? CalculateData(int forceCount, bool forceJustMe)
         {
-            if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesGradeAdjustedDistance - Forced recalculating {this.Name}");
+            if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesGradeAdjustedincline - Forced recalculating {this.Name}");
 
             TimeSeriesBase distanceStream = RequiredTimeSeries[0];
             TimeValueList? distanceData = distanceStream.GetData(forceCount, forceJustMe);
@@ -50,39 +61,22 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
             }
 
-            TimeSeriesBase altitudeStream = RequiredTimeSeries[1];
-            TimeValueList? altitudeData = altitudeStream.GetData(forceCount, forceJustMe);
-            if (altitudeData == null || altitudeData.Length < 1)
+
+            if (!ParentActivity!.TimeSeriesNames.Contains(InclineSeries))
             {
-                if (forceJustMe) Logging.Instance.TraceLeave($"No altitude");
+                if (forceJustMe) Logging.Instance.TraceLeave($"No incline stream");
                 return distanceData;
             }
 
-            int finalTimeAltitude = altitudeData.Length;
-            int finalTimeDistance = distanceData.Length;
-            int finalTimeDistance90 = finalTimeDistance * 90 / 100;
-            if (finalTimeAltitude < finalTimeDistance90)
+            TimeSeriesBase inclineStream = ParentActivity.TimeSeries[InclineSeries];
+            TimeValueList? inclineData = inclineStream.GetData(forceCount, forceJustMe);
+            if (inclineData == null || inclineData.Length < 1)
             {
-                if (forceJustMe) Logging.Instance.TraceLeave($"altitude less than 90 distance, {finalTimeAltitude}, {finalTimeDistance}, {finalTimeDistance90}");
+                if (forceJustMe) Logging.Instance.TraceLeave($"Incline too short");
                 return distanceData;
             }
 
-            //uint firstTimeAltitude = altitudeData.Times.First();
-            //uint firstTimeDistance = distanceData.Times.First();
-            //if (firstTimeAltitude > firstTimeDistance + 5 * 60)
-            //{
-            //    if (forceJustMe) Logging.Instance.TraceLeave($"altitude starts more than 5 min after distance, {firstTimeAltitude}, {firstTimeDistance}");
-            //    return distanceData;
-            //}
 
-
-            AlignedTimeSeries? aligned = AlignedTimeSeries.Align(distanceData, altitudeData);
-
-            if (aligned == null)
-            {
-                if (forceJustMe) Logging.Instance.TraceLeave($"No altitude, return distance {distanceData}");
-                return distanceData;
-            }
             float? gradeAdjustmentX2 = ParameterOrNull("gradeAdjustmentX2");
             float? gradeAdjustmentX3 = ParameterOrNull("gradeAdjustmentX3");
             float? gradeAdjustmentX4 = ParameterOrNull("gradeAdjustmentX4");
@@ -91,20 +85,28 @@ namespace FellrnrTrainingAnalysis.Model
             float? gradeAdjustmentFactor = ParameterOrNull("gradeAdjustmentFactor");
             float? gradeAdjustmentOffset = ParameterOrNull("gradeAdjustmentOffset");
 
-            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(aligned,
-                        gradeAdjustmentX2,
-                        gradeAdjustmentX3,
-                        gradeAdjustmentX4,
-                        gradeAdjustmentX5,
-                        gradeAdjustmentX,
-                        gradeAdjustmentFactor,
-                        gradeAdjustmentOffset);
+            Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(inclineData,
+                                                                                                distanceData,
+                                                                                                gradeAdjustmentX2,
+                                                                                                gradeAdjustmentX3,
+                                                                                                gradeAdjustmentX4,
+                                                                                                gradeAdjustmentX5,
+                                                                                                gradeAdjustmentX,
+                                                                                                gradeAdjustmentFactor,
+                                                                                                gradeAdjustmentOffset);
 
             TimeValueList retval = gradeAdjustedDistance.GetGradeAdjustedDistance();
 
-
-            if (forceJustMe) Logging.Instance.TraceLeave($"return GAD {retval}");
-            return retval;
+            if (retval == null)
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"return distance, GAD failed {retval}");
+                return distanceData;
+            }
+            else
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"return GAD {retval}");
+                return retval;
+            }
         }
 
 

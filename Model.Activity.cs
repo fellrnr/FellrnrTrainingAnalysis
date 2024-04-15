@@ -2,6 +2,7 @@
 using MemoryPack;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -249,15 +250,16 @@ namespace FellrnrTrainingAnalysis.Model
             if (tags.ProcessTags(this, forceCount: forceCount, forceJustMe: forceJustMe, force: force))
                 forceJustMe = true;
 
+
+            //calcualte the fields that need to be done before the time series, currently just assumed distance, which is used for many time series
             foreach (CalculateFieldBase calculate in CaclulateFieldFactory.Instance.PreTimeSeriesCalulators)
             {
                 calculate.Recalculate(this, forceCount, forceJustMe);
             }
 
+            List<TimeSeriesBase> ephemeralTimeSeries = TimeSeriesFactory.Instance.TimeSeries(this);
             if (force)
             {
-
-                List<TimeSeriesBase> ephemeralTimeSeries = TimeSeriesFactory.Instance.TimeSeries(this);
 
                 Logging.Instance.ContinueAccumulator("Activity.Recalculate(time series)");
                 foreach (TimeSeriesBase ts in ephemeralTimeSeries)
@@ -278,16 +280,21 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                foreach (KeyValuePair<string, TimeSeriesBase> kvp in timeSeries) //no longer try to add ephemeral time series - only add them on a full recalculate
+                //no longer try to add ephemeral time series - only add them on a full recalculate
+                //but we need to go through the ephemeral time series in order
+                foreach (TimeSeriesBase ets in ephemeralTimeSeries)
                 {
-                    TimeSeriesBase ts = kvp.Value;
-                    if (ts.IsValid())
+                    if (this.timeSeries.ContainsKey(ets.Name)) //only recalculate the ts we have
                     {
-                        ts.Recalculate(forceCount, forceJustMe);
-                    }
-                    else
-                    {
-                        Logging.Instance.Log($"Unforced TimSeries recalulation for {ts} isn't valid");
+                        TimeSeriesBase ts = timeSeries[ets.Name];
+                        if (ts.IsValid())
+                        {
+                            ts.Recalculate(forceCount, forceJustMe);
+                        }
+                        else
+                        {
+                            Logging.Instance.Log($"Unforced TimSeries recalulation for {ts} isn't valid");
+                        }
                     }
                 }
             }
@@ -323,9 +330,6 @@ namespace FellrnrTrainingAnalysis.Model
                 float minDistance = float.MaxValue;
                 float nearestLat = 0;
                 float nearestLon = 0;
-
-
-                //if(hill.Number == 2503)
 
                 //first optimization; is the hill within the bounds of the route?
                 if (LocationStream.WithinBounds(hill.Latitude, hill.Longitude))
@@ -363,6 +367,17 @@ namespace FellrnrTrainingAnalysis.Model
                         hill.Climbed.Add(this);
                 }
             }
+
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach(var hill in Climbed)
+            {
+                if(stringBuilder.Length > 0) stringBuilder.Append(", ");
+                stringBuilder.Append(hill.ToString());
+            }
+            if(stringBuilder.Length > 0)
+            {
+                this.AddOrReplaceDatum(new TypedDatum<string>("Climbed", false, stringBuilder.ToString()));
+            }
             //if (Options.Instance.LogLevel == Options.Level.Debug && force)
             //    Logging.Instance.Debug($"Hill matching took {Logging.Instance.GetAndResetTime("hills")}, {nochecked} checked, {nomatched} matched");
         }
@@ -386,6 +401,7 @@ namespace FellrnrTrainingAnalysis.Model
         public const string TagHrPwr = "HrPwr";
         public const string TagMovingTime = "Moving Time";
         public const string TagTreadmillAngle = "Treadmill Angle";
+        public const string TagProcessedTags = "Processed Tags";
         public static List<string> ActivityTypeRun = new List<string> { "Run", "Virtual Run" };
         /*
         public const string ActivityNameTag = "Activity Name";

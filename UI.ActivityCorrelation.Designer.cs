@@ -40,6 +40,13 @@
             buttonExecute = new Button();
             labelYDetails = new Label();
             labelXDetails = new Label();
+            dataGridView1 = new DataGridView();
+            label3 = new Label();
+            numericUpDownMinR2 = new NumericUpDown();
+            checkBoxIgnore0X = new CheckBox();
+            checkBoxIgnore0Y = new CheckBox();
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownMinR2).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -79,7 +86,7 @@
             // r2label
             // 
             r2label.AutoSize = true;
-            r2label.Location = new Point(729, 26);
+            r2label.Location = new Point(801, 26);
             r2label.Name = "r2label";
             r2label.Size = new Size(33, 25);
             r2label.TabIndex = 4;
@@ -88,7 +95,7 @@
             // slopeLabel
             // 
             slopeLabel.AutoSize = true;
-            slopeLabel.Location = new Point(729, 77);
+            slopeLabel.Location = new Point(801, 77);
             slopeLabel.Name = "slopeLabel";
             slopeLabel.Size = new Size(57, 25);
             slopeLabel.TabIndex = 5;
@@ -97,7 +104,7 @@
             // interceptYLabel
             // 
             interceptYLabel.AutoSize = true;
-            interceptYLabel.Location = new Point(729, 122);
+            interceptYLabel.Location = new Point(801, 122);
             interceptYLabel.Name = "interceptYLabel";
             interceptYLabel.Size = new Size(82, 25);
             interceptYLabel.TabIndex = 6;
@@ -151,11 +158,69 @@
             labelXDetails.TabIndex = 11;
             labelXDetails.Text = "X Details";
             // 
+            // dataGridView1
+            // 
+            dataGridView1.AllowUserToAddRows = false;
+            dataGridView1.AllowUserToDeleteRows = false;
+            dataGridView1.AllowUserToOrderColumns = true;
+            dataGridView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridView1.Location = new Point(12, 296);
+            dataGridView1.Name = "dataGridView1";
+            dataGridView1.RowHeadersWidth = 62;
+            dataGridView1.RowTemplate.Height = 33;
+            dataGridView1.Size = new Size(1976, 784);
+            dataGridView1.TabIndex = 12;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(301, 127);
+            label3.Name = "label3";
+            label3.Size = new Size(68, 25);
+            label3.TabIndex = 13;
+            label3.Text = "Min R2";
+            // 
+            // numericUpDownMinR2
+            // 
+            numericUpDownMinR2.DecimalPlaces = 2;
+            numericUpDownMinR2.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
+            numericUpDownMinR2.Location = new Point(424, 127);
+            numericUpDownMinR2.Maximum = new decimal(new int[] { 1, 0, 0, 0 });
+            numericUpDownMinR2.Name = "numericUpDownMinR2";
+            numericUpDownMinR2.Size = new Size(180, 31);
+            numericUpDownMinR2.TabIndex = 14;
+            // 
+            // checkBoxIgnore0X
+            // 
+            checkBoxIgnore0X.AutoSize = true;
+            checkBoxIgnore0X.Location = new Point(623, 23);
+            checkBoxIgnore0X.Name = "checkBoxIgnore0X";
+            checkBoxIgnore0X.Size = new Size(139, 29);
+            checkBoxIgnore0X.TabIndex = 15;
+            checkBoxIgnore0X.Text = "Ignore Zeros";
+            checkBoxIgnore0X.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxIgnore0Y
+            // 
+            checkBoxIgnore0Y.AutoSize = true;
+            checkBoxIgnore0Y.Location = new Point(623, 67);
+            checkBoxIgnore0Y.Name = "checkBoxIgnore0Y";
+            checkBoxIgnore0Y.Size = new Size(139, 29);
+            checkBoxIgnore0Y.TabIndex = 16;
+            checkBoxIgnore0Y.Text = "Ignore Zeros";
+            checkBoxIgnore0Y.UseVisualStyleBackColor = true;
+            // 
             // ActivityCorrelation
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(2000, 455);
+            ClientSize = new Size(2000, 1092);
+            Controls.Add(checkBoxIgnore0Y);
+            Controls.Add(checkBoxIgnore0X);
+            Controls.Add(numericUpDownMinR2);
+            Controls.Add(label3);
+            Controls.Add(dataGridView1);
             Controls.Add(labelXDetails);
             Controls.Add(labelYDetails);
             Controls.Add(buttonExecute);
@@ -170,6 +235,8 @@
             Controls.Add(label1);
             Name = "ActivityCorrelation";
             Text = "ActivityCorrelation";
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownMinR2).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -188,5 +255,10 @@
         private Button buttonExecute;
         private Label labelYDetails;
         private Label labelXDetails;
+        private DataGridView dataGridView1;
+        private Label label3;
+        private NumericUpDown numericUpDownMinR2;
+        private CheckBox checkBoxIgnore0X;
+        private CheckBox checkBoxIgnore0Y;
     }
 }

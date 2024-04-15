@@ -25,7 +25,7 @@ namespace FellrnrTrainingAnalysis.Model
         public bool WithinBounds(float lat, float lon)
         {
             //cache these as we do it a lot when looking for hills
-            //if(MinLat == null)
+            if(MinLat == null)
             {
                 //need to add some margin, as we might be slightly short of a peak, but within the margin
                 float minLat = Latitudes.Min();

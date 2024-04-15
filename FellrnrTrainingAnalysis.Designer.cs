@@ -67,6 +67,7 @@
             fixDataQualityIssueToolStripMenuItem = new ToolStripMenuItem();
             emailGoalsToolStripMenuItem = new ToolStripMenuItem();
             exploreGlobalRelationshipsToolStripMenuItem = new ToolStripMenuItem();
+            experimentalToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem1 = new ToolStripMenuItem();
             showOnlyToolStripMenuItem = new ToolStripMenuItem();
@@ -90,7 +91,7 @@
             overviewMap1 = new UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
             recalculateBackgroundWorker1 = new System.ComponentModel.BackgroundWorker();
-            experimentalToolStripMenuItem = new ToolStripMenuItem();
+            clearFiltersToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -379,9 +380,16 @@
             exploreGlobalRelationshipsToolStripMenuItem.Text = "Explore Global Relationships...";
             exploreGlobalRelationshipsToolStripMenuItem.Click += exploreGlobalRelationshipsToolStripMenuItem_Click;
             // 
+            // experimentalToolStripMenuItem
+            // 
+            experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
+            experimentalToolStripMenuItem.Size = new Size(392, 34);
+            experimentalToolStripMenuItem.Text = "Experimental...";
+            experimentalToolStripMenuItem.Click += experimentalToolStripMenuItem_Click;
+            // 
             // filterToolStripMenuItem
             // 
-            filterToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { filterToolStripMenuItem1, showOnlyToolStripMenuItem });
+            filterToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { filterToolStripMenuItem1, clearFiltersToolStripMenuItem, showOnlyToolStripMenuItem });
             filterToolStripMenuItem.Name = "filterToolStripMenuItem";
             filterToolStripMenuItem.Size = new Size(66, 35);
             filterToolStripMenuItem.Text = "Filter";
@@ -389,14 +397,14 @@
             // filterToolStripMenuItem1
             // 
             filterToolStripMenuItem1.Name = "filterToolStripMenuItem1";
-            filterToolStripMenuItem1.Size = new Size(200, 34);
+            filterToolStripMenuItem1.Size = new Size(270, 34);
             filterToolStripMenuItem1.Text = "Filter...";
             filterToolStripMenuItem1.Click += filterToolStripMenuItem1_Click;
             // 
             // showOnlyToolStripMenuItem
             // 
             showOnlyToolStripMenuItem.Name = "showOnlyToolStripMenuItem";
-            showOnlyToolStripMenuItem.Size = new Size(200, 34);
+            showOnlyToolStripMenuItem.Size = new Size(270, 34);
             showOnlyToolStripMenuItem.Text = "Show Only";
             // 
             // stravaToolStripMenuItem
@@ -480,7 +488,6 @@
             activityReport1.Name = "activityReport1";
             activityReport1.Size = new Size(1820, 1121);
             activityReport1.TabIndex = 0;
-            activityReport1.Load += activityReport1_Load;
             // 
             // activityTreeTabPage
             // 
@@ -611,12 +618,12 @@
             recalculateBackgroundWorker1.ProgressChanged += backgroundWorker_ProgressChanged;
             recalculateBackgroundWorker1.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
-            // experimentalToolStripMenuItem
+            // clearFiltersToolStripMenuItem
             // 
-            experimentalToolStripMenuItem.Name = "experimentalToolStripMenuItem";
-            experimentalToolStripMenuItem.Size = new Size(392, 34);
-            experimentalToolStripMenuItem.Text = "Experimental...";
-            experimentalToolStripMenuItem.Click += experimentalToolStripMenuItem_Click;
+            clearFiltersToolStripMenuItem.Name = "clearFiltersToolStripMenuItem";
+            clearFiltersToolStripMenuItem.Size = new Size(270, 34);
+            clearFiltersToolStripMenuItem.Text = "Clear Filters";
+            clearFiltersToolStripMenuItem.Click += clearFiltersToolStripMenuItem_Click;
             // 
             // FellrnrTrainingAnalysisForm
             // 
@@ -720,5 +727,6 @@
         private ToolStripMenuItem validationToolStripMenuItem;
         private ToolStripMenuItem exploreGlobalRelationshipsToolStripMenuItem;
         private ToolStripMenuItem experimentalToolStripMenuItem;
+        private ToolStripMenuItem clearFiltersToolStripMenuItem;
     }
 }

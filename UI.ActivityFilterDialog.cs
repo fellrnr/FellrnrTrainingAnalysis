@@ -506,7 +506,7 @@ new object[] { true });
             return aFilterActivities;
         }
 
-        private void Clear()
+        public void Clear()
         {
             foreach (KeyValuePair<string, FilterRow> kvp in Filters)
             {

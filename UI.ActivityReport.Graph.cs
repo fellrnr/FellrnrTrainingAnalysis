@@ -113,6 +113,14 @@ namespace FellrnrTrainingAnalysis
             var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArraySmoothed, color: dataStreamDefinition.GetColor());
             scatterGraph.MarkerShape = MarkerShape.none;
             scatterGraph.LineWidth = 2;
+            if (dataStreamDefinition.LineStyle == "Dot")
+                scatterGraph.LineStyle = LineStyle.Dot;
+            if (dataStreamDefinition.LineStyle == "DashDotDot")
+                scatterGraph.LineStyle = LineStyle.DashDotDot;
+            if (dataStreamDefinition.LineStyle == "DashDot")
+                scatterGraph.LineStyle = LineStyle.DashDot;
+            if (dataStreamDefinition.LineStyle == "Dash")
+                scatterGraph.LineStyle = LineStyle.Dash;
             YAxisMinMax.Add(new Tuple<double, double>(yArraySmoothed.Min(), yArraySmoothed.Max()));
 
 
@@ -269,13 +277,34 @@ namespace FellrnrTrainingAnalysis
             return smoothedData;
         }
 
+        private void LockAxis(object? sender, MouseEventArgs e)
+        {
+            var limits = formsPlot1.Plot.GetAxisLimits();
+
+            (double x, double y) = formsPlot1.GetMouseCoordinates();
+
+            bool isOverXAxis = limits.YMin > y; //below the bottom of the Y axis
+            bool isOverYAxis = limits.XMin > x; //to the left of the X axis
+
+            //lock the axis from zooming if the mouse is over the other axis
+            formsPlot1.Plot.YAxis.LockLimits(isOverXAxis);
+            formsPlot1.Plot.XAxis.LockLimits(isOverYAxis);
+            foreach (Axis axis in CurrentAxis) { axis.LockLimits(isOverXAxis); }
+
+        }
         private void formsPlot1_MouseMove(object sender, MouseEventArgs e)
         {
+
+            LockAxis(sender, e);
+
+            (double cx, double cy) = formsPlot1.GetMouseCoordinates();
+
+
             if (MouseCrosshair != null && CurrentlyDisplayedActivity != null)
             {
                 StringBuilder stringBuilder = new StringBuilder();
 
-                (double cx, double cy) = formsPlot1.GetMouseCoordinates();
+                
                 MouseCrosshair.X = cx;
                 MouseCrosshair.Y = cy;
                 formsPlot1.Refresh(); //TODO: can we just refresh the cross hairs?

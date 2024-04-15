@@ -60,7 +60,9 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (RestingHeartRate == 0)
             {
-                RestingHeartRate = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.TagRestingHeartRate, Options.Instance.StartingRestingHeartRate);
+                RestingHeartRate = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal,
+                                                                   Day.TagRestingHeartRate,
+                                                                   Options.Instance.StartingRestingHeartRate);
             }
 
             AlignedTimeSeries? alignedTimeSeries = AlignedTimeSeries.Align(hrData, pwrData);
@@ -109,7 +111,7 @@ namespace FellrnrTrainingAnalysis.Model
                 values[i] = first_hrpwr;
             }
 
-            LinearRegression? regression = LinearRegression.EvaluateLinearRegression(alignedTimeSeries, false);
+            LinearRegression? regression = LinearRegression.EvaluateLinearRegression(alignedTimeSeries, false, true, true);
             if(regression != null) { regression.Save(ParentActivity, Name);  }
             Logging.Instance.PauseAccumulator("GetHrPwr");
 

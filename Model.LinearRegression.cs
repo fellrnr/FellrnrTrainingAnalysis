@@ -10,12 +10,15 @@ namespace FellrnrTrainingAnalysis.Model
 {
     public class LinearRegression
     {
-        public float RSquared;
-        public float YIntercept;
-        public float Slope;
-        public float XStandardDeviation;
-        public float YStandardDeviation;
-        public int Count = 0;
+        //the id and date are used for display purposes
+        private string stravaId = "";
+        private DateTime? activityStart;
+        private double rSquared;
+        private double yIntercept;
+        private double slope;
+        private double xStandardDeviation;
+        private double yStandardDeviation;
+        private int count = 0;
 
         public void Save(Extensible extensible, string name)
         {
@@ -52,7 +55,16 @@ namespace FellrnrTrainingAnalysis.Model
         double avgX;
         double avgY;
 
-        private void Evaluate(AlignedTimeSeries alignedTimeSeries, bool primaryIsX)
+        public double RSquared { get => rSquared; set => rSquared = value; }
+        public double YIntercept { get => yIntercept; set => yIntercept = value; }
+        public double Slope { get => slope; set => slope = value; }
+        public double XStandardDeviation { get => xStandardDeviation; set => xStandardDeviation = value; }
+        public double YStandardDeviation { get => yStandardDeviation; set => yStandardDeviation = value; }
+        public int Count { get => count; set => count = value; }
+        public string StravaId { get => stravaId; set => stravaId = value; }
+        public DateTime? ActivityStart { get => activityStart; set => activityStart = value; }
+
+        private void Evaluate(AlignedTimeSeries alignedTimeSeries, bool primaryIsX, bool ignoreZerosX, bool ignoreZerosY)
         {
             int length = alignedTimeSeries.Length;
             Count += length;
@@ -62,22 +74,28 @@ namespace FellrnrTrainingAnalysis.Model
             //this isn't quite right; we really need the average of all time series, not doing it per list
             avgX = arrayX.Average();
             avgY = arrayX.Average();
+            double sumSqDiffXThis = 0;
+            double sumSqDiffYThis = 0;
             for (int i = 0; i < length; i++)
             {
                 double x = arrayX[i];
                 double y = arrayY[i];
-                sumCodeviates += x * y;
-                sumOfX += x;
-                sumOfY += y;
-                sumOfXSq += x * x;
-                sumOfYSq += y * y;
+                if ((!ignoreZerosX || x != 0) && (!ignoreZerosY || y != 0))
+                {
+                    sumCodeviates += x * y;
+                    sumOfX += x;
+                    sumOfY += y;
+                    sumOfXSq += x * x;
+                    sumOfYSq += y * y;
 
-                double diff;
-                diff = x - avgX;
-                sumSqDiffX += diff * diff;
-
-                diff = y - avgY;
-                sumSqDiffY += diff * diff;
+                    double diff;
+                    diff = x - avgX;
+                    sumSqDiffX += diff * diff;
+                    sumSqDiffXThis += diff * diff;
+                    diff = y - avgY;
+                    sumSqDiffY += diff * diff;
+                    sumSqDiffYThis += diff * diff;
+                }
             }
             ssX = sumOfXSq - ((sumOfX * sumOfX) / length);
             //ssY = sumOfYSq - ((sumOfY * sumOfY) / count);
@@ -98,50 +116,81 @@ namespace FellrnrTrainingAnalysis.Model
 
                 RSquared = (float)(dblR * dblR);
             }
-            YIntercept = (float)(meanY - ((sCo / ssX) * meanX));
             if(sCo == 0 && ssX == 0)
             {
                 Slope = 0;
+                YIntercept = 0;
             }
             else
             {
                 Slope = (float)(sCo / ssX);
+                YIntercept = (float)(meanY - ((sCo / ssX) * meanX));
             }
 
             XStandardDeviation = (float)Math.Sqrt(sumSqDiffX / Count);
             YStandardDeviation = (float)Math.Sqrt(sumSqDiffY / Count);
-
+            if (Options.Instance.DebugLinearRegression && XStandardDeviation > 1000)
+            {
+                if (System.Diagnostics.Debugger.IsAttached)
+                    System.Diagnostics.Debugger.Break();
+            }
         }
 
-        public static LinearRegression? EvaluateLinearRegression(AlignedTimeSeries alignedTimeSeries, bool primaryIsX, LinearRegression? prior = null)
+        public static LinearRegression AverageLinearRegressionList(List<LinearRegression> regressions)
         {
-            if(prior == null) { prior = new LinearRegression(); }
+            LinearRegression sum = new LinearRegression();
+
+            foreach (LinearRegression lr in regressions)
+            {
+                sum.RSquared += lr.RSquared;
+                sum.YIntercept += lr.YIntercept;
+                sum.Slope += lr.Slope;
+                sum.XStandardDeviation += lr.XStandardDeviation;
+                sum.YStandardDeviation += lr.YStandardDeviation;
+                sum.Count += lr.Count;
+            }
+
+            LinearRegression result = new LinearRegression();
+
+            result.RSquared += sum.RSquared / regressions.Count;
+            result.YIntercept += sum.YIntercept / regressions.Count;
+            result.Slope += sum.Slope / regressions.Count;
+            result.XStandardDeviation += sum.XStandardDeviation / regressions.Count;
+            result.YStandardDeviation += sum.YStandardDeviation / regressions.Count;
+            result.Count += sum.Count / regressions.Count;
+
+            return result;
+        }
+
+        public static LinearRegression? EvaluateLinearRegression(AlignedTimeSeries alignedTimeSeries, bool primaryIsX, bool ignoreZerosX, bool ignoreZerosY)
+        {
+            LinearRegression lr = new LinearRegression(); 
             
 
-            prior.Evaluate(alignedTimeSeries, primaryIsX);
+            lr.Evaluate(alignedTimeSeries, primaryIsX, ignoreZerosX, ignoreZerosY);
 
-            if (double.IsNaN(prior.RSquared))
+            if (double.IsNaN(lr.RSquared))
             {
                 Logging.Instance.Error("RSquared IsNaN");
                 return null;
             }
-            if (double.IsNaN(prior.YIntercept))
+            if (double.IsNaN(lr.YIntercept))
             {
                 Logging.Instance.Error("YIntercept IsNaN");
                 return null;
             }
-            if (double.IsNaN(prior.Slope))
+            if (double.IsNaN(lr.Slope))
             {
                 Logging.Instance.Error("Slope IsNaN");
                 return null;
             }
-            if (prior.RSquared > 1.001) //we can get rounding that bumps us just over 1
+            if (lr.RSquared > 1.001) //we can get rounding that bumps us just over 1
             {
                 Logging.Instance.Error("R^2 > 1");
                 return null;
             }
 
-            return prior;
+            return lr;
         }
 
 

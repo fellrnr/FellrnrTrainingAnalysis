@@ -11,6 +11,7 @@ namespace FellrnrTrainingAnalysis.Model
         public const string ALTITUDE = "Altitude";
         public const string DISTANCE = "Distance";
         public const string POWER = "Power";
+        public const string INCLINE = "Incline";
 
         public static TimeSeriesFactory Instance { get; set; } = new TimeSeriesFactory();
 
@@ -34,12 +35,22 @@ namespace FellrnrTrainingAnalysis.Model
                                     period: 60), //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
 
+                new TimeSeriesIncline(name:INCLINE,
+                                    parent: activity,
+                                    persistCache:true,  //this is more expensive than most ts
+                                    requiredFields: new List<string> { "Distance", "Altitude" },
+                                    opposingFields: null,
+                                    sportsToInclude:Activity.ActivityTypeRun,
+                                    spanPeriod: 15), //15 seems better than 30, but maybe TODO: goal seek span period for incline?
+
+
                 new TimeSeriesGradeAdjustedDistance(name:GRADE_ADJUSTED_DISTANCE,
                                                     parent: activity,
-                                                    persistCache:true,  //this is more expensive than most ts
-                                                    requiredFields: new List<string> { "Distance", "Altitude" },
+                                                    persistCache:false,  //this is more expensive than most ts
+                                                    requiredFields: new List<string> { "Distance" }, //we can do without Incline and just return distance
                                                     opposingFields: null,
-                                                    sportsToInclude:Activity.ActivityTypeRun),
+                                                    sportsToInclude:Activity.ActivityTypeRun,
+                                                    inclineSeries: "Incline"),
 
                 new TimeSeriesDelta(name:GRADE_ADUJUSTED_PACE,
                                     parent: activity,
@@ -70,7 +81,6 @@ namespace FellrnrTrainingAnalysis.Model
                                                 opposingFields: null,
                                                 sportsToInclude:Activity.ActivityTypeRun),
 
-
                 new TimeSeriesHeartRatePower(name:HEART_RATE_POWER,
                                                     parent: activity,
                                                     persistCache:true,  //this is more expensive than most ts
@@ -88,7 +98,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                 new TimeSeriesWPrimeBalance(name:"W' Balance",
                                             parent: activity,
-                                            persistCache:false,  //this is more expensive than most ts
+                                            persistCache:true,  //this is more expensive than most ts
                                             requiredFields: new List<string> { "Power" },
                                             opposingFields: null,
                                             sportsToInclude:Activity.ActivityTypeRun),
@@ -97,14 +107,16 @@ namespace FellrnrTrainingAnalysis.Model
                 //Watch out for differences in smoothing making GAP look wrong compared with speed/pace. 
                 //new TimeSeriesGradeAdjustedDistance(GRADE_ADUJUSTED_PACE, new List<string> {  "Speed", "Altitude" }, activity),
 
+                /*
                 // Minetti
                 //=(POWER(A2,5)*155.4 - POWER(A2,4)*30.4 - POWER(A2,3)*43.3+POWER(A2,2)*46.3+A2*16.5+3.6)/3.6
                 new TimeSeriesGradeAdjustedDistance(name:GRADE_ADJUSTED_DISTANCE + "_Minetti",
                                                     parent: activity,
-                                                    persistCache:true,  //this is more expensive than most ts
+                                                    persistCache:false,  //this is more expensive than most ts
                                                     requiredFields: new List<string> { "Distance", "Altitude" },
                                                     opposingFields: null,
                                                     sportsToInclude:Activity.ActivityTypeRun,
+                                                    inclineSeries: "Incline",
                                                     gradeAdjustmentX5: +155.4f,
                                                     gradeAdjustmentX4: -30.4f,
                                                     gradeAdjustmentX3: -43.3f,
@@ -136,7 +148,7 @@ namespace FellrnrTrainingAnalysis.Model
                                                 opposingFields: null,
                                                 sportsToInclude:Activity.ActivityTypeRun),
 
-
+                */
 
 
             };

@@ -21,7 +21,7 @@ namespace FellrnrTrainingAnalysis.Model
                         List<string>? sportsToInclude = null,
                         float scalingFactor = 1, 
                         float? numerator = null, 
-                        float? period = null, 
+                        int? period = null, 
                         float? limit = null) :
             base(name, parent, persistCache, requiredFields, opposingFields, sportsToInclude)
         {
@@ -38,7 +38,7 @@ namespace FellrnrTrainingAnalysis.Model
         float? Numerator { get; set; }
 
         [MemoryPackInclude]
-        float? Period { get; set; }
+        int? Period { get; set; }
 
         [MemoryPackInclude]
         float? Limit { get; set; }
@@ -61,6 +61,15 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
             TimeSeriesBase dataStream = RequiredTimeSeries[0];
+            //debug the issue of the underlying data stream not being ready. It should be ahead of us in the list and already calculated
+            if(dataStream is TimeSeriesEphemeral)
+            {
+                TimeSeriesEphemeral ephemeral = (TimeSeriesEphemeral)dataStream;
+                if(!ephemeral.CacheValid)
+                {
+                    Logging.Instance.Debug("Our underlying ephemeral data stream is not cached");
+                }
+            }
             TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
             if (data == null) { return null; }
 
@@ -75,7 +84,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                newData = TimeValueList.SpanDeltas(data, ScalingFactor, Numerator, Limit, (float)Period, extraDebug);
+                newData = TimeValueList.SpanDeltas(data, ScalingFactor, Numerator, Limit, (int)Period, extraDebug);
             }
             return newData;
         }

@@ -1,5 +1,6 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
+using ScottPlot.Drawing.Colormaps;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -7,16 +8,6 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public partial class TimeValueList
     {
-        [MemoryPackIgnore]
-        public uint[] TimesX
-        {
-            get
-            {
-                uint[] retval = new uint[Length];
-                for(uint i = 0; i < Length; i++) { retval[i] = i; }
-                return retval;
-            }
-        }
         [MemoryPackInclude]
         public float[] Values { get; set; }
 
@@ -77,8 +68,65 @@ namespace FellrnrTrainingAnalysis.Model
             return newData;
         }
 
-        //A more complex delta, using a time span for the change. Used for averaging over 60 seconds for instance. 
-        public static TimeValueList? SpanDeltas(TimeValueList data, float scalingFactor, float? numerator, float? limit, float period, bool extraDebug)
+        //create the deltas from the values before and after each time
+        public static TimeValueList SpanDeltas(TimeValueList tvl, float scalingFactor, float? numerator, float? limit, int period, bool extraDebug)
+        {
+            float[] result = new float[tvl.Length];
+            float[] data = tvl.Values;
+
+            int before = period / 2;
+            int after = period - before; //allow for odd values
+
+            List<float> debug_prior = new List<float>();
+            List<float> debug_ahead = new List<float>();
+            List<int> debug_ai = new List<int>();
+            List<int> debug_pi = new List<int>();
+            List<float> debug_raw = new List<float>();
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                float prior;
+                int prior_i;
+                if (i - before < 0)
+                    prior_i = 0;
+                else
+                    prior_i = i-before;
+                prior = data[prior_i];
+
+                float ahead;
+                int ahead_i;
+                if (i + after > data.Length-1)
+                    ahead_i = data.Length - 1;
+                else
+                    ahead_i = i + after;
+                ahead = data[ahead_i];
+
+                float currentDelta = ahead - prior;
+
+                debug_ahead.Add(ahead);
+                debug_prior.Add(prior);
+                debug_ai.Add(ahead_i);
+                debug_pi.Add(prior_i);
+                debug_raw.Add(currentDelta);
+
+                if (limit != null && Math.Abs(currentDelta) > limit)
+                {
+                    float limitf = (float)limit;
+                    currentDelta = currentDelta < 0 ? 0 - limitf : limitf;
+                }
+
+
+                if (numerator != null && currentDelta != 0)
+                    currentDelta = numerator.Value / currentDelta;
+                currentDelta = currentDelta * scalingFactor;
+                result[i] = currentDelta;
+            }
+            TimeValueList newData = new TimeValueList(result);
+            return newData;
+        }
+
+        //This is doing more than span - it's averaging the deltas over the period
+        public static TimeValueList? SpanDeltasWithSmoothing(TimeValueList data, float scalingFactor, float? numerator, float? limit, float period, bool extraDebug)
         {
             //uint[] elapsedTime = data.Times;
             float[] values = data.Values;

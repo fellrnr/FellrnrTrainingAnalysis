@@ -1,5 +1,6 @@
 ﻿using pi.science.smoothing;
 using pi.science.statistic;
+using ScottPlot.Plottable;
 using System.Diagnostics.Eventing.Reader;
 using static pi.science.smoothing.PIMovingAverageSmoothing;
 
@@ -191,6 +192,14 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         public static float[] WindowSmoothed(float[] rawData, int windowSize)
         {
+            double[] asDouble = Array.ConvertAll(rawData, x => (double)x);
+
+            double[] smoothed = WindowSmoothed(asDouble, windowSize);
+
+            float[] asFloat = Array.ConvertAll(rawData, x => (float)x);
+
+            return asFloat;
+            /*
             float[] smoothed = new float[rawData.Length];
             float[] buffer = new float[windowSize];
 
@@ -213,6 +222,7 @@ namespace FellrnrTrainingAnalysis.Utils
             }
 
             return smoothed;
+            */
         }
 
         public static float[] SimpleExponentialSmoothed(float[] rawData, int windowSize)

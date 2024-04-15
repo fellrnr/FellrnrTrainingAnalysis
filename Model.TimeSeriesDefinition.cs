@@ -48,13 +48,17 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string ColorName { get; set; } = "";
 
+        public string LineStyle { get; set; } = "";
+
         public Color GetColor()
         {
             Color retval;
             if (string.IsNullOrEmpty(ColorName))
                 retval = Color.Black;
+            else if(ColorName.StartsWith("#"))
+                retval = ColorTranslator.FromHtml(ColorName);
             else
-                retval = Color.FromName(ColorName);
+            retval = Color.FromName(ColorName);
             if(retval.R == 255 && retval.G == 255 && retval.B == 255)
                 retval = Color.DarkGray;
 

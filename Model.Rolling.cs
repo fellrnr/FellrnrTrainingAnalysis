@@ -237,14 +237,18 @@ namespace FellrnrTrainingAnalysis.Model
             //Σ🏃🚶→
             return new List<Rolling>
             {
+                //average daily distance per 7 or 30 days, and ratio
                 new RollingNormaliseAbsolute(Activity.ActivityTypeRun, "Σ🏃→X̄ 7D", "Σ🏃→ 7D", 7.0f),
                 new RollingNormaliseAbsolute(Activity.ActivityTypeRun, "Σ🏃→X̄ 30D", "Σ🏃→ 30D", 30.0f),
                 new RollingRatio(Activity.ActivityTypeRun, "🏃→X̄ 7/30", "Σ🏃→X̄ 7D", "Σ🏃→X̄ 30D"),
 
+                //average daily GAD per 7 or 30 days, and ratio
                 new RollingNormaliseAbsolute(Activity.ActivityTypeRun, "Σ🏃📐X̄ 7D", "Σ🏃📐 7D", 7.0f),
                 new RollingNormaliseAbsolute(Activity.ActivityTypeRun, "Σ🏃📐X̄ 30D", "Σ🏃📐 30D", 30.0f),
                 new RollingRatio(Activity.ActivityTypeRun, "🏃📐X̄ 7/30", "Σ🏃📐X̄ 7D", "Σ🏃📐X̄ 30D"),
 
+
+                //roll up TRIMP values
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP downhill", "TRIMP downhill", RollingRollUpActivityToDay.ModeEnum.Sum),
                 new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP downhill%", "ΣTRIMP downhill"),
 
@@ -254,10 +258,12 @@ namespace FellrnrTrainingAnalysis.Model
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP anaerobic", "TRIMP anaerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
                 new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP anaerobic%", "ΣTRIMP anaerobic"),
 
+                //roll up HrPwr values
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "Avg HrPwr 5 Min", "Avg HrPwr 5 Min", RollingRollUpActivityToDay.ModeEnum.Avg),
                 new RollingPercentMax(Activity.ActivityTypeRun, "HrPwr%", "Avg HrPwr 5 Min"),
                 //new RollingForceOverwrite(new List<string>(), Day.RestingHeartRateTag, 45.0f), //hack to correct problems
                 //new RollingForceOverwrite(new List<string>(), Day.TagWPrime, 15000), //hack to correct problems
+                //new RollingForceOverwrite(new List<string>(), Day.TagCriticalPower, 280), //hack to correct problems
             };
 
         }

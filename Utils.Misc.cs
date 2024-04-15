@@ -1,7 +1,10 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using GMap.NET;
 using GMap.NET.WindowsForms;
+using System.ComponentModel;
+using System.Data;
 using System.IO.Compression;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 
 namespace FellrnrTrainingAnalysis.Utils
@@ -194,6 +197,9 @@ namespace FellrnrTrainingAnalysis.Utils
         public static string FormatPace(float value)
         {
             float metersPerSecond = value;
+            if (metersPerSecond == 0)
+                return "0:00";
+
             float minutesPerKm = 16.666666667f / metersPerSecond; //https://www.aqua-calc.com/convert/speed/meter-per-second-to-minute-per-kilometer
             float secondsPerKm = minutesPerKm * 60;
             return FormatTime(secondsPerKm);
@@ -420,7 +426,53 @@ namespace FellrnrTrainingAnalysis.Utils
             return answer;
         }
 
-    }
+        public static DataTable ConvertToDataTable<T>(IList<T> data)
+        {
+            PropertyDescriptorCollection properties =
+               TypeDescriptor.GetProperties(typeof(T));
+            DataTable table = new DataTable();
+            foreach (PropertyDescriptor prop in properties)
+                table.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+            foreach (T item in data)
+            {
+                DataRow row = table.NewRow();
+                foreach (PropertyDescriptor prop in properties)
+                    row[prop.Name] = prop.GetValue(item) ?? DBNull.Value;
+                table.Rows.Add(row);
+            }
+            return table;
 
+        }
+
+
+        public static float StandardDeviation(float[] array)
+        {
+            float sumSqDiff = 0;
+            float avg = array.Average();
+
+            foreach (float x in array)
+            {
+                float diff;
+                diff = x - avg;
+                sumSqDiff += diff * diff;
+            }
+            float sd = (float)Math.Sqrt(sumSqDiff / array.Length);
+            return sd;
+        }
+        public static double StandardDeviation(double[] array)
+        {
+            double sumSqDiff = 0;
+            double avg = array.Average();
+
+            foreach (double x in array)
+            {
+                double diff;
+                diff = x - avg;
+                sumSqDiff += diff * diff;
+            }
+            double sd = (double)Math.Sqrt(sumSqDiff / array.Length);
+            return sd;
+        }
+    }
 }
 

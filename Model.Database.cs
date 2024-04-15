@@ -32,11 +32,12 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void MasterRecalculate(bool forceActivities, bool forceHills, bool forceGoals, BackgroundWorker? worker = null)
         {
-            if (forceActivities)
+            //we still want an unforced recalculation! 
+            //if (forceActivities)
                 RecalculateActivities(forceActivities, worker);
-            if (forceHills)
+            //if (forceHills)
                 RecalculateHills(forceHills, worker);
-            if (forceGoals)
+            //if (forceGoals)
                 RecalculateGoals(forceGoals, worker);
         }
 

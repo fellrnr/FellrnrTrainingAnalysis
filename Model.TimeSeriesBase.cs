@@ -15,6 +15,7 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(7, typeof(TimeSeriesCalculatePower))]
     [MemoryPackUnion(8, typeof(TimeSeriesWPrimeBalance))]
     [MemoryPackUnion(9, typeof(TimeSeriesPowerEstimateError))]
+    [MemoryPackUnion(10, typeof(TimeSeriesIncline))]
     public abstract partial class TimeSeriesBase
     {
         //Note: there is an instance of each TimeSeries object for each activity

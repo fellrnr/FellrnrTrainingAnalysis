@@ -311,7 +311,7 @@ namespace FellrnrTrainingAnalysis.Model
         public static readonly string[] FilterCommands = new string[] { "",
             "max <", "max <=", "max =", "max >=", "max >", "max between",
             "avg <", "avg <=", "avg =", "avg >=", "avg >", "avg between",
-            "min <", "min <=", "min =", "min >=", "min >", "min between", "has", "missing" };
+            "min <", "min <=", "min =", "min >=", "min >", "min between", "has", "missing", "virtual", "not virtual" };
 
 
         public FilterTimeSeries(string fieldName, string command, float? firstValue, float? secondValue)
@@ -340,6 +340,7 @@ namespace FellrnrTrainingAnalysis.Model
             {
 
                 float? value;
+                bool isvirtual = false;
 
                 if (!activity.TimeSeries.ContainsKey(FieldName))
                 {
@@ -355,6 +356,7 @@ namespace FellrnrTrainingAnalysis.Model
                     }
                     else
                     {
+                        isvirtual = datastream.IsVirtual();
                         float[] data = dataTuple.Values;
                         string statistic = Command.Substring(0, 3);
                         if (statistic == "max")
@@ -378,6 +380,14 @@ namespace FellrnrTrainingAnalysis.Model
                 else if (Command == "missing")
                 {
                     addIt = (value == null);
+                }
+                else if (Command == "virtual")
+                {
+                    addIt = (value != null && isvirtual);
+                }
+                else if (Command == "not virtual")
+                {
+                    addIt = (value != null && !isvirtual);
                 }
                 else
                 {

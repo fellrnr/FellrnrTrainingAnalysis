@@ -65,35 +65,9 @@ namespace FellrnrTrainingAnalysis.Model
                 WPrime *= 1000;
 
             float[] powerArray = powerData.Values;
-            float[] powerValues = new float[powerData.Length];
             float[] wPrimeBalanceValues = new float[powerData.Length];
             float CP = CriticalPower;
-            float totalBelowCP = 0;
-            float countBelowCP = 0;
-            float EXP = 0;
 
-            for (int i=0; i<powerData.Length; i++)
-            {
-                float value = powerArray[i];
-                if (value < 0) value = 0; // don't go negative now
-
-                powerValues[i] = value > CP ? value - CP : 0;
-
-                if (value < CP)
-                {
-                    totalBelowCP += value;
-                    countBelowCP++;
-                }
-                else EXP += value; // total expenditure above CP
-            }
-
-            float TAU;
-            if (countBelowCP > 0)
-                TAU = 546.00f * (float)Math.Exp(-0.01 * (CP - (totalBelowCP / countBelowCP))) + 316.00f;
-            else
-                TAU = 546.00f * (float)Math.Exp(-0.01 * (CP)) + 316.00f;
-
-            TAU = (int)TAU; // round it down
 
             //We're implementing differential
             //From https://groups.google.com/g/golden-cheetah-users/c/fPcfvyHLTMc?pli=1

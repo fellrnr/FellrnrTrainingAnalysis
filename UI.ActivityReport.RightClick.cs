@@ -30,6 +30,7 @@ namespace FellrnrTrainingAnalysis
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Recalculate", new EventHandler(toolStripItem1_Click_recalculate));
             AddContextMenu("Recalculate Hills", new EventHandler(toolStripItem1_Click_recalculateHills));
+            AddContextMenu("Reprocess Tags", new EventHandler(toolStripItem1_Click_reprocessTags));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Highlight", new EventHandler(toolStripItem1_Click_highlight));
             AddContextMenu("Edit Name", new EventHandler(toolStripItem1_Click_editName));
@@ -235,6 +236,22 @@ namespace FellrnrTrainingAnalysis
         {
             Model.Activity? activity = GetActivity();
             if (activity == null) return;
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
+            activity.Recalculate(true);
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
+            UpdateViews?.Invoke();
+
+            Logging.Instance.Log($"toolStripItem1_Click_recalculate done");
+            MessageBox.Show("Done");
+        }
+        private void toolStripItem1_Click_reprocessTags(object? sender, EventArgs args)
+        {
+            Model.Activity? activity = GetActivity();
+            if (activity == null) return;
+
+            activity.RemoveNamedDatum(Activity.TagProcessedTags);
 
             Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
             activity.Recalculate(true);
@@ -744,7 +761,11 @@ namespace FellrnrTrainingAnalysis
 
                             if (aligned != null)
                             {
-                                LinearRegression? regression = LinearRegression.EvaluateLinearRegression(aligned, false);
+                                LinearRegression? regression = LinearRegression.EvaluateLinearRegression(aligned,
+                                                                                                 primaryIsX: false,
+                                                                                                 ignoreZerosX: true,
+                                                                                                 ignoreZerosY: true);
+
                                 if (regression != null)
                                 {
                                     //float key = 1.0f - regression.RSquared;
@@ -830,7 +851,7 @@ namespace FellrnrTrainingAnalysis
                 MessageBox.Show("No activity found");
                 return;
             }
-            ActivityCorrelation activityCorrelation = new ActivityCorrelation(Database!, activity);
+            ActivityCorrelation activityCorrelation = new ActivityCorrelation(Database!, activity, null);
             activityCorrelation.Show();
         }
 

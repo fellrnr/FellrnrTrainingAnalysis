@@ -135,6 +135,8 @@ namespace FellrnrTrainingAnalysis.Action
 
                 List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
                 activity.PhotoUris = photos;
+
+                activity.Recalculate(true); //force a recalculation to add the ephemeral time series
             }
             return activity;
         }

@@ -34,6 +34,11 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesDifference - Forced recalculating {this.Name}");
 
             TimeSeriesBase powerStream = RequiredTimeSeries[0];
+            if(powerStream.IsVirtual())
+            {
+                if (forceJustMe) Logging.Instance.TraceLeave($"Power is calculated");
+                return null;
+            }
             TimeValueList? powerData = powerStream.GetData(forceCount, forceJustMe);
             if (powerData == null || powerData.Length < 1)
             {
@@ -94,7 +99,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             TimeValueList retval = new TimeValueList(difs);
 
-            LinearRegression? regression = LinearRegression.EvaluateLinearRegression(aligned, false);
+            LinearRegression? regression = LinearRegression.EvaluateLinearRegression(aligned, false, false, false);
             if (regression != null) { regression.Save(ParentActivity, Name); }
 
 

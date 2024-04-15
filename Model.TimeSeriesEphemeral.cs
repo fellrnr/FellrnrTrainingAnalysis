@@ -11,6 +11,7 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(3, typeof(TimeSeriesCalculateAltitude))]
     [MemoryPackUnion(4, typeof(TimeSeriesCalculateDistance))]
     [MemoryPackUnion(5, typeof(TimeSeriesCalculatePower))]
+    [MemoryPackUnion(6, typeof(TimeSeriesIncline))]
 
     public abstract partial class TimeSeriesEphemeral : TimeSeriesBase
     {
@@ -21,7 +22,12 @@ namespace FellrnrTrainingAnalysis.Model
             ParameterDictionary = new Dictionary<string, float>();
         } //for use by memory pack deserialization only
 
-        public TimeSeriesEphemeral(string name, Activity parent, bool persistCache, List<string>? requiredFields, List<string>? opposingFields = null, List<string>? sportsToInclude = null) : base(name, parent)
+        public TimeSeriesEphemeral(string name,
+                                   Activity parent,
+                                   bool persistCache,
+                                   List<string>? requiredFields,
+                                   List<string>? opposingFields = null,
+                                   List<string>? sportsToInclude = null) : base(name, parent)
         {
             RequiredFields = requiredFields;
             OpposingFields = opposingFields;
@@ -102,7 +108,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override bool IsVirtual() { return true; }
 
-        public override void PreSerialize() { if (!PersistCache) { CachedData = null; CacheValid = false; } }
+        public override void PreSerialize() { if (!PersistCache) {  CachedData = null; CacheValid = false; } }
 
         //This is horrible, but it allows for extensibility without breaking serialization
         [MemoryPackInclude]
@@ -144,7 +150,8 @@ namespace FellrnrTrainingAnalysis.Model
             bool force = false;
             if (forceCount > LastForceCount || forceJustMe) { LastForceCount = forceCount; force = true; }
 
-            if (force)
+            //on first recalculate, do the calculation and cache if we didn't persist it. 
+            if (force || !CacheValid)
             {
                 CachedData = CalculateData(forceCount, forceJustMe);
                 CacheValid = true;
