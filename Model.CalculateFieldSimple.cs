@@ -4,15 +4,16 @@ namespace FellrnrTrainingAnalysis.Model
 {
     public abstract class CalculateFieldSimple : CalculateFieldBase
     {
-        public CalculateFieldSimple(string activityFieldname, bool overrideRecordedZeroOnly, List<string>? sportsToInclude = null)
+        public CalculateFieldSimple(string activityFieldname, OverrideMode overrideWhen, List<string>? sportsToInclude = null)
         {
             ActivityFieldname = activityFieldname;
             SportsToInclude = sportsToInclude;
-            OverrideRecordedZeroOnly = overrideRecordedZeroOnly;
+            OverrideWhen = overrideWhen;
         }
 
         List<string>? SportsToInclude;
-        bool OverrideRecordedZeroOnly;
+        public enum OverrideMode { Always, OverrideRecordedZeroOnly, AbsentOnly }
+        OverrideMode OverrideWhen;
 
         public string ActivityFieldname { get; set; }
 
@@ -32,14 +33,19 @@ namespace FellrnrTrainingAnalysis.Model
             Activity activity = (Activity)extensible;
 
             Datum? datum = activity.GetNamedDatum(ActivityFieldname);
+            if (OverrideWhen == OverrideMode.AbsentOnly && datum != null)
+            {
+                return;
+            }
+
             //if we have a recorded non-zero datum and we don't override these, then return
-            if (OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data != 0)
+            if (OverrideWhen == OverrideMode.OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data != 0)
             {
                 return;
             }
 
             //on the other hand, if we have a recorded zero, then we want to force a calculation (next time through it will be a recorded value)
-            if (OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data == 0)
+            if (OverrideWhen == OverrideMode.OverrideRecordedZeroOnly && datum != null && datum.Recorded == true && datum is TypedDatum<float> && ((TypedDatum<float>)datum).Data == 0)
             {
                 force = true;
             }
@@ -71,9 +77,9 @@ namespace FellrnrTrainingAnalysis.Model
                                            string dependentFieldname,
                                            float defaultValue,
                                            Mode extractionMode,
-                                           bool overrideRecordedZeroOnly,
+                                           OverrideMode overrideWhen,
                                            List<string>? sportsToInclude = null) :
-            base(activityFieldname, overrideRecordedZeroOnly, sportsToInclude)
+            base(activityFieldname, overrideWhen, sportsToInclude)
         {
             DependentFieldname = dependentFieldname;
             DefaultValue = defaultValue;
@@ -113,15 +119,50 @@ namespace FellrnrTrainingAnalysis.Model
 
     }
 
+    public class CalculateFieldSimpleCopy : CalculateFieldSimple
+    {
+        public CalculateFieldSimpleCopy(string activityFieldname,
+                                        string dependentFieldname,
+                                        OverrideMode overrideWhen,
+                                        List<string>? sportsToInclude = null) :
+            base(activityFieldname, overrideWhen, sportsToInclude)
+        {
+            DependentFieldname = dependentFieldname;
+        }
+
+        public string DependentFieldname { get; set; }
+
+        public override string ToString()
+        {
+            return $"CalculateFieldSimpleCopy: Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
+        }
+
+
+        protected override float? ExtractValue(Activity activity, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleCopy Forced ExtractValue {ActivityFieldname}");
+            if (!activity.HasNamedDatum(DependentFieldname))
+                return null;
+
+            float? dependent = activity.GetNamedFloatDatum(DependentFieldname);
+
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldSimpleCopy Forced ExtractValue retval {dependent}");
+            return dependent;
+        }
+
+    }
+
     public class CalculateFieldSimpleMath : CalculateFieldSimple
     {
         public CalculateFieldSimpleMath(string activityFieldname,
                                            string firstFieldName,
                                            string secondFieldname,
                                            Mode extractionMode,
-                                           bool overrideRecordedZeroOnly,
+                                           OverrideMode overrideWhen,
                                            List<string>? sportsToInclude = null) :
-            base(activityFieldname, overrideRecordedZeroOnly, sportsToInclude)
+            base(activityFieldname, overrideWhen, sportsToInclude)
         {
             FirstFieldname = firstFieldName;
             SecondFieldname = secondFieldname;

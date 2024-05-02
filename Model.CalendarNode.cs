@@ -67,7 +67,10 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (KeyValuePair<DateTime, Extensible> kvp in _children)
             {
                 Extensible child = kvp.Value;
-                child.Recalculate(forceCount, forceJustMe, worker);
+
+                //change to do activity recalculation seperately for multithreading
+                if(child is not Activity)
+                    child.Recalculate(forceCount, forceJustMe, worker);
                 foreach (string name in child.DataNames)
                 {
                     Datum? datum = child.GetNamedDatum(name);

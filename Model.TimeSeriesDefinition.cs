@@ -50,6 +50,10 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string LineStyle { get; set; } = "";
 
+        public float? MinYAxis { get; set; } = null;
+
+        public float? MaxYAxis { get; set; } = null;
+
         public Color GetColor()
         {
             Color retval;
@@ -126,7 +130,14 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         //don't use a property as it will confuse the ObjectListView editor
-        public static List<TimeSeriesDefinition>? GetDefinitions() { return map?.Values.ToList(); }
+        public static List<TimeSeriesDefinition>? GetDefinitions() 
+        {
+            if (map == null)
+            {
+                map = ReadFromCsv();
+            }
+            return map?.Values.ToList(); 
+        }
         public static void SetDefinitions(List<TimeSeriesDefinition> value)
         {
             if (value == null)

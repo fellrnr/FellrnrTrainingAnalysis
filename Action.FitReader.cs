@@ -73,7 +73,7 @@ namespace FellrnrTrainingAnalysis.Action
                 Logging.Instance.Debug(string.Format("Found key {0}, count {1}", kvp.Key, kvp.Value));
         }
 
-        public void ReadFitFromStravaArchive()
+        public void ReadFitFromStravaArchive(bool reload = false)
         {
             Calculation.Overall.Start();
             CalculationData.Processed++;
@@ -109,7 +109,7 @@ namespace FellrnrTrainingAnalysis.Action
 
             }
 
-            Accumulation.activity.AddTimeSeriesSet(Accumulation.timeSeriesSet);
+            Accumulation.activity.AddTimeSeriesSet(Accumulation.timeSeriesSet, reload);
 
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());

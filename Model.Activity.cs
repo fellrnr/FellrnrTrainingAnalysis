@@ -144,12 +144,12 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public void AddTimeSeriesSet(Dictionary<string, KeyValuePair<List<uint>, List<float>>> timeSeriesSet)
+        public void AddTimeSeriesSet(Dictionary<string, KeyValuePair<List<uint>, List<float>>> timeSeriesSet, bool reload)
         {
             foreach (KeyValuePair<string, KeyValuePair<List<uint>, List<float>>> kvp in timeSeriesSet)
             {
                 string name = kvp.Key;
-                if (!TimeSeries.ContainsKey(name))
+                if (!TimeSeries.ContainsKey(name) || reload)
                 {
                     KeyValuePair<List<uint>, List<float>> timesAndValues = kvp.Value;
                     List<uint> times = timesAndValues.Key;
@@ -215,15 +215,21 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         [MemoryPackIgnore]
-        public static int CurrentRecalculateProgress { get; set; } //ugly, but the alternatives are worse
+        public static int CurrentRecalculateProgress; //ugly, but the alternatives are worse - can't be property as used in a ref
+        [MemoryPackIgnore]
+        private Object thisLock = new Object();
 
         public override void Recalculate(int forceCount, bool forceJustMe, BackgroundWorker? worker = null)
         {
             Logging.Instance.ContinueAccumulator("Activity.Recalculate");
 
             if (worker != null)
-                worker.ReportProgress(++CurrentRecalculateProgress);
-
+            {
+                lock (thisLock)
+                {
+                    worker.ReportProgress(++CurrentRecalculateProgress);
+                }
+            }
             if (parent_ != null && CurrentRecalculateProgress > parent_.Activities.Count)
                 MessageBox.Show("Huh");
 
@@ -247,7 +253,8 @@ namespace FellrnrTrainingAnalysis.Model
 
             //process the action tags first, as they may change or remove the recorded time series
             Action.Tags tags = new Action.Tags();
-            if (tags.ProcessTags(this, forceCount: forceCount, forceJustMe: forceJustMe, force: force))
+            tags.ProcessTags(this, forceCount: forceCount, forceJustMe: forceJustMe, force: force);
+            if(tags.ActivityChanged)
                 forceJustMe = true;
 
 
@@ -363,8 +370,11 @@ namespace FellrnrTrainingAnalysis.Model
 
                     if (!Climbed.Contains(hill))
                         Climbed.Add(hill);
-                    if (!hill.Climbed.Contains(this))
-                        hill.Climbed.Add(this);
+                    lock (hill.Climbed)
+                    {
+                        if (!hill.Climbed.Contains(this))
+                            hill.Climbed.Add(this);
+                    }
                 }
             }
 
@@ -376,7 +386,11 @@ namespace FellrnrTrainingAnalysis.Model
             }
             if(stringBuilder.Length > 0)
             {
-                this.AddOrReplaceDatum(new TypedDatum<string>("Climbed", false, stringBuilder.ToString()));
+                this.AddOrReplaceDatum(new TypedDatum<string>(TagClimbed, true, stringBuilder.ToString())); //mark this as recorded so it doesn't get removed on recalculation
+            }
+            else
+            {
+                this.RemoveNamedDatum(TagClimbed);
             }
             //if (Options.Instance.LogLevel == Options.Level.Debug && force)
             //    Logging.Instance.Debug($"Hill matching took {Logging.Instance.GetAndResetTime("hills")}, {nochecked} checked, {nomatched} matched");
@@ -393,6 +407,11 @@ namespace FellrnrTrainingAnalysis.Model
         public const string TagName = "Name";
         public const string TagType = "Type";
         public const string TagAltitude = "Altitude";
+        public const string TagSpeed = "Speed";
+        public const string TagGradeAdjustedPace = "Grade Adjusted Pace";
+        public const string TagGradeAdjustedDistance = "Grade Adjusted Distance";
+        public const string TagIncline = "Incline";
+        public const string TagClimbed = "Climbed";
 
         public const string TagDistance = "Distance"; //both a time series and a datum
         public const string TagElapsedTime = "Elapsed Time";

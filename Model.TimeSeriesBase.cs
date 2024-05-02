@@ -8,14 +8,15 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(0, typeof(TimeSeriesRecorded))]
     [MemoryPackUnion(1, typeof(TimeSeriesDelta))]
     [MemoryPackUnion(2, typeof(TimeSeriesEphemeral))]
-    [MemoryPackUnion(3, typeof(TimeSeriesGradeAdjustedDistance))]
+    [MemoryPackUnion(3, typeof(TimeSeriesGradeAdjustedPace))]
     [MemoryPackUnion(4, typeof(TimeSeriesHeartRatePower))]
     [MemoryPackUnion(5, typeof(TimeSeriesCalculateAltitude))]
-    [MemoryPackUnion(6, typeof(TimeSeriesCalculateDistance))]
+    [MemoryPackUnion(6, typeof(TimeSeriesCalculateSpeed))]
     [MemoryPackUnion(7, typeof(TimeSeriesCalculatePower))]
     [MemoryPackUnion(8, typeof(TimeSeriesWPrimeBalance))]
     [MemoryPackUnion(9, typeof(TimeSeriesPowerEstimateError))]
     [MemoryPackUnion(10, typeof(TimeSeriesIncline))]
+    [MemoryPackUnion(11, typeof(TimeSeriesCalculateDistance))]
     public abstract partial class TimeSeriesBase
     {
         //Note: there is an instance of each TimeSeries object for each activity

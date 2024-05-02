@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Action;
+﻿using BrightIdeasSoftware;
+using FellrnrTrainingAnalysis.Action;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.UI;
 using FellrnrTrainingAnalysis.Utils;
@@ -23,13 +24,35 @@ namespace FellrnrTrainingAnalysis
                activityDataGridView,
                new object[] { true });
 
+            Definitions = TimeSeriesDefinition.GetDefinitions();
+
+            CreateTimeSeriesPane();
         }
 
+        public List<TimeSeriesDefinition>? Definitions { get; }
 
+        private void CreateTimeSeriesPane()
+        {
+            if (Definitions != null)
+            {
+                /**/
+                objectListViewTimeSeries.SuspendLayout();
+
+                objectListViewTimeSeries.ShowGroups = false;
+                objectListViewTimeSeries.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
+                //Generator.GenerateColumns(objectListView1, definitions);
+                Generator.GenerateColumns(this.objectListViewTimeSeries, typeof(TimeSeriesDefinition), true);
+                objectListViewTimeSeries.SetObjects(Definitions);
+                objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+                objectListViewTimeSeries.ResumeLayout();
+                /**/
+            }
+        }
 
         Database? Database = null;
         FilterActivities? FilterActivities = null;
-        int PageSize = 25;
+        int PageSize = 20;
         bool FirstTime = true;
 
         public delegate void UpdateViewsEventHandler();
@@ -54,6 +77,7 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.TraceEntry("UpdateReport");
 
             IgnoreSelectionChanged = true;
+
             activityDataGridView.Rows.Clear();
             IgnoreSelectionChanged = false;
             Logging.Instance.Log(string.Format("ActivityReport.UpdateReport rows.clear took {0}", Logging.Instance.GetAndResetTime("UpdateReport-private")));
@@ -172,7 +196,8 @@ namespace FellrnrTrainingAnalysis
             if (activityDataGridView.Rows.Count > 0)
             {
                 activityDataGridView.FirstDisplayedScrollingRowIndex = activityDataGridView.RowCount - 1; //this changes the selected row to be zero
-                activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
+                //activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
+                SelectPreviouslySelectedRow();
             }
 
             IgnoreSelectionChanged = false;
@@ -212,6 +237,32 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.TraceLeave();
         }
 
+        private string? selectedPrimaryKey = null;
+        private void SelectPreviouslySelectedRow()
+        {
+            if (selectedPrimaryKey == null)
+            {
+                activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
+                return;
+            }
+            //activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
+            var index = activityDataGridView.Columns[Activity.TagPrimarykey]?.Index;
+            if (index != null && index != -1)
+            {
+                foreach (DataGridViewRow row in activityDataGridView.Rows)
+                {
+                    string primarykey = (string)row.Cells[index.Value].Value;
+                    if (primarykey == selectedPrimaryKey)
+                    {
+                        row.Selected = true;
+                        return; //only select one row
+                    }
+                }
+            }
+            //if we didn't select any row, do the last one
+            activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
+        }
+
         private void UpdateActivityDisplay()
         {
             Logging.Instance.TraceEntry("UpdateActivityDisplay");
@@ -221,6 +272,8 @@ namespace FellrnrTrainingAnalysis
             {
                 DataGridViewRow row = dataGridViewSelectedRowCollection[0];
                 activity = GetActivityForRow(row);
+                if (activity != null)
+                    selectedPrimaryKey = activity.PrimaryKey();
             }
             activityData1.DisplayActivity(Database!.CurrentAthlete, activity); //if we've got here, we have to have a database with an athlete
             activityMap1.DisplayActivity(activity, Database!.Hills);
@@ -235,8 +288,7 @@ namespace FellrnrTrainingAnalysis
             Logging.Instance.TraceLeave();
         }
 
-
-        private Model.Activity? GetActivityForRow(DataGridViewRow row)
+        private string? GetActivityIdForRow(DataGridViewRow row)
         {
             if (Database == null)
                 return null;
@@ -248,13 +300,24 @@ namespace FellrnrTrainingAnalysis
                 {
                     string primarykey = (string)row.Cells[index.Value].Value;
                     if (primarykey.Contains(" "))
-                        primarykey = primarykey.Substring(0, primarykey.IndexOf(" "));
-                    if (Database.CurrentAthlete.Activities.ContainsKey(primarykey)) //should never happen unless we've turned on debugging to add extra data to the primary key column of the table. 
-                    {
-                        Model.Activity activity = Database.CurrentAthlete.Activities[primarykey];
-                        return activity;
-                    }
+                        primarykey = primarykey.Substring(0, primarykey.IndexOf(" ")); //only happens if we've added debug data to the primary key
+                    return primarykey;
                 }
+            }
+            return null;
+        }
+
+        private Model.Activity? GetActivityForRow(DataGridViewRow row)
+        {
+            string? primarykey = GetActivityIdForRow(row);
+
+            if (primarykey == null)
+                return null;
+
+            if (Database!.CurrentAthlete.Activities.ContainsKey(primarykey)) //should never happen unless we've turned on debugging to add extra data to the primary key column of the table. 
+            {
+                Model.Activity activity = Database.CurrentAthlete.Activities[primarykey];
+                return activity;
             }
             return null;
 
@@ -275,5 +338,6 @@ namespace FellrnrTrainingAnalysis
             }
 
         }
+
     }
 }

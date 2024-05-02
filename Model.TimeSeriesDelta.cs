@@ -50,10 +50,10 @@ namespace FellrnrTrainingAnalysis.Model
 
             //Crude way of debugging a data stream deltas. Just change the id
             bool extraDebug = false;
-            if (ParentActivity!.PrimaryKey().Contains("10478327023") && Name == TimeSeriesFactory.GRADE_ADUJUSTED_PACE)
-            {
-                extraDebug = true;
-            }
+            //if (ParentActivity!.PrimaryKey().Contains("10478327023") && Name == Activity.TagHrPwr)
+            //{
+            //    extraDebug = true;
+            //}
             if (RequiredTimeSeries == null || RequiredTimeSeries.Count != 1)
             {
                 Logging.Instance.Error($"Somehow got no required time series for {this}, activity {this.ParentActivity}");

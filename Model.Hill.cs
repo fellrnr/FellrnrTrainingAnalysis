@@ -149,7 +149,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override string ToString()
         {
-            return $"{Name}, #{Number}, {Latitude}/{Longitude}/{Elevation}m, Climbed {ClimbedCount}, {string.Join(",", Classifications)}";
+            //return $"{Name}, #{Number}, {Latitude}/{Longitude}/{Elevation}m, Climbed {ClimbedCount}, {string.Join(",", Classifications)}";
+            return $"{Name}, {Elevation:#,0}m, Climbed x{ClimbedCount}";
         }
 
 

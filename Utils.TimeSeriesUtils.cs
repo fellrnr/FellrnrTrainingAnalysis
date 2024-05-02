@@ -14,10 +14,13 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public static List<float> InterpolateToOneSecond(uint[] times, float[] values)
         {
-            List<float> result = new List<float>();
-            List<uint> sanity = new List<uint>();
+            if (times.Length != values.Length)
+                Logging.Instance.Error($"Oops - InterpolateToOneSecond has time[{times.Length}] and values[{values.Length}]");
 
-            if (times.Length < 2)
+            int Length = Math.Min(times.Length, values.Length);
+            List<float> result = new List<float>();
+
+            if (Length < 2)
                 return new List<float>(values);
 
             if (times[0] != 0)
@@ -26,13 +29,11 @@ namespace FellrnrTrainingAnalysis.Utils
                 for (int i = 0; i < times[0]; i++)
                 {
                     result.Add(values[0]);
-                    sanity.Add((uint)i);
                 }
             }
 
             result.Add(values[0]);
-            sanity.Add(times[0]);
-            for (int i = 1; i < times.Length; i++) //start from one
+            for (int i = 1; i < Length; i++) //start from one
             {
                 if (times[i] != times[i - 1] + 1)
                 {
@@ -43,25 +44,12 @@ namespace FellrnrTrainingAnalysis.Utils
                     for (int j = 1; j <= timediff; j++) //start from one
                     {
                         float newval = values[i - 1] + valuePerSec * j;
-                        uint newtime = times[i - 1] + (uint)j;
                         result.Add(newval);
-                        sanity.Add(newtime);
                     }
                 }
                 else
                 {
                     result.Add(values[i]);
-                    sanity.Add(times[i]);
-                }
-            }
-
-            for (int i = 0; i < sanity.Count; i++)
-            {
-                //Logging.Instance.Debug($"{i} is t {sanity[i]} v {result[i]}");
-                if (sanity[i] != i)
-                {
-                    Logging.Instance.Error($"Oops, time at {i} is {sanity[i]}");
-                    break;
                 }
             }
 
@@ -150,9 +138,13 @@ namespace FellrnrTrainingAnalysis.Utils
             MA.Calc();
 
             PIVariable smoothOutput = MA.GetOutputVariable();
+
+            //the start and end of the smoothed data is bad, as the first and last window don't average nicely.
             smoothOutput.DeleteFirst(windowSize);
             smoothOutput.DeleteLast(windowSize);
 
+
+            //convert from double? to double
             double[] smoothed = new double[rawData.Length];
 
             for (int i = 0; i < rawData.Length; i++)
@@ -196,7 +188,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
             double[] smoothed = WindowSmoothed(asDouble, windowSize);
 
-            float[] asFloat = Array.ConvertAll(rawData, x => (float)x);
+            float[] asFloat = Array.ConvertAll(smoothed, x => (float)x);
 
             return asFloat;
             /*

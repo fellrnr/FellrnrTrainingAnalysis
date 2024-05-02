@@ -5,15 +5,11 @@ namespace FellrnrTrainingAnalysis.Model
 {
     public class TimeSeriesFactory
     {
-        public const string GRADE_ADUJUSTED_PACE = "Grade Adjusted Pace";
-        public const string GRADE_ADJUSTED_DISTANCE = "Grade Adjusted Distance";
-        public const string HEART_RATE_POWER = "HrPwr";
-        public const string ALTITUDE = "Altitude";
-        public const string DISTANCE = "Distance";
-        public const string POWER = "Power";
-        public const string INCLINE = "Incline";
 
         public static TimeSeriesFactory Instance { get; set; } = new TimeSeriesFactory();
+
+        bool DefaultPersistCache = false;
+        bool DefaultPersistCache2 = false;
 
         public List<TimeSeriesBase> TimeSeries(Activity activity)
         {
@@ -21,21 +17,28 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 //NB Order is important - the underlying data has to be calcualted first
 
-                new TimeSeriesCalculateDistance(name:DISTANCE, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
+                new TimeSeriesCalculateDistance(name:Activity.TagDistance, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
 
-                new TimeSeriesCalculateAltitude(name:ALTITUDE, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
+                new TimeSeriesDelta(name:Activity.TagSpeed,
+                                    parent: activity,
+                                    persistCache:DefaultPersistCache2,
+                                    requiredFields: new List<string> { "Distance"},
+                                    opposingFields: null,
+                                    sportsToInclude:Activity.ActivityTypeRun),
+
+                new TimeSeriesCalculateAltitude(name:Activity.TagAltitude, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
 
 
                 new TimeSeriesDelta(name:"Calc.Climb",
                                     parent: activity,
-                                    persistCache:false,
+                                    persistCache:DefaultPersistCache2,
                                     requiredFields: new List<string> { "Altitude"},
                                     opposingFields: null,
                                     sportsToInclude:Activity.ActivityTypeRun,
                                     period: 60), //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
 
-                new TimeSeriesIncline(name:INCLINE,
+                new TimeSeriesIncline(name:Activity.TagIncline,
                                     parent: activity,
                                     persistCache:true,  //this is more expensive than most ts
                                     requiredFields: new List<string> { "Distance", "Altitude" },
@@ -44,51 +47,45 @@ namespace FellrnrTrainingAnalysis.Model
                                     spanPeriod: 15), //15 seems better than 30, but maybe TODO: goal seek span period for incline?
 
 
-                new TimeSeriesGradeAdjustedDistance(name:GRADE_ADJUSTED_DISTANCE,
+                new TimeSeriesGradeAdjustedPace(name:Activity.TagGradeAdjustedPace,
                                                     parent: activity,
-                                                    persistCache:false,  //this is more expensive than most ts
-                                                    requiredFields: new List<string> { "Distance" }, //we can do without Incline and just return distance
+                                                    persistCache:DefaultPersistCache2,
+                                                    requiredFields: new List<string> { "Speed" }, //we can do without Incline and just return speed
                                                     opposingFields: null,
                                                     sportsToInclude:Activity.ActivityTypeRun,
                                                     inclineSeries: "Incline"),
 
-                new TimeSeriesDelta(name:GRADE_ADUJUSTED_PACE,
-                                    parent: activity,
-                                    persistCache:false,
-                                    requiredFields: new List<string> { GRADE_ADJUSTED_DISTANCE },
-                                    opposingFields: null,
-                                    sportsToInclude:Activity.ActivityTypeRun,
-                                    period: null), //meters per second
-
-                new TimeSeriesCalculatePower(name:POWER,
+                new TimeSeriesCalculatePower(name:Activity.TagPower,
                                              parent: activity,
-                                             persistCache:false,
-                                             requiredFields: new List<string> { GRADE_ADUJUSTED_PACE },
+                                             persistCache:DefaultPersistCache2,
+                                             requiredFields: new List<string> { Activity.TagGradeAdjustedPace },
                                              opposingFields: null,
                                              sportsToInclude:Activity.ActivityTypeRun),
 
+
+                //TODO: persisting this power estimate kills serialization at exit
                 new TimeSeriesCalculatePower(name:"Power Estimate",
                                              parent: activity,
-                                             persistCache:false,
-                                             requiredFields: new List<string> { GRADE_ADUJUSTED_PACE },
+                                             persistCache:DefaultPersistCache,
+                                             requiredFields: new List<string> { Activity.TagGradeAdjustedPace },
                                              opposingFields: null,
                                              sportsToInclude:Activity.ActivityTypeRun),
 
                 new TimeSeriesPowerEstimateError(name:"Power Estimate Error",
                                                 parent: activity,
-                                                persistCache:false,
+                                                persistCache:DefaultPersistCache,
                                                 requiredFields: new List<string> { "Power", "Grade Adjusted Pace" },
                                                 opposingFields: null,
                                                 sportsToInclude:Activity.ActivityTypeRun),
 
-                new TimeSeriesHeartRatePower(name:HEART_RATE_POWER,
+                new TimeSeriesHeartRatePower(name:Activity.TagHrPwr,
                                                     parent: activity,
                                                     persistCache:true,  //this is more expensive than most ts
                                                     requiredFields: new List<string> { "Heart Rate", "Power" },
                                                     opposingFields: null,
                                                     sportsToInclude:Activity.ActivityTypeRun),
 
-                new TimeSeriesHeartRatePower(name:HEART_RATE_POWER + "Offset",
+                new TimeSeriesHeartRatePower(name:Activity.TagHrPwr + "Offset",
                                                     parent: activity,
                                                     persistCache:true,  //this is more expensive than most ts
                                                     requiredFields: new List<string> { "Heart Rate", "Power" },

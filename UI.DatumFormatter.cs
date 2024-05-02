@@ -4,8 +4,14 @@ namespace FellrnrTrainingAnalysis.UI
 {
     public class DatumFormatter
     {
+        public static string Format(Extensible extensible, string name)
+        {
+            Datum? datum = extensible.GetNamedDatum(name);
+            ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name);
+            return FormatForGrid(datum, activityDatumMetadata);
+        }
 
-        public static string FormatForGrid(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
+        public static string FormatForGrid(Datum? datum, ActivityDatumMetadata? activityDatumMetadata)
         {
             string retval = Format(datum, activityDatumMetadata);
             if (Utils.Options.Instance.DebugAddRawDataToGrids)
@@ -31,12 +37,12 @@ namespace FellrnrTrainingAnalysis.UI
             return retval;
         }
 
-        public static string FormatForTree(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
+        public static string FormatForTree(Datum? datum, ActivityDatumMetadata? activityDatumMetadata)
         {
             return FormatForGrid(datum, activityDatumMetadata);
         }
 
-        private static string Format(Datum? datum, ActivityDatumMetadata activityDatumMetadata)
+        private static string Format(Datum? datum, ActivityDatumMetadata? activityDatumMetadata)
         {
             if (datum == null) { return ""; }
             if (activityDatumMetadata == null) { return datum.DataAsString()!; }

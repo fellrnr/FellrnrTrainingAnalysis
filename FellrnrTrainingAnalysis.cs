@@ -21,6 +21,7 @@ namespace FellrnrTrainingAnalysis
         FilterString? CurrentTypeFilter = null;
         //dialog filters are added to the current filter
         FilterActivities DialogFilterActivities = new FilterActivities(); //the default filter
+        FilterActivities ToggleFilterActivities = new FilterActivities(); //the default filter
         FilterBadData? CurrentFilterBadData = null;
         FilterActivities CurrentFilterActivities = new FilterActivities(); //the default filter
         ActivityFilterDialog? activityFilterDialog;
@@ -233,9 +234,6 @@ namespace FellrnrTrainingAnalysis
 
             }
         }
-
-
-
 
     }
 

@@ -24,10 +24,13 @@ namespace FellrnrTrainingAnalysis.Model
 
         public Day GetOrAddDay(DateTime date)
         {
-            DateTime dateNoTime = date.Date; //just in case
-            if (!_days.ContainsKey(dateNoTime))
-                _days.Add(dateNoTime, new Day(dateNoTime));
-            return _days[dateNoTime];
+            lock (_days)
+            {
+                DateTime dateNoTime = date.Date; //just in case
+                if (!_days.ContainsKey(dateNoTime))
+                    _days.Add(dateNoTime, new Day(dateNoTime));
+                return _days[dateNoTime];
+            }
         }
 
         //look for the given date and work backwards to find one with a datum with the name provided
@@ -77,7 +80,10 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 //simple optimization = add the values to the dates so next time around we'll be fast
                 Day day = GetOrAddDay(dateNoTime);
-                day.AddOrReplaceDatum(new TypedDatum<float>(name, true, defaultValue));
+                lock (day)
+                {
+                    day.AddOrReplaceDatum(new TypedDatum<float>(name, true, defaultValue));
+                }
                 retval = defaultValue;
             }
 
@@ -532,12 +538,29 @@ namespace FellrnrTrainingAnalysis.Model
             //if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Calendar Entries ({_calendarTree.Count})", _calendarTree.Count));
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Activities Entries ({Activities.Count})", Activities.Count + 1));
             Activity.CurrentRecalculateProgress = 0; //ugly hack for progress count
-            //int i = 0;
+
+            if (!Options.Instance.DebugBlockParallel)
+            {
+
+                //Activities
+                //    .AsParallel()
+                //    .ForAll(activity => activity.Value.Recalculate(forceCount, forceJustMe))
+                //    .WithProgressReporting(progress => worker.ReportProgress(progress));
+                Activities
+                    .AsParallel()
+                    .ForAll(activity => activity.Value.Recalculate(forceCount, forceJustMe, worker));
+            }
+            else
+            {
+                foreach(var kvp in Activities)
+                    kvp.Value.Recalculate(forceCount, forceJustMe);
+            }
+
+            //do the calendar recalculation after activities rather than recursively so we can multithread the activity recalculation
             foreach (KeyValuePair<DateTime, CalendarNode> kvp1 in _calendarTree)
             {
                 CalendarNode calendarNode = kvp1.Value;
                 calendarNode.Recalculate(forceCount, forceJustMe, worker); //Note that this will iterated down to the activities, so don't need to call recalculate on them below
-                //if (worker != null) worker.ReportProgress(++i);
             }
 
             Logging.Instance.TraceLeave();

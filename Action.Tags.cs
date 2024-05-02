@@ -1,5 +1,7 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
+using Microsoft.VisualBasic;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace FellrnrTrainingAnalysis.Action
 {
@@ -20,17 +22,20 @@ namespace FellrnrTrainingAnalysis.Action
         //new TagActivities("Delete Power", "⌗Power༶Delete֍"),
         //new TagActivities("Cap Power CP", "⌗Power༶Cap༶100֍"),
 
-        public bool ProcessTags(Activity activity, int forceCount, bool forceJustMe, bool force)
+        public bool Success { get; set; } = true;
+        public bool ActivityChanged { get; set; } = false;
+
+        public void ProcessTags(Activity activity, int forceCount, bool forceJustMe, bool force)
         {
             TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagDescription);
             if (descriptionDatum == null || descriptionDatum.Data == null)
-                return false;
+                return;
             string description = descriptionDatum.Data;
+
 
             //change - only reprocess tags on forceJustMe, not every forced recalculate. 
             TypedDatum<string>? processedDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagProcessedTags);
             string processedTags = (forceJustMe || processedDatum == null || processedDatum.Data == null) ? "" : processedDatum.Data;
-            bool processedTagsChanged = false;
 
             while (description.Contains(START) && description.Contains(END))
             {
@@ -42,29 +47,26 @@ namespace FellrnrTrainingAnalysis.Action
                 if (!processedTags.Contains(tag))
                 {
                     if (forceJustMe) Logging.Instance.Debug($"processedTags [{processedTags}] doesn't contain {tag}, so needs to be actioned");
-                    if (!ProcessTag(activity, tag, forceCount, forceJustMe))
+                    ProcessTag(activity, tag, forceCount, forceJustMe);
+                    if(!Success)
                     {
                         Logging.Instance.Error($"ProcessTag failed, activity {activity}");
-                        return false;
+                        return;
                     }
                     processedTags += tag;
-                    processedTagsChanged = true;
+                    ActivityChanged = true;
                 }
 
                 description = description.Substring(end + 1);
             }
-            if (processedTagsChanged)
+            if (ActivityChanged)
             {
                 if (forceJustMe) Logging.Instance.Debug($"processedTags is now {processedTags}");
                 activity.AddOrReplaceDatum(new TypedDatum<string>(Activity.TagProcessedTags, true, processedTags)); //set recorded to true as this isn't something we want to recreate all the time
-
-                if (!force) //we weren't forced, then we need to force downstream processing)
-                    return true;
             }
-            return false;
         }
 
-        private bool ProcessTag(Activity activity, string tag, int forceCount, bool forceJustMe)
+        private async void ProcessTag(Activity activity, string tag, int forceCount, bool forceJustMe)
         {
             if (forceJustMe) Logging.Instance.Debug($"ProcessTag({tag})");
             string[] strings = tag.Split(MIDDLE);
@@ -76,7 +78,35 @@ namespace FellrnrTrainingAnalysis.Action
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag command: delete stream:{target}");
                 activity.RemoveNamedDatum(target);
                 activity.RemoveTimeSeries(target);
-                return true;
+            }
+            else if (command == "Lookup")
+            {
+                if(target != Activity.TagAltitude)
+                {
+                    Logging.Instance.Error($"ProcessTag Lookup isn't altitude {target}");
+                    Success = false;
+                    return;
+                }
+
+                if (activity.LocationStream == null || activity.LocationStream.Times == null)
+                {
+                    Logging.Instance.Error($"ProcessTag Lookup without location data");
+                    Success = false;
+                    return;
+                }
+
+                Action.Elevation elevation = new Elevation();
+
+                Task<TimeSeriesBase?> task = elevation.GetElevation(activity.LocationStream, activity);
+                TimeSeriesBase? result = await task;
+                if(result == null)
+                {
+                    Logging.Instance.Error($"ProcessTag Lookup failed");
+                    Success = false;
+                    return;
+                }
+                activity.AddTimeSeries(result);
+
             }
             else if (command == "CopyBack")
             {
@@ -84,15 +114,17 @@ namespace FellrnrTrainingAnalysis.Action
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag command: copyback stream:{target}");
                 if (!activity.TimeSeries.ContainsKey(target))
                 {
-                    if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack missing {target}");
-                    return false;
+                    Logging.Instance.Error($"ProcessTag CopyBack missing {target}");
+                    Success = false;
+                    return;
                 }
                 TimeSeriesBase dataStream = activity.TimeSeries[target];
                 TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
                 if (data == null || data.Length < amount)
                 {
-                    if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack {target} is too short");
-                    return false;
+                    Logging.Instance.Error($"ProcessTag CopyBack {target} is too short");
+                    Success = false;
+                    return;
                 }
                 float copyback = data.Values[amount];
 
@@ -101,7 +133,6 @@ namespace FellrnrTrainingAnalysis.Action
                     data.Values[i] = copyback;
                 }
                 if (forceJustMe) Logging.Instance.Debug($"ProcessTag CopyBack {target} Done");
-                return true;
             }
             else if (command == "Cap")
             {
@@ -111,16 +142,18 @@ namespace FellrnrTrainingAnalysis.Action
                 TimeValueList? data = dataStream.GetData(forceCount, forceJustMe);
                 if (data == null)
                 {
-                    if (forceJustMe) Logging.Instance.Debug($"ProcessTag Cap {target} no data");
-                    return false;
+                    Logging.Instance.Error($"ProcessTag Cap {target} no data");
+                    Success = false;
                 }
-                for (int i = 0; i < data.Values.Length; i++)
+                else
                 {
-                    if (data.Values[i] > amount)
-                        data.Values[i] = amount;
+                    for (int i = 0; i < data.Values.Length; i++)
+                    {
+                        if (data.Values[i] > amount)
+                            data.Values[i] = amount;
+                    }
+                    if (forceJustMe) Logging.Instance.Debug($"ProcessTag Cap {target} Done");
                 }
-                if (forceJustMe) Logging.Instance.Debug($"ProcessTag Cap {target} Done");
-                return true;
             }
             else if (command == "Override")
             {
@@ -135,14 +168,46 @@ namespace FellrnrTrainingAnalysis.Action
                     if (forceJustMe) Logging.Instance.Debug($"ProcessTag Deleting TimeSeries with same name as Override {target}");
                     activity.RemoveTimeSeries(target);
                 }
-
-                return true;
             }
             else
             {
                 Logging.Instance.Error($"ProcessTag unexpected command {command}");
-                return false;
+                Success = false;
+                return;
             }
         }
+
+
+        public void TagStravaActivity(string tag, Activity activity, bool process = true)
+        {
+            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagDescription);
+            if (descriptionDatum == null)
+                descriptionDatum = new TypedDatum<string>(Activity.TagDescription, true, ""); //make this recoreded as we need it to persist
+
+            string? description = descriptionDatum.Data;
+
+            if (description != null && !description.Contains(tag))
+            {
+                description = description + tag;
+
+                //HACK: short term fix to migrate from deleting altitude to looking it up
+                if (description.Contains($"⌗{Activity.TagAltitude}༶Lookup֍") && description.Contains($"⌗{Activity.TagAltitude}༶Delete֍"))
+                {
+                    description = description.Replace($"⌗{Activity.TagAltitude}༶Delete֍", "");
+                }
+
+                if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
+                {
+                    MessageBox.Show("Update Failed");
+                    return;
+                }
+                descriptionDatum.Data = description;
+                activity.AddOrReplaceDatum(descriptionDatum);
+
+                if(process)
+                    this.ProcessTags(activity, 0, true, true); //force and ask for debug
+            }
+        }
+
     }
 }

@@ -70,6 +70,7 @@
             experimentalToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem1 = new ToolStripMenuItem();
+            clearFiltersToolStripMenuItem = new ToolStripMenuItem();
             showOnlyToolStripMenuItem = new ToolStripMenuItem();
             stravaToolStripMenuItem = new ToolStripMenuItem();
             graphTabPage = new TabPage();
@@ -91,7 +92,8 @@
             overviewMap1 = new UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
             recalculateBackgroundWorker1 = new System.ComponentModel.BackgroundWorker();
-            clearFiltersToolStripMenuItem = new ToolStripMenuItem();
+            fixResultsToolStripMenuItem = new ToolStripMenuItem();
+            toggleFilterToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -389,7 +391,7 @@
             // 
             // filterToolStripMenuItem
             // 
-            filterToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { filterToolStripMenuItem1, clearFiltersToolStripMenuItem, showOnlyToolStripMenuItem });
+            filterToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { filterToolStripMenuItem1, showOnlyToolStripMenuItem, fixResultsToolStripMenuItem, toggleFilterToolStripMenuItem, clearFiltersToolStripMenuItem });
             filterToolStripMenuItem.Name = "filterToolStripMenuItem";
             filterToolStripMenuItem.Size = new Size(66, 35);
             filterToolStripMenuItem.Text = "Filter";
@@ -400,6 +402,13 @@
             filterToolStripMenuItem1.Size = new Size(270, 34);
             filterToolStripMenuItem1.Text = "Filter...";
             filterToolStripMenuItem1.Click += filterToolStripMenuItem1_Click;
+            // 
+            // clearFiltersToolStripMenuItem
+            // 
+            clearFiltersToolStripMenuItem.Name = "clearFiltersToolStripMenuItem";
+            clearFiltersToolStripMenuItem.Size = new Size(270, 34);
+            clearFiltersToolStripMenuItem.Text = "Clear Filters";
+            clearFiltersToolStripMenuItem.Click += clearFiltersToolStripMenuItem_Click;
             // 
             // showOnlyToolStripMenuItem
             // 
@@ -618,12 +627,19 @@
             recalculateBackgroundWorker1.ProgressChanged += backgroundWorker_ProgressChanged;
             recalculateBackgroundWorker1.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
-            // clearFiltersToolStripMenuItem
+            // fixResultsToolStripMenuItem
             // 
-            clearFiltersToolStripMenuItem.Name = "clearFiltersToolStripMenuItem";
-            clearFiltersToolStripMenuItem.Size = new Size(270, 34);
-            clearFiltersToolStripMenuItem.Text = "Clear Filters";
-            clearFiltersToolStripMenuItem.Click += clearFiltersToolStripMenuItem_Click;
+            fixResultsToolStripMenuItem.Name = "fixResultsToolStripMenuItem";
+            fixResultsToolStripMenuItem.Size = new Size(270, 34);
+            fixResultsToolStripMenuItem.Text = "Fix Results";
+            fixResultsToolStripMenuItem.Click += fixResultsToolStripMenuItem_Click;
+            // 
+            // toggleFilterToolStripMenuItem
+            // 
+            toggleFilterToolStripMenuItem.Name = "toggleFilterToolStripMenuItem";
+            toggleFilterToolStripMenuItem.Size = new Size(270, 34);
+            toggleFilterToolStripMenuItem.Text = "Toggle Filter";
+            toggleFilterToolStripMenuItem.Click += toggleFilterToolStripMenuItem_Click;
             // 
             // FellrnrTrainingAnalysisForm
             // 
@@ -728,5 +744,7 @@
         private ToolStripMenuItem exploreGlobalRelationshipsToolStripMenuItem;
         private ToolStripMenuItem experimentalToolStripMenuItem;
         private ToolStripMenuItem clearFiltersToolStripMenuItem;
+        private ToolStripMenuItem fixResultsToolStripMenuItem;
+        private ToolStripMenuItem toggleFilterToolStripMenuItem;
     }
 }

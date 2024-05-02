@@ -1,11 +1,16 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using GMap.NET;
 using GMap.NET.WindowsForms;
+using GoogleApi.Entities.Search.Video.Common.Enums;
+using Microsoft.VisualBasic.ApplicationServices;
+using ScottPlot;
+using System;
 using System.ComponentModel;
 using System.Data;
 using System.IO.Compression;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
+using System.Threading;
 
 namespace FellrnrTrainingAnalysis.Utils
 {
@@ -474,5 +479,57 @@ namespace FellrnrTrainingAnalysis.Utils
             return sd;
         }
     }
+
+
+    //http://blog.functionalfun.net/2008/07/reporting-progress-during-linq-queries.html
+    //https://stackoverflow.com/questions/55584078/how-can-i-report-progress-from-a-plinq-query
+
+    /*
+    static class Extensions
+    {
+        public static ParallelQuery<T> WithProgressReporting<T>(this ParallelQuery<T> sequence, System.Action increment)
+        {
+            return sequence.Select(x =>
+            {
+                increment?.Invoke();
+                return x;
+            });
+        }
+    }
+    */
+
+    public static class Extensions
+    {
+        public static IEnumerable<T> WithProgressReporting<T>(this IEnumerable<T> sequence, Action<int> reportProgress)
+        {
+            if (sequence == null) { throw new ArgumentNullException("sequence"); }
+
+            // make sure we can find out how many elements are in the sequence
+            ICollection<T>? collection = sequence as ICollection<T>;
+            if (collection == null)
+            {
+                // buffer the entire sequence
+                collection = new List<T>(sequence);
+            }
+
+            int total = collection.Count;
+            return collection.WithProgressReporting(total, reportProgress);
+        }
+
+        public static IEnumerable<T> WithProgressReporting<T>(this IEnumerable<T> sequence, long itemCount, Action<int> reportProgress)
+        {
+            if (sequence == null) { throw new ArgumentNullException("sequence"); }
+
+            int completed = 0;
+            foreach (var item in sequence)
+            {
+                yield return item;
+
+                completed++;
+                reportProgress((int)(((double)completed / itemCount) * 100));
+            }
+        }
+    }
+
 }
 

@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Model;
+﻿using BrightIdeasSoftware;
+using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
 using ScottPlot;
 using ScottPlot.Plottable;
@@ -15,7 +16,6 @@ namespace FellrnrTrainingAnalysis
     {
         private List<Axis> CurrentAxis { get; set; } = new List<Axis>();
 
-        private List<string> AxisNames { get; set; } = new List<string>();
         private List<Tuple<double, double>> YAxisMinMax { get; set; } = new List<Tuple<double, double>>();
         private int axisIndex = 0;
         private const int AXIS_OFFSET = 3;
@@ -44,6 +44,8 @@ namespace FellrnrTrainingAnalysis
             }
         }
 
+
+
         private void UpdateTimeSeriesGraph()
         {
             Logging.Instance.TraceEntry("UpdateTimeSeriesGraph");
@@ -56,7 +58,6 @@ namespace FellrnrTrainingAnalysis
             //formsPlot1.Plot.GetSettings().Axes.Clear();
             foreach (Axis axis in CurrentAxis) { formsPlot1.Plot.RemoveAxis(axis); }
             CurrentAxis.Clear();
-            AxisNames.Clear();
             YAxisMinMax.Clear();
             axisIndex = 0;
 
@@ -121,7 +122,15 @@ namespace FellrnrTrainingAnalysis
                 scatterGraph.LineStyle = LineStyle.DashDot;
             if (dataStreamDefinition.LineStyle == "Dash")
                 scatterGraph.LineStyle = LineStyle.Dash;
-            YAxisMinMax.Add(new Tuple<double, double>(yArraySmoothed.Min(), yArraySmoothed.Max()));
+
+            double yMin = yArraySmoothed.Min();
+            double yMax = yArraySmoothed.Max();
+            if(dataStreamDefinition.MinYAxis != null)
+                yMin = Math.Min(yMin, dataStreamDefinition.MinYAxis.Value);
+            if (dataStreamDefinition.MaxYAxis != null)
+                yMax = Math.Min(yMax, dataStreamDefinition.MaxYAxis.Value);
+
+            YAxisMinMax.Add(new Tuple<double, double>(yMin, yMax));
 
 
             formsPlot1.Plot.XAxis.TickLabelFormat(customTickFormatterForTime);
@@ -142,7 +151,6 @@ namespace FellrnrTrainingAnalysis
                 scatterGraph.YAxisIndex = yAxis.AxisIndex;
                 CurrentAxis.Add(yAxis);
             }
-            AxisNames.Add(dataStreamDefinition.DisplayTitle);
 
             if (dataStreamDefinition.DisplayUnits == TimeSeriesDefinition.DisplayUnitsType.Pace && !Options.Instance.DebugDisableTimeAxis)
             {
@@ -152,7 +160,8 @@ namespace FellrnrTrainingAnalysis
             {
                 yAxis.TickLabelFormat(null); //reset as axis are reused
             }
-            yAxis.Label(dataStreamDefinition.DisplayTitle);
+            string axisTags = timeSeriesBase.IsVirtual() ? " (V)" : "";
+            yAxis.Label(dataStreamDefinition.DisplayTitle + axisTags);
             yAxis.Color(scatterGraph.Color);
             axisIndex++;
 
@@ -362,6 +371,15 @@ namespace FellrnrTrainingAnalysis
                 positionLabel.Text = stringBuilder.ToString();
 
             }
+        }
+
+        private void objectListViewTimeSeries_SubItemChecking(object sender, SubItemCheckingEventArgs e)
+        {
+            TimeSeriesDefinition row = (TimeSeriesDefinition)e.RowObject;
+            row.ShowReportGraph = (e.NewValue == CheckState.Checked);
+            //objectListView1.RefreshObject(e.RowObject);
+            UpdateSelectedRow();
+
         }
 
 

@@ -6,7 +6,7 @@ namespace FellrnrTrainingAnalysis.Utils
     {
 
         public GradeAdjustedDistance(TimeValueList inclineData,
-                                    TimeValueList distanceData,
+                                    TimeValueList speedData,
                                     float? gradeAdjustmentX2 = null, 
                                     float? gradeAdjustmentX3 = null, 
                                     float? gradeAdjustmentX4 = null, 
@@ -19,7 +19,7 @@ namespace FellrnrTrainingAnalysis.Utils
             _inclineData = inclineData.Values;
             if (_inclineData.Length < 2)
                 throw new ArgumentException("need at least two inclines to calculate GAP");
-            _distanceDeltas = CalculateDelta(distanceData.Values);
+
             //calcualte grade from distance and altitude deltas
             _rawGrades = inclineData.Values;
 
@@ -72,21 +72,20 @@ namespace FellrnrTrainingAnalysis.Utils
 
             _costs = CalculateCost(_smoothedGrades);
 
-            _gradeAdjustedDistance = CalculateGradeAdjustedDistance(_distanceDeltas, _costs);
-
-            _gradeAdjustedPace = CalculateDelta(_gradeAdjustedDistance);
+            _gradeAdjustedPace = CalculateGradeAdjustedPace(speedData, _costs);
 
             Logging.Instance.PauseAccumulator($"Utils.GradeAdjustedDistance.GradeAdjustedDistance");
         }
 
 
         private float[] _inclineData;
-        private float[] _distanceDeltas;
         private float[] _rawGrades;
         private float[] _smoothedGrades;
         private float[] _costs;
-        private float[] _gradeAdjustedDistance;
-        private float[] _gradeAdjustedPace;
+
+        private float _gradeAdjustedDistance;
+        TimeValueList _gradeAdjustedPace;
+
 
         private float GradeAdjustmentX5 { get; set; }
         private float GradeAdjustmentX4 { get; set; }
@@ -95,70 +94,17 @@ namespace FellrnrTrainingAnalysis.Utils
         private float GradeAdjustmentX { get; set; }
         private float GradeAdjustmentFactor { get; set; }
         private float GradeAdjustmentOffset { get; set; }
-        public TimeValueList GetGradeAdjustedDistance()
-        {
-            TimeValueList gradeAdjustedDistance = new TimeValueList(_gradeAdjustedDistance);
 
-            return gradeAdjustedDistance;
+        public float GetGradeAdjustedDistance()
+        {
+            return _gradeAdjustedDistance;
         }
 
         public TimeValueList GetGradeAdjustedPace()
         {
-            TimeValueList gradeAdjustedPace = new TimeValueList(_gradeAdjustedPace);
-
-            return gradeAdjustedPace;
+            return _gradeAdjustedPace;
         }
 
-        private float[] CalculateDelta(float[] input)
-        {
-
-            float[] deltas = new float[input.Length];
-
-            float last = input[0];
-            deltas[0] = 0; //no previous value, delta has to be zero
-            for (int i = 1; i < input.Length; i++) //note starting from one, as the first element is zero
-            {
-                float change = input[i] - last;
-                deltas[i] = change;
-                last = input[i];
-            }
-            return deltas;
-        }
-
-        private float[] CalculateGrade(float[] dd, float[] ad)
-        {
-
-            float[] grades = new float[dd.Length];
-
-            grades[0] = 0; //no previous value, grade of the first point has to be zero
-            for (int i = 1; i < dd.Length; i++) //note starting from one, as the first element is zero
-            {
-                float distanceDelta = dd[i];
-                float altitudeDelta = ad[i];
-                float grade;
-                if (distanceDelta == 0)
-                {
-                    grade = 0;
-                }
-                else
-                {
-                    grade = altitudeDelta / distanceDelta;
-
-                    //constrain slope before smoothing in case of discontinuities
-                    if (grade > Options.Instance.MaxSlope)
-                        grade = (float)Options.Instance.MaxSlope;
-
-                    if (grade < Options.Instance.MinSlope)
-                        grade = (float)Options.Instance.MinSlope;
-                }
-                grades[i] = grade;
-                if (grade != 0 && !float.IsNormal(grade))
-                {
-                    Logging.Instance.Log(string.Format("invalid grade value {0} from altitude {1} and distance {2} at offset {3}", grade, altitudeDelta, distanceDelta, i));
-                }
-            }
-            return grades;
-        }
         private float[] CalculateCost(float[] grades)
         {
             Logging.Instance.ContinueAccumulator($"Utils.GradeAdjustedDistance.CalculateCost");
@@ -205,21 +151,25 @@ namespace FellrnrTrainingAnalysis.Utils
             return costs;
         }
         private bool firstError = true;
-        private float[] CalculateGradeAdjustedDistance(float[] distanceDeltas, float[] costs)
+
+        private TimeValueList CalculateGradeAdjustedPace(TimeValueList speedData, float[] costs)
         {
 
-            float currentDistance = 0;
-            int length = Math.Min(distanceDeltas.Length, costs.Length);
-            float[] gradeAdjustedDistance = new float[length];
+            _gradeAdjustedDistance = 0;
+            int length = Math.Min(speedData.Length, costs.Length);
+            float[] speeds = speedData.Values;
+
+            float[] gradeAdjustedPace = new float[length];
             for (int i = 0; i < length; i++)
             {
-                float distanceDelta = distanceDeltas[i];
+                float speed = speeds[i];
                 float costAdjustment = costs[i];
-                float adjustedDistance = distanceDelta * costAdjustment;
-                currentDistance += adjustedDistance;
-                gradeAdjustedDistance[i] = currentDistance;
+                float adjustedSpeed = speed * costAdjustment;
+                gradeAdjustedPace[i] = adjustedSpeed;
+
+                _gradeAdjustedDistance += adjustedSpeed; //each entry is a second, speed is m/s, so distance is the speed for this second
             }
-            return gradeAdjustedDistance;
+            return new TimeValueList(gradeAdjustedPace);
         }
 
 

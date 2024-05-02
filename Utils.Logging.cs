@@ -12,7 +12,6 @@ namespace FellrnrTrainingAnalysis.Utils
         static Logging() { }
         public static Logging Instance { get; set; } = new Logging();
 
-
         private StringBuilder DebugStringBuilder { get; set; } = new StringBuilder();
         private StreamWriter DebugFile { get; } = new("FellrnrTrainingAnalysis_debug.txt");
         private StringBuilder LogStringBuilder { get; set; } = new StringBuilder();
@@ -29,14 +28,21 @@ namespace FellrnrTrainingAnalysis.Utils
         private Dictionary<string, Stopwatch> timing = new Dictionary<string, Stopwatch> { { "", new Stopwatch() } };
         private Dictionary<string, Stopwatch> accumulators = new Dictionary<string, Stopwatch>();
         private Dictionary<string, int> Counters = new Dictionary<string, int>();
+        private Object thisLock = new Object();
 
-        private Stopwatch Timer(string name) { if (!timing.ContainsKey(name)) timing.Add(name, new Stopwatch()); return timing[name]; }
-        private Stopwatch Accumulator(string name) { if (!accumulators.ContainsKey(name)) { accumulators.Add(name, new Stopwatch()); Counters.Add(name, 0); } return accumulators[name]; }
 
-        public void ResetAndStartTimer(string name = "") { Timer(name).Reset(); Timer(name).Start(); }
 
-        public void ContinueAccumulator(string name) { Accumulator(name).Start(); Counters[name]++; }
-        public void PauseAccumulator(string name) { Accumulator(name).Stop(); }
+#if !LOGGING
+
+
+
+        private Stopwatch Timer(string name) { lock (thisLock) { if (!timing.ContainsKey(name)) timing.Add(name, new Stopwatch()); return timing[name]; } }
+        private Stopwatch Accumulator(string name) { lock (thisLock) { if (!accumulators.ContainsKey(name)) { accumulators.Add(name, new Stopwatch()); Counters.Add(name, 0); } return accumulators[name]; } }
+
+        public void ResetAndStartTimer(string name = "") { lock (thisLock) { Timer(name).Reset(); Timer(name).Start(); } }
+
+        public void ContinueAccumulator(string name) { lock (thisLock) { Accumulator(name).Start(); Counters[name]++; } }
+        public void PauseAccumulator(string name) { lock (thisLock) { Accumulator(name).Stop(); } }
 
         public void DumpAndResetAccumulators()
         {
@@ -57,20 +63,25 @@ namespace FellrnrTrainingAnalysis.Utils
 
         public void TraceEntry(string name, bool announce = true)
         {
-            ResetAndStartTimer(name);
-            if (announce) Debug("Entering " + name);
-            names.Push(name);
-            depth++;
+            lock (thisLock)
+            {
+                ResetAndStartTimer(name);
+                if (announce) Debug("Entering " + name);
+                names.Push(name);
+                depth++;
+            }
         }
 
         public void TraceLeave(string msg = "")
         {
-            depth--;
-            string name = names.Pop();
-            string ts = Logging.Instance.GetAndResetTime(name);
-            Debug($"{name} took {ts} {msg}");
+            lock (thisLock)
+            {
+                depth--;
+                string name = names.Pop();
+                string ts = Logging.Instance.GetAndResetTime(name);
+                Debug($"{name} took {ts} {msg}");
+            }
         }
-
 
         public string GetAndResetTime(string name = "")
         {
@@ -89,37 +100,44 @@ namespace FellrnrTrainingAnalysis.Utils
         private const int MaxDebugLength = 1024 * 1024 * 10; //10Mb
         public void Debug(string message)
         {
-            if (Options.Instance.LogLevel == Options.Level.Debug)
+            lock (thisLock)
             {
-                if (DebugStringBuilder.Length < MaxDebugLength)
+                if (Options.Instance.LogLevel == Options.Level.Debug)
                 {
-                    if (Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
-                }
+                    if (DebugStringBuilder.Length < MaxDebugLength)
+                    {
+                        if (Options.Instance.InMemory) DebugStringBuilder.Append("DEBUG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
+                    }
 
-                DebugFile.WriteLine(message);
-                DebugFile.Flush();
+                    DebugFile.WriteLine(message);
+                    DebugFile.Flush();
+                }
             }
         }
         //Logs also get writting to the Debug
         public void Log(string message)
         {
-            if (Options.Instance.LogLevel == Options.Level.Debug || Options.Instance.LogLevel == Options.Level.Log)
+            lock (thisLock)
             {
-                if (Options.Instance.InMemory) LogStringBuilder.Append("LOG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
-                LogFile.WriteLine(message);
-                Debug(message);
+                if (Options.Instance.LogLevel == Options.Level.Debug || Options.Instance.LogLevel == Options.Level.Log)
+                {
+                    if (Options.Instance.InMemory) LogStringBuilder.Append("LOG: ").Append(new string('>', depth)).Append(message).Append("\r\n");
+                    LogFile.WriteLine(message);
+                    Debug(message);
+                }
             }
         }
-
         //Errors also get writting to the Log
         public void Error(string message)
         {
-            HasErrors = true;
-            if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: ").Append(new string('>', depth)).Append(message).Append("\r\n");
-            ErrorFile.WriteLine(message);
-            Log(message);
+            lock (thisLock)
+            {
+                HasErrors = true;
+                if (Options.Instance.InMemory) ErrorStringBuilder.Append("ERROR: ").Append(new string('>', depth)).Append(message).Append("\r\n");
+                ErrorFile.WriteLine(message);
+                Log(message);
+            }
         }
-
         public string Debug() { return DebugStringBuilder.ToString(); }
         public string Log() { return LogStringBuilder.ToString(); }
         public string Error() { return ErrorStringBuilder.ToString(); }
@@ -129,5 +147,57 @@ namespace FellrnrTrainingAnalysis.Utils
 
 
         public void Close() { DebugFile.Close(); LogFile.Close(); ErrorFile.Close(); }
+#else
+
+
+        public void ResetAndStartTimer(string name = "") { }
+
+        public void ContinueAccumulator(string name) { }
+        public void PauseAccumulator(string name) { }
+
+        public void DumpAndResetAccumulators()
+        {
+        }
+
+        public void TraceEntry(string name, bool announce = true)
+        {
+        }
+
+        public void TraceLeave(string msg = "")
+        {
+        }
+
+        public string GetAndResetTime(string name = "")
+        {
+            return "";
+        }
+        public TimeSpan GetAndStopTime(string name = "")
+        {
+            return new TimeSpan();
+        }
+
+
+        public void Debug(string message)
+        {
+        }
+        //Logs also get writting to the Debug
+        public void Log(string message)
+        {
+        }
+        //Errors also get writting to the Log
+        public void Error(string message)
+        {
+        }
+        public string Debug() { return DebugStringBuilder.ToString(); }
+        public string Log() { return LogStringBuilder.ToString(); }
+        public string Error() { return ErrorStringBuilder.ToString(); }
+
+
+        public void Clear() { DebugStringBuilder.Clear(); LogStringBuilder.Clear(); ErrorStringBuilder.Clear(); }
+
+
+        public void Close() { DebugFile.Close(); LogFile.Close(); ErrorFile.Close(); }
+
+#endif
     }
 }

@@ -1,4 +1,8 @@
-﻿using MemoryPack;
+﻿using FellrnrTrainingAnalysis.Utils.Gpx;
+using GMap.NET;
+using GMap.NET.MapProviders;
+using MemoryPack;
+using ScottPlot.Drawing.Colormaps;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -25,7 +29,7 @@ namespace FellrnrTrainingAnalysis.Model
         public bool WithinBounds(float lat, float lon)
         {
             //cache these as we do it a lot when looking for hills
-            if(MinLat == null)
+            if (MinLat == null)
             {
                 //need to add some margin, as we might be slightly short of a peak, but within the margin
                 float minLat = Latitudes.Min();
@@ -62,6 +66,40 @@ namespace FellrnrTrainingAnalysis.Model
         public float[] Longitudes { get; set; }
 
 
+        private const double EARTH_RADIUS = 6371; // [km]
+        private const double RADIAN = Math.PI / 180;
 
+        public float[] LocationToDistance()
+        {
+            float[] retval = new float[Latitudes.Length];
+            Tuple<float, float>? previous = null;
+            float distance = 0;
+            for (int i = 0; i < Latitudes.Length; i++)
+            {
+                if (previous != null)
+                {
+                    double Latitude = Latitudes[i];
+                    double Longitude = Longitudes[i];
+                    double otherLatitude = previous.Item1;
+                    double otherLongitude = previous.Item2;
+
+                    double thisLatitudeRad = Latitude * RADIAN;
+                    double otherLatitudeRad = otherLatitude * RADIAN;
+                    double deltaLongitudeRad = Math.Abs(Longitude - otherLongitude) * RADIAN;
+
+                    double cos = Math.Cos(deltaLongitudeRad) * Math.Cos(thisLatitudeRad) * Math.Cos(otherLatitudeRad) +
+                        Math.Sin(thisLatitudeRad) * Math.Sin(otherLatitudeRad);
+
+                    double distanceKm = EARTH_RADIUS * Math.Acos(Math.Max(Math.Min(cos, 1), -1));
+
+                    double distanceM = distanceKm * 1000.0;
+                    distance += (float)distanceM;
+                    retval[i] = distance;
+                }
+                previous = new Tuple<float, float>(Latitudes[i], Longitudes[i]);
+
+            }
+            return retval;
+        }
     }
 }

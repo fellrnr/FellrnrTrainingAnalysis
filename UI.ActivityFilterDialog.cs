@@ -1,4 +1,5 @@
 ﻿using FellrnrTrainingAnalysis.Model;
+using Newtonsoft.Json.Linq;
 using System.Reflection;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -19,6 +20,7 @@ new object[] { true });
 
         private const string BadDataName = "BadData";
         private const string RelativeName = "Relative";
+        private const string LocationName = "Location";
         private Dictionary<string, FilterRow> Filters = new Dictionary<string, FilterRow>();
 
         public void Display(Database database)
@@ -33,6 +35,13 @@ new object[] { true });
                 IReadOnlyCollection<string> possibleFields = database.CurrentAthlete.ActivityFieldNames;
                 FilterRow filterRow = FilterRowFactory.CreateRelative(tableLayoutPanel1, OnKeyPress, possibleFields);
                 Filters.Add(RelativeName, filterRow);
+            }
+
+            if (!Filters.ContainsKey(LocationName))
+            {
+                IReadOnlyCollection<string> possibleFields = database.CurrentAthlete.ActivityFieldNames;
+                FilterRow filterRow = FilterRowFactory.CreateLocation(tableLayoutPanel1, OnKeyPress, possibleFields);
+                Filters.Add(LocationName, filterRow);
             }
 
             //put bad data at the top of the filters for now
@@ -147,6 +156,19 @@ new object[] { true });
                 return filterRow;
             }
 
+            public static FilterRow CreateLocation(TableLayoutPanel tableLayoutPanel, KeyPressEventHandler onEnterHandler, IReadOnlyCollection<string> possibleFields)
+            {
+
+                FilterRow filterRow;
+                LocationFilter newFilter = new LocationFilter(tableLayoutPanel, LocationName, CurrentRow, onEnterHandler, possibleFields);
+
+                filterRow = newFilter;
+
+                CurrentRow++;
+
+                return filterRow;
+            }
+
         }
 
         private abstract class FilterRow
@@ -166,6 +188,8 @@ new object[] { true });
                 }
             }
             public abstract FilterBase? AsFilterBase();
+
+            public abstract void Load(FilterBase filterBase);
 
             public abstract string ValueOne();
             public abstract string ValueTwo();
@@ -223,6 +247,18 @@ new object[] { true });
                     return null;
                 FilterString filterString = new FilterString(FieldName.Text, Filter.Text, Value1!.Text);
                 return filterString;
+            }
+
+            public override void Load(FilterBase filterBase)
+            {
+                FilterString? filterString = filterBase as FilterString;
+                if (filterString == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterString.Command;
+                if (Value1 != null) //the selection should create this
+                    Value1.Text = filterString.Value1;
             }
 
         }
@@ -291,6 +327,19 @@ new object[] { true });
 
                 return filterDateTime;
             }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterDateTime? filterTyped = filterBase as FilterDateTime;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
+                if (Value1 != null && filterTyped.StartDateTime != null) //the selection should create this
+                    Value1.Value = (DateTime)filterTyped.StartDateTime;
+                if (Value2 != null && filterTyped.EndDateTime!= null) //the selection should create this
+                    Value2.Value = (DateTime)filterTyped.EndDateTime;
+            }
         }
 
         private class FloatFilter : FilterRow
@@ -349,6 +398,19 @@ new object[] { true });
                 FilterFloat filterFloat = new FilterFloat(FieldName.Text, Filter.Text, float1, float2);
 
                 return filterFloat;
+            }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterFloat? filterTyped = filterBase as FilterFloat;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
+                if (Value1 != null && filterTyped.FirstValue != null) //the selection should create this
+                    Value1.Value = (decimal)filterTyped.FirstValue;
+                if (Value2 != null && filterTyped.SecondValue!= null) //the selection should create this
+                    Value2.Value = (decimal)filterTyped.SecondValue;
             }
         }
 
@@ -409,6 +471,19 @@ new object[] { true });
 
                 return filterTimeSeries;
             }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterTimeSeries? filterTyped = filterBase as FilterTimeSeries;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
+                if (Value1 != null && filterTyped.FirstValue != null) //the selection should create this
+                    Value1.Value = (decimal)filterTyped.FirstValue;
+                if (Value2 != null && filterTyped.SecondValue != null) //the selection should create this
+                    Value2.Value = (decimal)filterTyped.SecondValue;
+            }
         }
 
         private class BadDataFilter : FilterRow
@@ -429,6 +504,15 @@ new object[] { true });
                     return null;
 
                 return new FilterBadData(Filter.Text);
+            }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterBadData? filterTyped = filterBase as FilterBadData;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
             }
         }
 
@@ -485,9 +569,59 @@ new object[] { true });
                 FilterRelative filterRelative = new FilterRelative(Value1!.Text, Filter.Text, Value2!.Text);
                 return filterRelative;
             }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterRelative? filterTyped = filterBase as FilterRelative;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
+                if (Value1 != null && filterTyped.FieldName != null) //the selection should create this
+                    Value1.Text = filterTyped.FieldName;
+                if (Value2 != null && filterTyped.OtherFieldName != null) //the selection should create this
+                    Value2.Text = filterTyped.OtherFieldName;
+            }
 
         }
 
+        private class LocationFilter : FilterRow
+        {
+            ComboBox? Value1;
+            ComboBox? Value2;
+
+            IReadOnlyCollection<string> PossibleFields;
+
+            public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
+            public override string ValueTwo() { return Value2 != null ? Value2.Text : ""; }
+
+            public LocationFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler, IReadOnlyCollection<string> possibleFields) : base(tableLayoutPanel, name, row, FilterLocation.filterCommands, onEnterHandler)
+            {
+                PossibleFields = possibleFields;
+            }
+
+            protected override void Filter_SelectedIndexChanged(object? sender, EventArgs e)
+            {
+
+            }
+
+            public override FilterBase? AsFilterBase()
+            {
+                if (Filter.Text == "")
+                    return null;
+                FilterLocation filterLocation = new FilterLocation(Filter.Text);
+                return filterLocation;
+            }
+            public override void Load(FilterBase filterBase)
+            {
+                FilterLocation? filterTyped = filterBase as FilterLocation;
+                if (filterTyped == null)
+                    return;
+
+                //Filter.Text = filterString.Command;
+                Filter.SelectedItem = filterTyped.Command;
+            }
+        }
 
         private FilterActivities GenerateFilterActivities()
         {
@@ -505,6 +639,18 @@ new object[] { true });
 
             return aFilterActivities;
         }
+
+        public void LoadFromFilterActivities(FilterActivities filterActivities)
+        {
+            Clear();
+            foreach(FilterBase fa in filterActivities.Filters)
+            {
+                if (Filters.ContainsKey(fa.Tag))
+                    Filters[fa.Tag].Load(fa);
+            }
+
+        }
+
 
         public void Clear()
         {

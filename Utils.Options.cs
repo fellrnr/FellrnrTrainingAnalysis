@@ -9,13 +9,8 @@ namespace FellrnrTrainingAnalysis.Utils
         public Options() //has to be public for the deserializer to create one
         {
         }
-        static Options() { }
         public static Options Instance { get; set; } = new Options();
 
-        private const string fileName = @"FellrnrTrainingAnalysisConfig.json";
-        static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        static string AppDataSubFolder = "FellrnrTrainingData";
-        static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
 
         public static void LoadConfig()
         {
@@ -64,6 +59,10 @@ namespace FellrnrTrainingAnalysis.Utils
         public DateTime? OnlyLoadAfter { get; set; }
         public bool ImportUnknownFitFields { get; set; } = false; //May only save a tiny amount of time and space, but reduces the noise of extra fields
         public bool ImportDeveloperFitFields { get; set; } = false;
+
+
+        [Description("How big should the smoothing window be (in seconds) for GPX data")]
+        public int GPXSmoothingWindow { get; set; } = 30;
 
         //Strava
         //     _____ _                        
@@ -187,6 +186,8 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Debug Linear Regression")]
         public bool DebugLinearRegression { get; set; } = false;
 
+        [Description("Debug - block parallel processing")]
+        public bool DebugBlockParallel { get; set; } = false;
 
         //Email
         //    ______                 _ _ 
@@ -240,6 +241,7 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Starting point (in the absense of daily values) for W', AKA W Prime, in jules")]
         public float StartingWPrime { get; set; } = 15000.0f;
 
+        //Display
         //    _____  _           _             
         //   |  __ \(_)         | |            
         //   | |  | |_ ___ _ __ | | __ _ _   _ 
@@ -264,5 +266,50 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Copy an image of the goals to the clipboard")]
         public bool CopyGoalsToClibboard { get; set; } = false;
 
-    }
+
+        //Mapping API
+        //    __  __                   _                        _____ _____ 
+        //   |  \/  |                 (_)                 /\   |  __ \_   _|
+        //   | \  / | __ _ _ __  _ __  _ _ __   __ _     /  \  | |__) || |  
+        //   | |\/| |/ _` | '_ \| '_ \| | '_ \ / _` |   / /\ \ |  ___/ | |  
+        //   | |  | | (_| | |_) | |_) | | | | | (_| |  / ____ \| |    _| |_ 
+        //   |_|  |_|\__,_| .__/| .__/|_|_| |_|\__, | /_/    \_\_|   |_____|
+        //                | |   | |             __/ |                       
+        //                |_|   |_|            |___/                        
+
+        [Description("Use Google Map API")]
+        public bool UseGoogleApi { get; set; } = true;
+
+        [Description("Google Map API Key")]
+        public string GoogleApiKey { get; set; } = "";
+
+        [Description("Google Map API Chunk Size (512 should work but doesn't)")]
+        public int GoogleApiChunk { get; set; } = 256;
+
+
+        //Folders
+        //    ______    _     _               
+        //   |  ____|  | |   | |              
+        //   | |__ ___ | | __| | ___ _ __ ___ 
+        //   |  __/ _ \| |/ _` |/ _ \ '__/ __|
+        //   | | | (_) | | (_| |  __/ |  \__ \
+        //   |_|  \___/|_|\__,_|\___|_|  |___/
+        //                                    
+        //                                    
+
+        private const string fileName = @"FellrnrTrainingAnalysisConfig.json";
+        public static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        public static string AppDataSubFolder = "FellrnrTrainingData";
+        public static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
+
+        static Options()
+        {
+            if (!Directory.Exists(Options.AppDataPath))
+            {
+                Directory.CreateDirectory(Options.AppDataPath);
+            }
+        }
+
+
+}
 }

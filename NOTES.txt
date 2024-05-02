@@ -1,6 +1,8 @@
 ﻿Notes 
 
-
+//for more big text:
+        //http://patorjk.com/software/taag/#p=display&f=Big&t=Debug
+        //http://patorjk.com/software/taag/#p=display&c=c%2B%2B&f=Big&t=Debug
 
 //                 _   _       _ _            _____                  _     _______               
 //       /\       | | (_)     (_) |          / ____|                | |   |__   __|              
@@ -86,3 +88,21 @@ Extensible
 	CalendarNode [DateTime->Extensible (CalendarNode or Activity)
 	Day (Activity)
 	
+
+	
+
+   _____      _ _   _           _   _____                       
+  / ____|    (_) | (_)         | | |  __ \                      
+ | |     _ __ _| |_ _  ___ __ _| | | |__) |____      _____ _ __ 
+ | |    | '__| | __| |/ __/ _` | | |  ___/ _ \ \ /\ / / _ \ '__|
+ | |____| |  | | |_| | (_| (_| | | | |  | (_) \ V  V /  __/ |   
+  \_____|_|  |_|\__|_|\___\__,_|_| |_|   \___/ \_/\_/ \___|_|   
+                                                                
+                                                                
+
+Looking at Golden Cheetah
+
+Search for "Mark Rages' Algorithm for Fast Find of Mean-Max"
+
+
+

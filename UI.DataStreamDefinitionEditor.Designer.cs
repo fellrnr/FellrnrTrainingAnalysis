@@ -28,35 +28,32 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.objectListView1 = new BrightIdeasSoftware.ObjectListView();
-            ((System.ComponentModel.ISupportInitialize)(this.objectListView1)).BeginInit();
-            this.SuspendLayout();
+            objectListView1 = new BrightIdeasSoftware.ObjectListView();
+            ((System.ComponentModel.ISupportInitialize)objectListView1).BeginInit();
+            SuspendLayout();
             // 
             // objectListView1
             // 
-            this.objectListView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.objectListView1.Location = new System.Drawing.Point(9, 9);
-            this.objectListView1.Name = "objectListView1";
-            this.objectListView1.ShowGroups = false;
-            this.objectListView1.Size = new System.Drawing.Size(1915, 1073);
-            this.objectListView1.TabIndex = 0;
-            this.objectListView1.View = System.Windows.Forms.View.Details;
-            this.objectListView1.CellEditFinished += new BrightIdeasSoftware.CellEditEventHandler(this.objectListView1_CellEditFinished);
-            this.objectListView1.SubItemChecking += new System.EventHandler<BrightIdeasSoftware.SubItemCheckingEventArgs>(this.objectListView1_SubItemChecking);
+            objectListView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            objectListView1.Location = new Point(9, 9);
+            objectListView1.Name = "objectListView1";
+            objectListView1.ShowGroups = false;
+            objectListView1.Size = new Size(230, 360);
+            objectListView1.TabIndex = 0;
+            objectListView1.View = View.Details;
+            objectListView1.CellEditFinished += objectListView1_CellEditFinished;
+            objectListView1.SubItemChecking += objectListView1_SubItemChecking;
             // 
             // TimeSeriesDefinitionEditor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1936, 1094);
-            this.Controls.Add(this.objectListView1);
-            this.Name = "TimeSeriesDefinitionEditor";
-            this.Text = "TimeSeriesDefinitionEditor";
-            ((System.ComponentModel.ISupportInitialize)(this.objectListView1)).EndInit();
-            this.ResumeLayout(false);
-
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(251, 381);
+            Controls.Add(objectListView1);
+            Name = "TimeSeriesDefinitionEditor";
+            Text = "TimeSeriesDefinitionEditor";
+            ((System.ComponentModel.ISupportInitialize)objectListView1).EndInit();
+            ResumeLayout(false);
         }
 
         #endregion

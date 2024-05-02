@@ -6,12 +6,13 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackable]
     [Serializable]
     [MemoryPackUnion(0, typeof(TimeSeriesDelta))]
-    [MemoryPackUnion(1, typeof(TimeSeriesGradeAdjustedDistance))]
+    [MemoryPackUnion(1, typeof(TimeSeriesGradeAdjustedPace))]
     [MemoryPackUnion(2, typeof(TimeSeriesHeartRatePower))]
     [MemoryPackUnion(3, typeof(TimeSeriesCalculateAltitude))]
-    [MemoryPackUnion(4, typeof(TimeSeriesCalculateDistance))]
+    [MemoryPackUnion(4, typeof(TimeSeriesCalculateSpeed))]
     [MemoryPackUnion(5, typeof(TimeSeriesCalculatePower))]
     [MemoryPackUnion(6, typeof(TimeSeriesIncline))]
+    [MemoryPackUnion(7, typeof(TimeSeriesCalculateDistance))]
 
     public abstract partial class TimeSeriesEphemeral : TimeSeriesBase
     {

@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Utils;
+﻿using de.schumacher_bw.Strava.Endpoint;
+using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,9 +12,6 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public partial class Database
     {
-        static string AppDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        static string AppDataSubFolder = "FellrnrTrainingData";
-        static string AppDataPath = Path.Combine(AppDataFolder, AppDataSubFolder);
 
         public Database()
         {
@@ -95,12 +93,20 @@ namespace FellrnrTrainingAnalysis.Model
                 Hills = Hill.Reload();
 
 
-            foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
+            if (!Options.Instance.DebugBlockParallel)
             {
-                Activity activity = kvp.Value;
-                activity.RecalculateHills(Hills, force, false);
+                CurrentAthlete.Activities
+                    .AsParallel()
+                    .ForAll(activity => activity.Value.RecalculateHills(Hills, force, false));
             }
-
+            else
+            {
+                foreach (KeyValuePair<string, Activity> kvp in CurrentAthlete.Activities)
+                {
+                    Activity activity = kvp.Value;
+                    activity.RecalculateHills(Hills, force, false);
+                }
+            }
 
             if (Options.Instance.DebugHills)
                 Hill.Dump(Hills, Hill.WAINWRIGHT);
@@ -134,7 +140,7 @@ namespace FellrnrTrainingAnalysis.Model
         public void SaveToMemoryPackFile()
         {
             PreSerialize();
-            string path = Path.Combine(AppDataPath, DatabaseSerializedNameMP);
+            string path = Path.Combine(Options.AppDataPath, DatabaseSerializedNameMP);
             SaveToMemoryPack(path);
         }
 
@@ -183,15 +189,17 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("Database.SaveToMemoryPack");
 
+
+            var bin = MemoryPackSerializer.Serialize(this); //do the serialization before moving the files around in case we fail
+
+
             if (File.Exists(path))
             {
                 string newPath = path + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 File.Move(path, newPath);
             }
-
             using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                var bin = MemoryPackSerializer.Serialize(this);
                 stream.Write(bin);
             }
 
@@ -231,17 +239,13 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static Database LoadFromFile()
         {
-            if (!Directory.Exists(AppDataPath))
-            {
-                Directory.CreateDirectory(AppDataPath);
-            }
             return LoadFromMemoryMapFile();
             //return LoadFromBinaryFile();
         }
 
         private static Database LoadFromMemoryMapFile()
         {
-            string path = Path.Combine(AppDataPath, DatabaseSerializedNameMP);
+            string path = Path.Combine(Options.AppDataPath, DatabaseSerializedNameMP);
 
             if (!File.Exists(path))
             {

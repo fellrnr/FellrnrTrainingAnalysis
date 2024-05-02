@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -124,7 +125,8 @@ namespace FellrnrTrainingAnalysis
 
         private void forceRecalculationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("Recalculate all?", "Sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            //this is now fast enough we don't need to ask
+            //if (MessageBox.Show("Recalculate all?", "Sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 RecalculateAsync(forceActivities: true, forceHills: true, forceGoals: true);
             }
@@ -424,9 +426,9 @@ namespace FellrnrTrainingAnalysis
 
             CurrentFilterBadData = null;
 
-            foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByLocalDateTime)
+            foreach (KeyValuePair<DateTime, Model.Activity> kvp in Database.CurrentAthlete.ActivitiesByLocalDateTime)
             {
-                Activity activity = kvp.Value;
+                Model.Activity activity = kvp.Value;
                 activity.ClearDataQualityIssues();
             }
         }
@@ -490,7 +492,7 @@ namespace FellrnrTrainingAnalysis
             int count = 0;
             foreach (var kvp in athlete.Activities)
             {
-                Activity activity = kvp.Value as Activity;
+                Model.Activity activity = kvp.Value as Model.Activity;
 
                 if (activity.LocationStream != null && !activity.TimeSeries.ContainsKey("Altitude"))
                 {
@@ -574,6 +576,7 @@ namespace FellrnrTrainingAnalysis
                 activityFilterDialog = new ActivityFilterDialog();
             activityFilterDialog.UpdatedHandler += FilterChangedCallbackEventHandler;
             activityFilterDialog.Display(Database);
+            activityFilterDialog.LoadFromFilterActivities(DialogFilterActivities);
             activityFilterDialog.Show();
 
         }
@@ -595,6 +598,40 @@ namespace FellrnrTrainingAnalysis
                 UpdateViews();
             }
         }
+
+
+        private void fixResultsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            List<Activity> activities = CurrentFilterActivities.GetActivities(Database);
+            List<string> keys = new List<string>();
+            foreach (Activity activity in activities)
+            {
+                string pk = activity.PrimaryKey();
+                keys.Add(pk);
+            }
+
+            string csv = string.Join(",", keys);
+
+            DialogFilterActivities.Filters.Clear();
+            DialogFilterActivities.Filters.Add(new FilterString(Activity.TagPrimarykey, FilterString.IN, csv));
+
+            if (activityFilterDialog != null)
+                activityFilterDialog.LoadFromFilterActivities(DialogFilterActivities);
+
+        }
+
+        private void toggleFilterToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FilterActivities TmpFilterActivities = DialogFilterActivities;
+            DialogFilterActivities = ToggleFilterActivities;
+            ToggleFilterActivities = TmpFilterActivities;
+
+            if(activityFilterDialog != null)
+                activityFilterDialog.LoadFromFilterActivities(DialogFilterActivities);
+
+            UpdateViews(); //will call UpdateFilters which will clear the full filter list
+        }
+
 
         #endregion
 
@@ -648,6 +685,8 @@ namespace FellrnrTrainingAnalysis
         }
 
 
+        private System.Diagnostics.Stopwatch timing = new System.Diagnostics.Stopwatch();
+
         private void backgroundWorker_ProgressChanged(object sender, System.ComponentModel.ProgressChangedEventArgs e)
         {
             if (e.UserState != null && e.UserState is Misc.ProgressReport)
@@ -662,16 +701,17 @@ namespace FellrnrTrainingAnalysis
 
         private void backgroundWorker_RunWorkerCompleted(object sender, System.ComponentModel.RunWorkerCompletedEventArgs e)
         {
+            timing.Stop(); 
             UpdateViews(); //has to be done in this thread
             ProgressDialog.Hide();
             if (e.Result != null)
             {
                 int count = (int)e.Result;
-                MessageBox.Show($"Loaded {count} activities from archive, took {Logging.Instance.GetAndStopTime("Async")}");
+                MessageBox.Show($"Loaded {count} activities from archive, took {timing.Elapsed}");
             }
             else
             {
-                MessageBox.Show($"Recalculation complete, took {Logging.Instance.GetAndStopTime("Async")}");
+                MessageBox.Show($"Recalculation complete, took {timing.Elapsed}");
             }
 
         }
@@ -680,7 +720,7 @@ namespace FellrnrTrainingAnalysis
 
         private void RecalculateAsync(bool forceActivities = false, bool forceHills = false, bool forceGoals = false)
         {
-            Logging.Instance.ResetAndStartTimer("Async");
+            timing.Reset(); timing.Start();
             ProgressDialog.Progress = 0;
             ProgressDialog.TaskName = "Recalculate";
             ProgressDialog.ShowMe();

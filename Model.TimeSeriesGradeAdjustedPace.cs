@@ -6,17 +6,17 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackable]
     [Serializable]
 
-    //A class that calculates grade adjusted distance from horizontal distance and elevation changes
-    public partial class TimeSeriesGradeAdjustedDistance : TimeSeriesEphemeral
+    //A class that calculates grade adjusted speed from horizontal speed and elevation changes
+    public partial class TimeSeriesGradeAdjustedPace : TimeSeriesEphemeral
     {
         [MemoryPackConstructor]
-        protected TimeSeriesGradeAdjustedDistance()  //for use by memory pack deserialization only
+        protected TimeSeriesGradeAdjustedPace()  //for use by memory pack deserialization only
         {
             InclineSeries = "Incline";
         }
 
 
-        public TimeSeriesGradeAdjustedDistance(string name, 
+        public TimeSeriesGradeAdjustedPace(string name, 
                                     Activity parent, 
                                     bool persistCache,
                                     List<string>? requiredFields, 
@@ -53,19 +53,29 @@ namespace FellrnrTrainingAnalysis.Model
         {
             if (forceJustMe) Logging.Instance.TraceEntry($"TimeSeriesGradeAdjustedincline - Forced recalculating {this.Name}");
 
-            TimeSeriesBase distanceStream = RequiredTimeSeries[0];
-            TimeValueList? distanceData = distanceStream.GetData(forceCount, forceJustMe);
-            if (distanceData == null || distanceData.Length < 1)
+            TimeSeriesBase speedStream = RequiredTimeSeries[0];
+            TimeValueList? speedData = speedStream.GetData(forceCount, forceJustMe);
+            if (speedData == null || speedData.Length < 1)
             {
-                if (forceJustMe) Logging.Instance.TraceLeave($"No distance");
+                if (forceJustMe) Logging.Instance.TraceLeave($"No speed");
                 return null;
+            }
+
+            //if speed is virtual because it's based on virtual distance, we can't do GAP. The virtual speed will be constant, and power will be meaningless
+            if(speedStream.IsVirtual())
+            {
+                if (!ParentActivity!.TimeSeries.ContainsKey(Activity.TagDistance))
+                    return speedData;
+
+                if(ParentActivity!.TimeSeries[Activity.TagDistance].IsVirtual())
+                    return speedData;
             }
 
 
             if (!ParentActivity!.TimeSeriesNames.Contains(InclineSeries))
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"No incline stream");
-                return distanceData;
+                return speedData;
             }
 
             TimeSeriesBase inclineStream = ParentActivity.TimeSeries[InclineSeries];
@@ -73,7 +83,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (inclineData == null || inclineData.Length < 1)
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"Incline too short");
-                return distanceData;
+                return speedData;
             }
 
 
@@ -86,7 +96,7 @@ namespace FellrnrTrainingAnalysis.Model
             float? gradeAdjustmentOffset = ParameterOrNull("gradeAdjustmentOffset");
 
             Utils.GradeAdjustedDistance gradeAdjustedDistance = new Utils.GradeAdjustedDistance(inclineData,
-                                                                                                distanceData,
+                                                                                                speedData,
                                                                                                 gradeAdjustmentX2,
                                                                                                 gradeAdjustmentX3,
                                                                                                 gradeAdjustmentX4,
@@ -95,15 +105,17 @@ namespace FellrnrTrainingAnalysis.Model
                                                                                                 gradeAdjustmentFactor,
                                                                                                 gradeAdjustmentOffset);
 
-            TimeValueList retval = gradeAdjustedDistance.GetGradeAdjustedDistance();
+            TimeValueList retval = gradeAdjustedDistance.GetGradeAdjustedPace();
 
             if (retval == null)
             {
-                if (forceJustMe) Logging.Instance.TraceLeave($"return distance, GAD failed {retval}");
-                return distanceData;
+                if (forceJustMe) Logging.Instance.TraceLeave($"return speed, GAD failed {retval}");
+                return speedData;
             }
             else
             {
+                float gad = gradeAdjustedDistance.GetGradeAdjustedDistance();
+                ParentActivity.AddOrReplaceDatum(new TypedDatum<float>(Activity.TagGradeAdjustedDistance, false, gad));
                 if (forceJustMe) Logging.Instance.TraceLeave($"return GAD {retval}");
                 return retval;
             }

@@ -80,6 +80,7 @@ namespace FellrnrTrainingAnalysis.Action
         {
             List<uint>? LocationTimes = new List<uint>();
             List<float> LocationDistance = new List<float>();
+            List<float> LocationSpeed = new List<float>();
             List<float> LocationLats = new List<float>();
             List<float> LocationLons = new List<float>();
             List<float>? LocationElev = new List<float>();
@@ -109,10 +110,27 @@ namespace FellrnrTrainingAnalysis.Action
                         double distanceM = distanceKm * 1000.0;
                         distance += (float)distanceM;
                         LocationDistance.Add(distance);
+
+                        if (previous.Time != null)
+                        {
+                            DateTime dateTimePrevious = (DateTime)previous.Time;
+                            TimeSpan timeSpan = dateTime - dateTimePrevious;
+                            float offset = (float)timeSpan.TotalSeconds;
+                            float speed = (float)offset != 0 ? (float)distanceM / offset : 0;
+                            //GPX data quality is pretty grim
+                            //if (speed > 5.0)
+                            //    Logging.Instance.Debug($"Too fast {speed}");
+                            LocationSpeed.Add(speed); //speed in m/s
+                        }
+                        else
+                        {
+                            LocationSpeed.Add(0f); //add the first point at zero
+                        }
                     }
                     else
                     {
                         LocationDistance.Add(0f); //add the first point at zero
+                        LocationSpeed.Add(0f); //add the first point at zero
                     }
                     previous = gpxPoint;
 
@@ -132,7 +150,21 @@ namespace FellrnrTrainingAnalysis.Action
             if (LocationTimes != null)
             {
                 Activity.LocationStream = new LocationStream(LocationTimes.ToArray(), LocationLats.ToArray(), LocationLons.ToArray());
+
                 Activity.AddTimeSeries(Activity.TagDistance, LocationTimes.ToArray(), LocationDistance.ToArray());
+
+                //need to create the time series 
+                if (Options.Instance.GPXSmoothingWindow != 0)
+                {
+                    List<float> to1sec = Utils.TimeSeriesUtils.InterpolateToOneSecond(LocationTimes.ToArray(), LocationSpeed.ToArray());
+                    float[] smoothedSpeed = TimeSeriesUtils.WindowSmoothed(to1sec.ToArray(), Options.Instance.GPXSmoothingWindow);
+                    Activity.AddTimeSeries(new TimeSeriesRecorded(Activity.TagSpeed, new TimeValueList(smoothedSpeed), Activity)); //already interpolated to 1 sec
+                }
+                else
+                {
+                    //just add as is
+                    Activity.AddTimeSeries(Activity.TagSpeed, LocationTimes.ToArray(), LocationSpeed.ToArray());
+                }
                 if (LocationElev != null && LocationElev.Count > 0)
                 {
                     Activity.AddTimeSeries(Activity.TagAltitude, LocationTimes.ToArray(), LocationElev.ToArray());

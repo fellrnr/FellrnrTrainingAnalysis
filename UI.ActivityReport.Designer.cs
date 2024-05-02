@@ -46,7 +46,7 @@
             activityData1 = new UI.ActivityData();
             tabPage3 = new TabPage();
             activityMap1 = new UI.ActivityMap();
-            listViewGraphOptions = new ListView();
+            objectListViewTimeSeries = new BrightIdeasSoftware.ObjectListView();
             ((System.ComponentModel.ISupportInitialize)splitContainerReportToTabs).BeginInit();
             splitContainerReportToTabs.Panel1.SuspendLayout();
             splitContainerReportToTabs.Panel2.SuspendLayout();
@@ -65,6 +65,7 @@
             tabPage1.SuspendLayout();
             tabPage2.SuspendLayout();
             tabPage3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)objectListViewTimeSeries).BeginInit();
             SuspendLayout();
             // 
             // splitContainerReportToTabs
@@ -127,12 +128,12 @@
             // pageSizeComboBox1
             // 
             pageSizeComboBox1.FormattingEnabled = true;
-            pageSizeComboBox1.Items.AddRange(new object[] { "25", "50", "100", "500", "All" });
+            pageSizeComboBox1.Items.AddRange(new object[] { "10", "15", "20", "25", "50", "100", "500", "All" });
             pageSizeComboBox1.Location = new Point(95, 3);
             pageSizeComboBox1.Name = "pageSizeComboBox1";
             pageSizeComboBox1.Size = new Size(182, 33);
             pageSizeComboBox1.TabIndex = 1;
-            pageSizeComboBox1.Text = "25";
+            pageSizeComboBox1.Text = "20";
             pageSizeComboBox1.SelectedIndexChanged += pageSizeComboBox1_SelectedIndexChanged;
             // 
             // labelTotalRows
@@ -201,7 +202,7 @@
             // 
             // splitContainerTabsToList.Panel2
             // 
-            splitContainerTabsToList.Panel2.Controls.Add(listViewGraphOptions);
+            splitContainerTabsToList.Panel2.Controls.Add(objectListViewTimeSeries);
             splitContainerTabsToList.Size = new Size(1902, 686);
             splitContainerTabsToList.SplitterDistance = 1700;
             splitContainerTabsToList.TabIndex = 0;
@@ -245,9 +246,9 @@
             tabPage2.Location = new Point(4, 34);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(192, 62);
+            tabPage2.Size = new Size(1683, 650);
             tabPage2.TabIndex = 1;
-            tabPage2.Text = "Activity Data";
+            tabPage2.Text = "Activity Table";
             tabPage2.UseVisualStyleBackColor = true;
             // 
             // activityData1
@@ -255,7 +256,7 @@
             activityData1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             activityData1.Location = new Point(3, 3);
             activityData1.Name = "activityData1";
-            activityData1.Size = new Size(172, 39);
+            activityData1.Size = new Size(1663, 627);
             activityData1.TabIndex = 0;
             // 
             // tabPage3
@@ -263,7 +264,7 @@
             tabPage3.Controls.Add(activityMap1);
             tabPage3.Location = new Point(4, 34);
             tabPage3.Name = "tabPage3";
-            tabPage3.Size = new Size(192, 62);
+            tabPage3.Size = new Size(1683, 650);
             tabPage3.TabIndex = 2;
             tabPage3.Text = "Activty Map";
             tabPage3.UseVisualStyleBackColor = true;
@@ -274,17 +275,19 @@
             activityMap1.BackColor = SystemColors.ActiveCaption;
             activityMap1.Location = new Point(3, 3);
             activityMap1.Name = "activityMap1";
-            activityMap1.Size = new Size(186, 59);
+            activityMap1.Size = new Size(1677, 647);
             activityMap1.TabIndex = 0;
             // 
-            // listViewGraphOptions
+            // objectListViewTimeSeries
             // 
-            listViewGraphOptions.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            listViewGraphOptions.Location = new Point(3, 3);
-            listViewGraphOptions.Name = "listViewGraphOptions";
-            listViewGraphOptions.Size = new Size(195, 680);
-            listViewGraphOptions.TabIndex = 0;
-            listViewGraphOptions.UseCompatibleStateImageBehavior = false;
+            objectListViewTimeSeries.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            objectListViewTimeSeries.Location = new Point(-1, 3);
+            objectListViewTimeSeries.Name = "objectListViewTimeSeries";
+            objectListViewTimeSeries.ShowGroups = false;
+            objectListViewTimeSeries.Size = new Size(196, 676);
+            objectListViewTimeSeries.TabIndex = 1;
+            objectListViewTimeSeries.View = View.Details;
+            objectListViewTimeSeries.SubItemChecking += objectListViewTimeSeries_SubItemChecking;
             // 
             // ActivityReport
             // 
@@ -312,6 +315,7 @@
             tabPage1.ResumeLayout(false);
             tabPage2.ResumeLayout(false);
             tabPage3.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)objectListViewTimeSeries).EndInit();
             ResumeLayout(false);
         }
 
@@ -319,7 +323,6 @@
 
         private SplitContainer splitContainerReportToTabs;
         private SplitContainer splitContainerTabsToList;
-        private ListView listViewGraphOptions;
         private SplitContainer splitContainerTopButtonsToReport;
         private FlowLayoutPanel flowLayoutPanel1;
         private DataGridView activityDataGridView;
@@ -334,5 +337,6 @@
         private TabPage tabPage3;
         private UI.ActivityMap activityMap1;
         private Label positionLabel;
+        private BrightIdeasSoftware.ObjectListView objectListViewTimeSeries;
     }
 }

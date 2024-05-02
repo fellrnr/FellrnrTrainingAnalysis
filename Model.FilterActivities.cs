@@ -95,8 +95,14 @@ namespace FellrnrTrainingAnalysis.Model
     [Serializable]
     public class FilterBase
     {
-        //note, always return the list sorted by start date/time
+        public string Tag;
 
+        public FilterBase(string tag)
+        {
+            Tag = tag;
+        }
+
+        //note, always return the list sorted by start date/time
         public virtual List<Activity> GetActivities(List<Activity> activities)
         {
             return activities;
@@ -110,7 +116,7 @@ namespace FellrnrTrainingAnalysis.Model
     {
         public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "1M", "6M", "1Y", "in", "has", "missing" };
 
-        public FilterDateTime(string fieldName, string command, DateTime? startDateTime, DateTime? endDateTime, string? list)
+        public FilterDateTime(string fieldName, string command, DateTime? startDateTime, DateTime? endDateTime, string? list) : base(fieldName)
         {
             if (command == "in" && list != null)
             {
@@ -137,7 +143,7 @@ namespace FellrnrTrainingAnalysis.Model
         [JsonInclude]
         private string FieldName { get; set; }
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         [JsonInclude]
         public DateTime? StartDateTime { get; set; }
@@ -231,7 +237,7 @@ namespace FellrnrTrainingAnalysis.Model
         public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">", "between", "has", "missing" };
 
 
-        public FilterFloat(string fieldName, string command, float? firstValue, float? secondValue)
+        public FilterFloat(string fieldName, string command, float? firstValue, float? secondValue) : base(fieldName)
         {
             FirstValue = firstValue;
             SecondValue = secondValue;
@@ -242,7 +248,7 @@ namespace FellrnrTrainingAnalysis.Model
         [JsonInclude]
         private string FieldName { get; set; }
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         [JsonInclude]
         public float? FirstValue { get; set; }
@@ -314,7 +320,7 @@ namespace FellrnrTrainingAnalysis.Model
             "min <", "min <=", "min =", "min >=", "min >", "min between", "has", "missing", "virtual", "not virtual" };
 
 
-        public FilterTimeSeries(string fieldName, string command, float? firstValue, float? secondValue)
+        public FilterTimeSeries(string fieldName, string command, float? firstValue, float? secondValue) : base(fieldName)
         {
             FirstValue = firstValue;
             SecondValue = secondValue;
@@ -325,7 +331,7 @@ namespace FellrnrTrainingAnalysis.Model
         [JsonInclude]
         private string FieldName { get; set; }
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         [JsonInclude]
         public float? FirstValue { get; set; }
@@ -431,10 +437,11 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class FilterString : FilterBase
     {
-        public static readonly string[] filterCommands = new string[] { "", "=", "contains", "doesn't contain", "has", "missing", "in" };
+        public const string IN = "in"; //used to fix search results to a list of strava ids
+        public static readonly string[] filterCommands = new string[] { "", "=", "contains", "doesn't contain", "has", "missing", IN };
 
 
-        public FilterString(string fieldName, string command, string? value)
+        public FilterString(string fieldName, string command, string? value) : base(fieldName)
         {
             Value1 = value;
             Command = command;
@@ -444,7 +451,7 @@ namespace FellrnrTrainingAnalysis.Model
         [JsonInclude]
         private string FieldName { get; set; }
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         [JsonInclude]
         public string? Value1 { get; set; }
@@ -513,13 +520,13 @@ namespace FellrnrTrainingAnalysis.Model
         public static readonly string[] filterCommands = new string[] { "", HasBadValueTag };
 
 
-        public FilterBadData(string command)
+        public FilterBadData(string command) : base(HasBadValueTag)
         {
             Command = command;
         }
 
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         public override List<Activity> GetActivities(List<Activity> activities)
         {
@@ -547,12 +554,51 @@ namespace FellrnrTrainingAnalysis.Model
     }
 
     [Serializable]
+    public class FilterLocation : FilterBase
+    {
+        public const string HasLocationTag = "Has Location";
+        public static readonly string[] filterCommands = new string[] { "", HasLocationTag };
+
+
+        public FilterLocation(string command) : base(HasLocationTag)
+        {
+            Command = command;
+        }
+
+        [JsonInclude]
+        public string Command { get; set; }
+
+        public override List<Activity> GetActivities(List<Activity> activities)
+        {
+            List<Activity> returnActivities = new List<Activity>();
+            foreach (Activity activity in activities)
+            {
+                bool addIt = false;
+                switch (Command)
+                {
+                    case HasLocationTag:
+                        if (activity.LocationStream != null && activity.LocationStream.Times != null && activity.LocationStream.Times.Length > 0)
+                            addIt = true;
+                        break;
+                    default:
+                        break;
+                }
+
+                if (addIt)
+                {
+                    returnActivities.Add(activity);
+                }
+            }
+            return returnActivities;
+        }
+    }
+    [Serializable]
     public class FilterRelative : FilterBase
     {
         public static readonly string[] FilterCommands = new string[] { "", "<", "<=", "=", ">=", ">" };
 
 
-        public FilterRelative(string fieldName, string command, string otherFieldName)
+        public FilterRelative(string fieldName, string command, string otherFieldName) : base("Relative")
         {
             OtherFieldName = otherFieldName;
             Command = command;
@@ -560,9 +606,9 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
         [JsonInclude]
-        private string FieldName { get; set; }
+        public string FieldName { get; set; }
         [JsonInclude]
-        private string Command { get; set; }
+        public string Command { get; set; }
 
         [JsonInclude]
         public string OtherFieldName { get; set; }

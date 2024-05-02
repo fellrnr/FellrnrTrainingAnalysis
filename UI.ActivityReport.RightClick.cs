@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
 using System.Text;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace FellrnrTrainingAnalysis
 {
@@ -35,6 +37,7 @@ namespace FellrnrTrainingAnalysis
             AddContextMenu("Highlight", new EventHandler(toolStripItem1_Click_highlight));
             AddContextMenu("Edit Name", new EventHandler(toolStripItem1_Click_editName));
             AddContextMenu("Edit Description", new EventHandler(toolStripItem1_Click_editDescription));
+            AddContextMenu("Update Description", new EventHandler(toolStripItem1_Click_updateDescription));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
             AddContextMenu("Refresh ALL From Strava", new EventHandler(toolStripItem1_Click_refreshAll));
@@ -48,6 +51,9 @@ namespace FellrnrTrainingAnalysis
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddFixSubMenus("Fix This Activity", toolStripItem1_Click_tagStrava);
             AddFixSubMenus("Fix ALL Activities", toolStripItem1_Click_tagAllStrava);
+            AddContextMenu("Distance from GPS", toolStripItem1_Click_distanceGPS);
+            AddContextMenu("Lookup altitude from location", toolStripItem1_Click_lookupLocation);
+            AddContextMenu("Lookup ALL altitude from location", toolStripItem1_Click_lookupAllLocation);
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Write table to CSV...", new EventHandler(toolStripItem1_Click_writeCsv));
             AddContextMenu("Debug Activity...", new EventHandler(toolStripItem1_Click_debugActivity));
@@ -71,6 +77,7 @@ namespace FellrnrTrainingAnalysis
         private const string ASKME = "ASKME";
         List<TagActivities> SpecialFixActivityTags = new List<TagActivities>() {
             new TagActivities("Replace Start of Altitude", "⌗Altitude༶CopyBack༶10֍"),
+            new TagActivities("Lookup Altitude using Google API", $"⌗{Activity.TagAltitude}༶Lookup֍"),
         };
         List<string> FixTimeSeriesCommands = new List<string>() { "Delete", "Cap" };
         List<string> FixDatumCommands = new List<string>() { "Override" };
@@ -136,24 +143,6 @@ namespace FellrnrTrainingAnalysis
             rightClickSubSubMenu.DropDownItems.AddRange(toolStripSubMenuItems.ToArray());
         }
 
-        //private void AddFixSubMenusOLDXXXXXXXXXXXXXXXXXXX(string name, EventHandler eventHandler)
-        //{
-        //    ToolStripMenuItem rightClickMenuItem = new ToolStripMenuItem();
-        //    rightClickMenuItem.Text = name;
-        //    rightClickMenuSubMenus.Add(rightClickMenuItem);
-
-        //    List<ToolStripMenuItem> toolStripSubMenuItems = new List<ToolStripMenuItem>();
-        //    List<TagActivities> tagActivities = GetFixActivityTags();
-        //    foreach (TagActivities t in tagActivities)
-        //    {
-        //        ToolStripMenuItem toolStripItem4 = new ToolStripMenuItem();
-        //        toolStripItem4.Text = t.Name;
-        //        toolStripItem4.Click += eventHandler;
-        //        toolStripItem4.Tag = t;
-        //        toolStripSubMenuItems.Add(toolStripItem4);
-        //    }
-        //    rightClickMenuItem.DropDownItems.AddRange(toolStripSubMenuItems.ToArray());
-        //}
 
         private void AddRightClicks(DataGridViewColumn dataGridViewColumn)
         {
@@ -223,6 +212,45 @@ namespace FellrnrTrainingAnalysis
 
 
             string description = largeTextDialogForm.Value;
+            if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
+            {
+                MessageBox.Show("Update Failed");
+                return;
+            }
+            activity.Description = description;
+            UpdateViews?.Invoke();
+        }
+
+        private string AddDatum(Extensible extensible, string text, string name)
+        {
+            if (extensible.HasNamedDatum(name))
+            {
+                string formated = DatumFormatter.Format(extensible, name);
+                return $"{Environment.NewLine}{text}{formated}";
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+        private void toolStripItem1_Click_updateDescription(object? sender, EventArgs args)
+        {
+            Model.Activity? activity = GetActivity();
+            if (activity == null) return;
+
+            string description = activity.Description;
+            description += AddDatum(activity, "Grade Adjusted Distance: ", Activity.TagGradeAdjustedDistance);
+            description += AddDatum(activity.Day, "Distance Rolling Year: ", "Σ🏃→ 1Y");
+            description += AddDatum(activity.Day, "Elevation Rolling Year: ", "Σ🏃⬆ 1Y");
+            description += AddDatum(activity.Day, "Grade Adjusted Distance Rolling Year: ", "Σ🏃📐 1Y");
+            description += AddDatum(activity, "", Activity.TagClimbed);
+
+            LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(description);
+            largeTextDialogForm.ShowDialog();
+            if (largeTextDialogForm.Cancelled) return;
+
+
+            description = largeTextDialogForm.Value;
             if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
             {
                 MessageBox.Show("Update Failed");
@@ -334,7 +362,7 @@ namespace FellrnrTrainingAnalysis
                 FitReader fitReader = new FitReader(activity);
                 try
                 {
-                    fitReader.ReadFitFromStravaArchive();
+                    fitReader.ReadFitFromStravaArchive(reload: true);
                 }
                 catch (Exception e)
                 {
@@ -613,12 +641,66 @@ namespace FellrnrTrainingAnalysis
             MessageBox.Show("Done");
         }
 
+        //this doesn't seem to help with data quality much, but left here in case it's useful at some point
+        private void toolStripItem1_Click_distanceGPS(object? sender, EventArgs args)
+        {
+            if (mouseLocation == null || sender == null)
+                return;
+
+            DataGridViewRow row = activityDataGridView.Rows[mouseLocation.RowIndex];
+            Model.Activity? activity = GetActivityForRow(row);
+            if (activity == null)
+            {
+                MessageBox.Show("No activity found");
+                return;
+            }
+
+
+            if (activity.LocationStream != null && activity.LocationStream.Times != null)
+            {
+                float[] distances = activity.LocationStream.LocationToDistance();
+
+                if (distances != null)
+                {
+                    float final = distances.Last();
+                    if (activity.TimeSeries.ContainsKey(Activity.TagDistance))
+                    {
+                        List<float> to1sec = Utils.TimeSeriesUtils.InterpolateToOneSecond(activity.LocationStream.Times.ToArray(), distances);
+                        TimeSeriesBase tsb = activity.TimeSeries[Activity.TagDistance];
+                        TimeValueList? tvl = tsb.GetData();
+                        if (tvl != null)
+                        {
+                            float[] existing = tvl.Values;
+
+                            float[] diffs = new float[to1sec.Count];
+                            for (int i = 0; i < to1sec.Count; i++)
+                            {
+                                float d = existing[i] - to1sec[i];
+                                diffs[i] = d;
+                            }
+
+                        }
+                    }
+
+                    if (MessageBox.Show($"replace raw distance with that from location {final}?", "Continue?", MessageBoxButtons.YesNoCancel) == DialogResult.Yes)
+                    {
+                        activity.AddTimeSeries(Activity.TagDistance, activity.LocationStream.Times, distances);
+                        MessageBox.Show("Done");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Failed to calculate distances");
+                }
+            }
+            else
+            {
+                MessageBox.Show("No location stream or times for locations");
+            }
+
+        }
         private void TagStravaActivity(string tag, Activity activity)
         {
-            TypedDatum<string>? descriptionDatum = (TypedDatum<string>?)activity.GetNamedDatum(Activity.TagDescription);
-            if (descriptionDatum == null)
-                descriptionDatum = new TypedDatum<string>(Activity.TagDescription, true, ""); //make this recoreded as we need it to persist
-
             if (tag.Contains(ASKME)) //TODO: support overriding non-numeric values
             {
                 string input = Interaction.InputBox("Enter numeric value");
@@ -627,27 +709,11 @@ namespace FellrnrTrainingAnalysis
                 tag = tag.Replace(ASKME, input);
             }
 
-            string? description = descriptionDatum.Data;
-
-            if (description != null && !description.Contains(tag))
-            {
-                description = description + tag;
-                if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
-                {
-                    MessageBox.Show("Update Failed");
-                    return;
-                }
-                descriptionDatum.Data = description;
-                activity.AddOrReplaceDatum(descriptionDatum);
-
-                Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
-                tags.ProcessTags(activity, 0, true, true); //force and ask for debug
-
-                //activity.Recalculate(true);
-
-                //UpdateViews?.Invoke();
-            }
+            Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
+            tags.TagStravaActivity(tag, activity);
         }
+
+
 
         private void toolStripItem1_Click_tagAllStravaAsInput(object? sender, EventArgs args)
         {
@@ -685,6 +751,95 @@ namespace FellrnrTrainingAnalysis
 
         }
 
+
+        private async void toolStripItem1_Click_lookupAllLocation(object? sender, EventArgs args)
+        {
+            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            {
+                Model.Activity? activity = GetActivityForRow(row);
+                if (activity == null)
+                    return;
+
+                await LookupElevation(activity, false);
+            }
+            UpdateViews?.Invoke();
+            MessageBox.Show("Done");
+        }
+        private async void toolStripItem1_Click_lookupLocation(object? sender, EventArgs args)
+        {
+            if (mouseLocation == null || sender == null)
+                return;
+
+            DataGridViewRow row = activityDataGridView.Rows[mouseLocation.RowIndex];
+            Model.Activity? activity = GetActivityForRow(row);
+            if (activity == null)
+            {
+                MessageBox.Show("No activity found");
+                return;
+            }
+
+            await LookupElevation(activity, true);
+            UpdateViews?.Invoke();
+            MessageBox.Show("Done");
+
+        }
+
+        private async Task LookupElevation(Activity activity, bool dialogs)
+        {
+            if (activity.LocationStream != null && activity.LocationStream.Times != null)
+            {
+                Action.Elevation elevation = new Elevation();
+
+                Task<TimeSeriesBase?> task = elevation.GetElevation(activity.LocationStream, activity);
+                TimeSeriesBase? result = await task;
+
+                if (result != null)
+                {
+                    string stats;
+                    if (activity.TimeSeries.ContainsKey(Activity.TagAltitude))
+                    {
+                        TimeSeriesBase original = activity.TimeSeries[Activity.TagAltitude];
+                        stats =
+                            $"Original/New: " +
+                            $"min {original.Percentile(TimeSeriesBase.StaticsValue.Min):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Min):#,0.0}, " +
+                            $"mean {original.Percentile(TimeSeriesBase.StaticsValue.Mean):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Mean):#,0.0}, " +
+                            $"max {original.Percentile(TimeSeriesBase.StaticsValue.Max):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Max):#,0.0}, " +
+                            $"sd {original.Percentile(TimeSeriesBase.StaticsValue.StandardDeviation)}/{result.Percentile(TimeSeriesBase.StaticsValue.StandardDeviation)}";
+                    }
+                    else
+                    {
+                        stats = result.ToStatisticsString();
+                    }
+                    Logging.Instance.Log($"Replacing original elevation?{stats} on {activity} ");
+                    bool doit = false;
+                    if (!dialogs || MessageBox.Show($"replace original elevation?{Environment.NewLine}{stats}", "Continue?", MessageBoxButtons.YesNoCancel) == DialogResult.Yes)
+                    {
+                        doit = true;
+                    }
+                    if(doit)
+                    { 
+                        string tag = $"⌗{Activity.TagAltitude}༶Lookup֍";
+                        Action.Tags tags = new FellrnrTrainingAnalysis.Action.Tags();
+                        tags.TagStravaActivity(tag, activity, false);
+
+                        activity.AddTimeSeries(result);
+                        activity.Recalculate(true);
+                    }
+                }
+                else
+                {
+                    if(dialogs)
+                        MessageBox.Show("Failed to lookup elevation");
+                    Logging.Instance.Log($"Failed to lookup elevation on {activity} ");
+                }
+            }
+            else
+            {
+                if (dialogs)
+                    MessageBox.Show("No location stream or times for locations");
+                Logging.Instance.Log($"No location stream or times for locations on {activity} ");
+            }
+        }
 
         private void toolStripItem1_Click_showDataQuality(object? sender, EventArgs args)
         {
@@ -833,7 +988,7 @@ namespace FellrnrTrainingAnalysis
             else
             {
                 if (!int.TryParse(pageSizeComboBox1.Text, out PageSize))
-                    PageSize = 25;
+                    PageSize = 5;
             }
             UpdateReport();
         }

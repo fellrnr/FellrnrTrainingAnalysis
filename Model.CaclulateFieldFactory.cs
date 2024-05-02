@@ -14,10 +14,16 @@
 
                 new CalculateDataFieldFromTimeSeriesSimple("Max Climb", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Calc.Climb", Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromTimeSeriesSimple("Min Climb", CalculateDataFieldFromTimeSeriesSimple.Mode.Min, "Calc.Climb", new List < string > { "Run", "Virtual Run" }),
-                new CalculateDataFieldFromTimeSeriesSimple("Grade Adjusted Distance", CalculateDataFieldFromTimeSeriesSimple.Mode.LastValue, "Grade Adjusted Distance", Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("Min Climb",
+                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Min,
+                                                           "Calc.Climb",
+                                                           new List < string > { "Run", "Virtual Run" }),
+                
 
-                new CalculateDataFieldFromTimeSeriesSimple("Avg GAP", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, TimeSeriesFactory.GRADE_ADUJUSTED_PACE, Activity.ActivityTypeRun), //meters per second
+                new CalculateDataFieldFromTimeSeriesSimple("Avg GAP",
+                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
+                                                           Activity.TagGradeAdjustedPace,
+                                                           Activity.ActivityTypeRun), //meters per second
 
                 new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
 
@@ -45,9 +51,14 @@
                                                 "Elapsed Time",
                                                 2.98f,
                                                 CalculateFieldSimpleDefault.Mode.Multiply,
-                                                true,
+                                                CalculateFieldSimple.OverrideMode.OverrideRecordedZeroOnly,
                                                 Activity.ActivityTypeRun), //9 min/mile is 2.98 m/s
 
+                //in the asbsense of any other data, copy distance to GAD
+                new CalculateFieldSimpleCopy(activityFieldname: "Grade Adjusted Distance",
+                                            dependentFieldname: "Distance",
+                                            CalculateFieldSimple.OverrideMode.AbsentOnly,
+                                            sportsToInclude: Activity.ActivityTypeRun),
                 /*
                 //difference between GAD and raw distance
                 new CalculateFieldSimpleMath(activityFieldname: "GADΔ",
@@ -61,7 +72,12 @@
 
             PreTimeSeriesCalulators = new List<CalculateFieldBase>
             {
-                new CalculateFieldSimpleDefault("Distance", "Elapsed Time", 2.98f, CalculateFieldSimpleDefault.Mode.Multiply, true, Activity.ActivityTypeRun), //9 min/mile is 2.98 m/s
+                new CalculateFieldSimpleDefault("Distance",
+                                                "Elapsed Time",
+                                                2.98f,
+                                                CalculateFieldSimpleDefault.Mode.Multiply,
+                                                CalculateFieldSimple.OverrideMode.OverrideRecordedZeroOnly,
+                                                Activity.ActivityTypeRun), //9 min/mile is 2.98 m/s
 
             };
 
