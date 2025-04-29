@@ -17,14 +17,19 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 //NB Order is important - the underlying data has to be calcualted first
 
-                new TimeSeriesCalculateDistance(name:Activity.TagDistance, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
+                new TimeSeriesCalculateDistance(name:Activity.TagDistance, 
+                                                parent: activity, 
+                                                persistCache:false, 
+                                                requiredFields: null, 
+                                                opposingFields: null,
+                                                sportsToInclude:Activity.ActivityTypeOnFoot),
 
                 new TimeSeriesDelta(name:Activity.TagSpeed,
                                     parent: activity,
                                     persistCache:DefaultPersistCache2,
                                     requiredFields: new List<string> { "Distance"},
                                     opposingFields: null,
-                                    sportsToInclude:Activity.ActivityTypeRun),
+                                    sportsToInclude:Activity.ActivityTypeOnFoot),
 
                 new TimeSeriesCalculateAltitude(name:Activity.TagAltitude, parent: activity, persistCache:false, requiredFields: null, opposingFields: null, sportsToInclude:Activity.ActivityTypeRun),
 
@@ -34,7 +39,7 @@ namespace FellrnrTrainingAnalysis.Model
                                     persistCache:DefaultPersistCache2,
                                     requiredFields: new List<string> { "Altitude"},
                                     opposingFields: null,
-                                    sportsToInclude:Activity.ActivityTypeRun,
+                                    sportsToInclude:Activity.ActivityTypeOnFoot,
                                     period: 60), //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
 
@@ -43,7 +48,7 @@ namespace FellrnrTrainingAnalysis.Model
                                     persistCache:true,  //this is more expensive than most ts
                                     requiredFields: new List<string> { "Distance", "Altitude" },
                                     opposingFields: null,
-                                    sportsToInclude:Activity.ActivityTypeRun,
+                                    sportsToInclude:Activity.ActivityTypeOnFoot,
                                     spanPeriod: 15), //15 seems better than 30, but maybe TODO: goal seek span period for incline?
 
 
@@ -52,7 +57,7 @@ namespace FellrnrTrainingAnalysis.Model
                                                     persistCache:DefaultPersistCache2,
                                                     requiredFields: new List<string> { "Speed" }, //we can do without Incline and just return speed
                                                     opposingFields: null,
-                                                    sportsToInclude:Activity.ActivityTypeRun,
+                                                    sportsToInclude:Activity.ActivityTypeOnFoot,
                                                     inclineSeries: "Incline"),
 
                 new TimeSeriesCalculatePower(name:Activity.TagPower,
@@ -99,6 +104,14 @@ namespace FellrnrTrainingAnalysis.Model
                                             requiredFields: new List<string> { "Power" },
                                             opposingFields: null,
                                             sportsToInclude:Activity.ActivityTypeRun),
+
+                new PowerDistributionCurve(name:Activity.TagPowerDistributionCurve,
+                                            parent: activity,
+                                            persistCache:true,
+                                            requiredFields: new List<string> { Activity.TagPower },
+                                            opposingFields: null,
+                                            sportsToInclude:Activity.ActivityTypeRun),
+
 
                 //You can grade adjust speed rather than delta on distance, but the result is surprisingly close
                 //Watch out for differences in smoothing making GAP look wrong compared with speed/pace. 

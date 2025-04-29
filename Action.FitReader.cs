@@ -87,6 +87,11 @@ namespace FellrnrTrainingAnalysis.Action
                 throw new Exception("File " + filepath + " not found");
             }
 
+            if(new System.IO.FileInfo(filepath).Length == 0)
+            {
+                throw new Exception("File " + filepath + " is empty");
+            }
+
             //using (FileStream fitSource = new FileStream(filename, FileMode.Open, FileAccess.Read))
             using (Stream fitSource = Misc.DecompressAndOpenFile(filepath))
             {
@@ -375,7 +380,12 @@ namespace FellrnrTrainingAnalysis.Action
             FileIdMesg myFileIdMesg = (FileIdMesg)e.mesg;
             var timestampUint = myFileIdMesg.GetFieldValue(FileIdMesg.FieldDefNum.TimeCreated);
 
-            Dynastream.Fit.DateTime dt = new Dynastream.Fit.DateTime((uint)timestampUint);
+            if(timestampUint == null )
+            {
+                throw new Exception("File has null time created, probably a bad file");
+            }
+
+            Dynastream.Fit.DateTime dt = new Dynastream.Fit.DateTime((uint)timestampUint);  //fails on empty file
             System.DateTime startTime = dt.GetDateTime();
             Calculation.lastStop = startTime;
 

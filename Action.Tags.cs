@@ -83,7 +83,7 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 if(target != Activity.TagAltitude)
                 {
-                    Logging.Instance.Error($"ProcessTag Lookup isn't altitude {target}");
+                    Logging.Instance.Error($"ProcessTag Lookup isn't altitude, target [{target}], tag [{tag}]");
                     Success = false;
                     return;
                 }

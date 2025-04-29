@@ -13,6 +13,7 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(5, typeof(TimeSeriesCalculatePower))]
     [MemoryPackUnion(6, typeof(TimeSeriesIncline))]
     [MemoryPackUnion(7, typeof(TimeSeriesCalculateDistance))]
+    [MemoryPackUnion(8, typeof(PowerDistributionCurve))]
 
     public abstract partial class TimeSeriesEphemeral : TimeSeriesBase
     {
@@ -123,7 +124,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public abstract TimeValueList? CalculateData(int forceCount, bool forceJustMe);
 
-        public override TimeValueList? GetData(int forceCount, bool forceJustMe)
+        public override TimeValueList? GetData(int forceCount = 0, bool forceJustMe = false)
         {
             if (!CacheValid)
             {

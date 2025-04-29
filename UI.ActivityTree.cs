@@ -121,7 +121,8 @@ namespace FellrnrTrainingAnalysis.UI
                             }
                             else
                             {
-                                if (activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                                if (activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None && 
+                                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
                                     column.TextAlign = HorizontalAlignment.Right;
                                 column.IsVisible = true;
                                 int positionInTree = (int)activityDatumMetadata.PositionInTree;

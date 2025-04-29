@@ -19,6 +19,8 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackInclude]
         private SortedDictionary<DateTime, Day> _days { get; set; }
 
+
+
         [MemoryPackIgnore]
         public ReadOnlyDictionary<DateTime, Day> Days { get { return _days.AsReadOnly(); } }
 
@@ -607,6 +609,36 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 kvp.Value.PreSerialize(this);
             }
+        }
+
+        public PowerDistributionCurve.BestCurve? CalculateDistrubutionCurve(string tag, DateTime start, int duration)
+        {
+            Dictionary<Activity, TimeValueList> curves = new Dictionary<Activity, TimeValueList>();
+            int onehr = PowerDistributionCurve.OneHourOffset();
+            foreach (var kvp in Activities)
+            {
+                Activity activity = (Activity)kvp.Value;
+                DateTime? activityDate = activity.StartDateNoTimeLocal;
+                if (activityDate == null) continue;
+
+                if (activityDate > start) continue; //in the future
+
+                if (activityDate < start.AddDays(0-duration)) continue; //before the start point 
+
+                if (!activity.TimeSeries.ContainsKey(tag)) continue;
+                TimeValueList? curve = activity.TimeSeries[tag].GetData();
+                if (curve == null) continue;
+
+                if (curve.Length > onehr && curve.Values[onehr] > 300)
+                    Logging.Instance.Debug("huh");
+                curves.Add(activity, curve);
+            }
+
+            if (curves.Count == 0) return null;
+
+            PowerDistributionCurve.BestCurve bestCurve = PowerDistributionCurve.BestCurves(curves, start);
+            return bestCurve;
+
         }
 
         public const string AthleteIdTag = "AthleteId";

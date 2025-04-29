@@ -38,10 +38,11 @@
             splitContainer1 = new SplitContainer();
             formsPlotProgress = new ScottPlot.FormsPlot();
             tableLayoutPanel1 = new TableLayoutPanel();
-            label4 = new Label();
-            label5 = new Label();
-            label6 = new Label();
-            operationLabel = new Label();
+            operationLabelCol1 = new Label();
+            dataLabelCol0 = new Label();
+            typeLabelCol2 = new Label();
+            smoothLabelCol3 = new Label();
+            axisLabelCol4 = new Label();
             flowLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -146,15 +147,17 @@
             // 
             tableLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tableLayoutPanel1.AutoScroll = true;
-            tableLayoutPanel1.ColumnCount = 4;
+            tableLayoutPanel1.ColumnCount = 5;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
-            tableLayoutPanel1.Controls.Add(operationLabel, 0, 0);
-            tableLayoutPanel1.Controls.Add(label4, 0, 0);
-            tableLayoutPanel1.Controls.Add(label5, 1, 0);
-            tableLayoutPanel1.Controls.Add(label6, 2, 0);
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.Controls.Add(dataLabelCol0, 0, 0);
+            tableLayoutPanel1.Controls.Add(axisLabelCol4, 4, 0);
+            tableLayoutPanel1.Controls.Add(operationLabelCol1, 1, 0);
+            tableLayoutPanel1.Controls.Add(typeLabelCol2, 2, 0);
+            tableLayoutPanel1.Controls.Add(smoothLabelCol3, 3, 0);
             tableLayoutPanel1.Location = new Point(3, 3);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
@@ -162,41 +165,50 @@
             tableLayoutPanel1.Size = new Size(377, 597);
             tableLayoutPanel1.TabIndex = 0;
             // 
-            // label4
+            // operationLabelCol1
             // 
-            label4.AutoSize = true;
-            label4.Location = new Point(3, 0);
-            label4.Name = "label4";
-            label4.Size = new Size(49, 25);
-            label4.TabIndex = 0;
-            label4.Text = "Data";
+            operationLabelCol1.AutoSize = true;
+            operationLabelCol1.Location = new Point(58, 0);
+            operationLabelCol1.Name = "operationLabelCol1";
+            operationLabelCol1.Size = new Size(92, 25);
+            operationLabelCol1.TabIndex = 3;
+            operationLabelCol1.Text = "Operation";
             // 
-            // label5
+            // dataLabelCol0
             // 
-            label5.AutoSize = true;
-            label5.Location = new Point(156, 0);
-            label5.Name = "label5";
-            label5.Size = new Size(49, 25);
-            label5.TabIndex = 1;
-            label5.Text = "Type";
+            dataLabelCol0.AutoSize = true;
+            dataLabelCol0.Location = new Point(3, 0);
+            dataLabelCol0.Name = "dataLabelCol0";
+            dataLabelCol0.Size = new Size(49, 25);
+            dataLabelCol0.TabIndex = 0;
+            dataLabelCol0.Text = "Data";
             // 
-            // label6
+            // typeLabelCol2
             // 
-            label6.AutoSize = true;
-            label6.Location = new Point(211, 0);
-            label6.Name = "label6";
-            label6.Size = new Size(76, 25);
-            label6.TabIndex = 2;
-            label6.Text = "Smooth";
+            typeLabelCol2.AutoSize = true;
+            typeLabelCol2.Location = new Point(156, 0);
+            typeLabelCol2.Name = "typeLabelCol2";
+            typeLabelCol2.Size = new Size(49, 25);
+            typeLabelCol2.TabIndex = 1;
+            typeLabelCol2.Text = "Type";
             // 
-            // operationLabel
+            // smoothLabelCol3
             // 
-            operationLabel.AutoSize = true;
-            operationLabel.Location = new Point(58, 0);
-            operationLabel.Name = "operationLabel";
-            operationLabel.Size = new Size(92, 25);
-            operationLabel.TabIndex = 3;
-            operationLabel.Text = "Operation";
+            smoothLabelCol3.AutoSize = true;
+            smoothLabelCol3.Location = new Point(211, 0);
+            smoothLabelCol3.Name = "smoothLabelCol3";
+            smoothLabelCol3.Size = new Size(76, 25);
+            smoothLabelCol3.TabIndex = 2;
+            smoothLabelCol3.Text = "Smooth";
+            // 
+            // axisLabelCol4
+            // 
+            axisLabelCol4.AutoSize = true;
+            axisLabelCol4.Location = new Point(293, 0);
+            axisLabelCol4.Name = "axisLabelCol4";
+            axisLabelCol4.Size = new Size(44, 25);
+            axisLabelCol4.TabIndex = 4;
+            axisLabelCol4.Text = "Axis";
             // 
             // ProgressGraph
             // 
@@ -229,9 +241,10 @@
         private SplitContainer splitContainer1;
         private ScottPlot.FormsPlot formsPlotProgress;
         private TableLayoutPanel tableLayoutPanel1;
-        private Label label4;
-        private Label label5;
-        private Label label6;
-        private Label operationLabel;
+        private Label dataLabelCol0;
+        private Label typeLabelCol2;
+        private Label smoothLabelCol3;
+        private Label operationLabelCol1;
+        private Label axisLabelCol4;
     }
 }

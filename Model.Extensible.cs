@@ -77,12 +77,15 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddOrReplaceDatum(Datum datum)
         {
-            if (!Data.ContainsKey(datum.Name))
+            lock(Data)
             {
-                Data.Add(datum.Name, datum);
-                NewDatumNameAdded(datum.Name);
+                if (!Data.ContainsKey(datum.Name))
+                {
+                    Data.Add(datum.Name, datum);
+                    NewDatumNameAdded(datum.Name);
+                }
+                Data[datum.Name] = datum;
             }
-            Data[datum.Name] = datum;
         }
 
         public void ImportDatum<T>(string name, ActivityDatumMapping.DataSourceEnum source, ActivityDatumMapping.LevelType level, T data)
@@ -122,5 +125,7 @@ namespace FellrnrTrainingAnalysis.Model
             foreach (string s in toDelete)
                 Data.Remove(s);
         }
+
+        public virtual bool CheckSportType(List<string>? sportsToInclude) { return true; }
     }
 }

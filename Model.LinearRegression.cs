@@ -64,14 +64,12 @@ namespace FellrnrTrainingAnalysis.Model
         public string StravaId { get => stravaId; set => stravaId = value; }
         public DateTime? ActivityStart { get => activityStart; set => activityStart = value; }
 
-        private void Evaluate(AlignedTimeSeries alignedTimeSeries, bool primaryIsX, bool ignoreZerosX, bool ignoreZerosY)
-        {
-            int length = alignedTimeSeries.Length;
-            Count += length;
-            float[] arrayX = primaryIsX ? alignedTimeSeries.Primary : alignedTimeSeries.Secondary;
-            float[] arrayY = !primaryIsX ? alignedTimeSeries.Primary : alignedTimeSeries.Secondary;
 
+        private void Evaluate(float[] arrayX, float[] arrayY, bool ignoreZerosX, bool ignoreZerosY)
+        {
             //this isn't quite right; we really need the average of all time series, not doing it per list
+            int length = arrayX.Length;
+            Count += length;
             avgX = arrayX.Average();
             avgY = arrayX.Average();
             double sumSqDiffXThis = 0;
@@ -108,7 +106,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (RNumerator == 0 && RDenom == 0) //can happen when x is constant
             {
-                RSquared = 0; 
+                RSquared = 0;
             }
             else
             {
@@ -116,7 +114,7 @@ namespace FellrnrTrainingAnalysis.Model
 
                 RSquared = (float)(dblR * dblR);
             }
-            if(sCo == 0 && ssX == 0)
+            if (sCo == 0 && ssX == 0)
             {
                 Slope = 0;
                 YIntercept = 0;
@@ -164,10 +162,17 @@ namespace FellrnrTrainingAnalysis.Model
 
         public static LinearRegression? EvaluateLinearRegression(AlignedTimeSeries alignedTimeSeries, bool primaryIsX, bool ignoreZerosX, bool ignoreZerosY)
         {
-            LinearRegression lr = new LinearRegression(); 
-            
 
-            lr.Evaluate(alignedTimeSeries, primaryIsX, ignoreZerosX, ignoreZerosY);
+            float[] arrayX = primaryIsX ? alignedTimeSeries.Primary : alignedTimeSeries.Secondary;
+            float[] arrayY = !primaryIsX ? alignedTimeSeries.Primary : alignedTimeSeries.Secondary;
+
+            return EvaluateLinearRegression(arrayX, arrayY, ignoreZerosX, ignoreZerosY);
+        }
+        public static LinearRegression? EvaluateLinearRegression(float[] arrayX, float[] arrayY, bool ignoreZerosX, bool ignoreZerosY)
+        {
+            LinearRegression lr = new LinearRegression();
+
+            lr.Evaluate(arrayX, arrayY, ignoreZerosX, ignoreZerosY);
 
             if (double.IsNaN(lr.RSquared))
             {

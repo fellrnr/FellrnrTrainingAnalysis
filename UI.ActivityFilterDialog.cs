@@ -587,13 +587,11 @@ new object[] { true });
 
         private class LocationFilter : FilterRow
         {
-            ComboBox? Value1;
-            ComboBox? Value2;
 
             IReadOnlyCollection<string> PossibleFields;
 
-            public override string ValueOne() { return Value1 != null ? Value1.Text : ""; }
-            public override string ValueTwo() { return Value2 != null ? Value2.Text : ""; }
+            public override string ValueOne() { return ""; }
+            public override string ValueTwo() { return ""; }
 
             public LocationFilter(TableLayoutPanel tableLayoutPanel, string name, int row, KeyPressEventHandler onEnterHandler, IReadOnlyCollection<string> possibleFields) : base(tableLayoutPanel, name, row, FilterLocation.filterCommands, onEnterHandler)
             {

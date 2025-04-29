@@ -16,6 +16,7 @@
         public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
         public static List<Period> DefaultEmailPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
         public static List<Period> DefaultStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
+        public static List<Period> ShortStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30) };
     }
 
     internal class PeriodRolling : Period

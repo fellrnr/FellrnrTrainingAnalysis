@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.UI;
+using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -417,11 +418,15 @@ namespace FellrnrTrainingAnalysis.Model
         public const string TagElapsedTime = "Elapsed Time";
         public const string TagHeartRate = "Heart Rate";
         public const string TagPower = "Power";
+        public const string TagAveragePower = "Avg Power";
         public const string TagHrPwr = "HrPwr";
         public const string TagMovingTime = "Moving Time";
         public const string TagTreadmillAngle = "Treadmill Angle";
         public const string TagProcessedTags = "Processed Tags";
+        public const string TagPowerDistributionCurve = "Power Distrubution Curve";
+        public const string Tag1HrPwr = "1Hr Pwr";
         public static List<string> ActivityTypeRun = new List<string> { "Run", "Virtual Run" };
+        public static List<string> ActivityTypeOnFoot = new List<string> { "Run", "Walk", "Hike", "Virtual Run" };
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";
@@ -517,18 +522,77 @@ namespace FellrnrTrainingAnalysis.Model
         public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches
 
 
-        public bool CheckSportType(List<string> sportsToInclude)
+        public override bool CheckSportType(List<string>? sportsToInclude)
         {
             string? activitySportType = this.ActivityType?.Trim(); //had spaces after sport
             //if (activity.StartDateNoTime == DateTime.Now.AddDays(-1).Date)
             //{
             //    MessageBox.Show(activitySportType);
             //}
-            if (activitySportType == null || sportsToInclude == null)
+            if (sportsToInclude == null)
+                return true;
+            if (activitySportType == null)
                 return false;
             if (!sportsToInclude.Contains(activitySportType))
                 return false;
             return true;
+        }
+
+
+        private string AddDatum(Extensible extensible, string text, string name, bool addnewline = true)
+        {
+            if (extensible.HasNamedDatum(name))
+            {
+                string formated = DatumFormatter.Format(extensible, name);
+                if(addnewline)
+                    return $"{Environment.NewLine}{text}{formated}";
+                else
+                    return $"{text}{formated}";
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        public string? UpdatedDescription()
+        {
+            string magic = "https://fellrnr.com";
+            string description = Description;
+
+            if (description.Contains(magic))
+                return null;
+
+
+            description += AddDatum(this, "5-Zone-1: ", "5-Zone-1");
+            description += AddDatum(this, " ", "5-Zone-1%", false);
+            description += AddDatum(this, "5-Zone-2: ", "5-Zone-2");
+            description += AddDatum(this, " ", "5-Zone-2%", false);
+            description += AddDatum(this, "5-Zone-3: ", "5-Zone-3");
+            description += AddDatum(this, " ", "5-Zone-3%", false);
+            description += AddDatum(this, "5-Zone-4: ", "5-Zone-4");
+            description += AddDatum(this, " ", "5-Zone-4%", false);
+            description += AddDatum(this, "5-Zone-5: ", "5-Zone-5");
+            description += AddDatum(this, " ", "5-Zone-5%", false);
+            description += AddDatum(this, "5-Zone-5a: ", "5-Zone-5a");
+            description += AddDatum(this, " ", "5-Zone-5a%", false);
+
+            float? distance = GetNamedFloatDatum(TagDistance);
+            float? gad = GetNamedFloatDatum(TagGradeAdjustedDistance);
+            if (distance.HasValue && gad.HasValue && gad.Value > (distance.Value * 1.1))
+            {
+                description += AddDatum(this, "Grade Adjusted Distance: ", TagGradeAdjustedDistance);
+            }
+            description += AddDatum(Day, "🏃 Distance 7D: ", "Σ🏃→ 7D");
+            description += AddDatum(Day, "🏃 Grade Adjusted Distance 7D: ", "Σ🏃📐 7D");
+            description += AddDatum(Day, "🏃 Distance 12M: ", "Σ🏃→ 1Y");
+            description += AddDatum(Day, "🏃 Grade Adjusted Distance 12M: ", "Σ🏃📐 1Y");
+            description += AddDatum(Day, "PolarizationIndex 30D: ", "PolarizationIndex 30D");
+            description += AddDatum(Day, "🏃 Elevation 12M: ", "Σ🏃⬆ 1Y");
+            description += AddDatum(Day, "🦶 Elevation 12M: ", "Σ🦶⬆ 1Y");
+            description += AddDatum(this, "", TagClimbed);
+            description += $"{Environment.NewLine}{magic}"; ;
+            return description;
         }
 
     }

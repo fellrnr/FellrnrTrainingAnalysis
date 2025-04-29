@@ -61,12 +61,26 @@ namespace FellrnrTrainingAnalysis.Action
         }
 
         //returns count processed and count left
-        public Tuple<int, int> SyncNewActivites(Database database)
+
+        public class SyncedData
+        {
+            public int synced;
+            public int remaining;
+            public List<Activity> activities = new List<Activity>();
+
+            public SyncedData(int synced, int remaining)
+            {
+                this.synced = synced;
+                this.remaining = remaining;
+            }
+        }
+
+        public SyncedData SyncNewActivites(Database database)
         {
             if (database == null || database.CurrentAthlete == null)
             {
                 Logging.Instance.Debug(string.Format("Database or CurrentAthlete is null"));
-                return new Tuple<int, int>(0, 0);
+                return new SyncedData(0, 0);
             }
             DateTime? onlyAfter = null;
             if (database != null && database.CurrentAthlete != null && database.CurrentAthlete.CalendarTree != null && database.CurrentAthlete.CalendarTree.Count > 0)
@@ -79,12 +93,22 @@ namespace FellrnrTrainingAnalysis.Action
             if (onlyAfter == null && Options.Instance.OnlyLoadAfter != null)
                 onlyAfter = Options.Instance.OnlyLoadAfter;
 
-            SummaryActivity[] newActivities = StravaApiV3Sharp.Activities.GetLoggedInAthleteActivities(null, onlyAfter);
-            if (newActivities == null)
+            SummaryActivity[] newActivities;
+            try
             {
-                return new Tuple<int, int>(-1, -1);
+                newActivities = StravaApiV3Sharp.Activities.GetLoggedInAthleteActivities(null, onlyAfter);
+                if (newActivities == null)
+                {
+                    return new SyncedData(-1, -1);
+                }
             }
-            int counter = 0;
+            catch (Exception ex)
+            {
+                Logging.Instance.Error($"Failed to get activities from strava with exception {ex}");
+                return new SyncedData(-1, -1);
+            }
+
+            SyncedData syncedData = new SyncedData(0, newActivities.Length);
             foreach (SummaryActivity stravaActivity in newActivities)
             {
                 if (stravaActivity.Id == null)
@@ -94,14 +118,17 @@ namespace FellrnrTrainingAnalysis.Action
                 }
                 else
                 {
-                    GetActivityFromStrava(database!, stravaActivity.Id.Value);
-                    counter++;
-                    if (counter >= 10)
-                        return new Tuple<int, int>(counter, newActivities.Length - counter);
+                    Activity? activity = GetActivityFromStrava(database!, stravaActivity.Id.Value);
+                    if(activity != null)
+                        syncedData.activities.Add(activity);
+                    syncedData.synced++;
+                    syncedData.remaining--;
+                    if (syncedData.synced >= Options.Instance.StravaSyncSize)
+                        return syncedData;
 
                 }
             }
-            return new Tuple<int, int>(counter, 0);
+            return syncedData;
         }
 
         public void RefreshActivity(Database database, Activity activity)
@@ -126,13 +153,19 @@ namespace FellrnrTrainingAnalysis.Action
                 //we had a null error on this call that went away the next morning. The activity had zeros in power, and seemed to be related to the power stream
                 //https://www.strava.com/activities/9398565924
                 //also see "Testing Strava API.docx" in OneDrive 
-                StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams(stravaId, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.Temp);
-                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
-                //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
-                //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
-                AddTimeSeries(activity, streamSet);
-
+                try
+                {
+                    StreamSet streamSet = StravaApiV3Sharp.Streams.GetActivityStreams(stravaId, (StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
+                    //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.Temp);
+                    //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp);
+                    //StreamTypes.Time | StreamTypes.Distance | StreamTypes.Latlng | StreamTypes.Altitude | StreamTypes.Cadence | StreamTypes.VelocitySmooth | StreamTypes.Watts | StreamTypes.Temp );
+                    //(StreamTypes)Options.Instance.StravaStreamTypesToRetrieve); ;
+                    AddTimeSeries(activity, streamSet);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Instance.Log($"No streams found for {activity.Id}, {ex}");
+                }
                 List<Uri>? photos = detailedActivity.Photos?.Primary?.Urls?.Values?.ToList(); //TODO: Photos from Strava API is only returning two resolutions of one photo
                 activity.PhotoUris = photos;
 
@@ -157,33 +190,40 @@ namespace FellrnrTrainingAnalysis.Action
                 updatableActivity.Name = name;
             }
             long stravaId;
-            if (long.TryParse(activity.PrimaryKey(), out stravaId))
+            if (!long.TryParse(activity.PrimaryKey(), out stravaId))
             {
-                try
-                {
-                    DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.UpdateActivityById(stravaId, updatableActivity);
-
-
-                    if (name != null)
-                    {
-                        if (detailedActivity.Name != updatableActivity.Name)
-                            return false;
-                        TypedDatum<string> typedDatum = new TypedDatum<string>("Name", true, name);
-                        activity.AddOrReplaceDatum(typedDatum);
-                    }
-                    if (description != null)
-                    {
-                        if (detailedActivity.Description != updatableActivity.Description)
-                            return false;
-                        TypedDatum<string> typedDatum = new TypedDatum<string>(Activity.TagDescription, true, description);
-                        activity.AddOrReplaceDatum(typedDatum);
-                    }
-                    return true;
-                }
-                catch (Exception) { return false; }
-
+                Logging.Instance.Error("Couldn't parse primary key {activity.PrimaryKey()}");
+                return false;
             }
-            return false;
+            try
+            {
+                DetailedActivity detailedActivity = StravaApiV3Sharp.Activities.UpdateActivityById(stravaId, updatableActivity);
+
+                if (name != null)
+                {
+                    if (detailedActivity.Name != updatableActivity.Name)
+                        return false;
+                    TypedDatum<string> typedDatum = new TypedDatum<string>("Name", true, name);
+                    activity.AddOrReplaceDatum(typedDatum);
+                }
+                if (description != null)
+                {
+                    if (detailedActivity.Description != updatableActivity.Description)
+                    {
+                        Logging.Instance.Error("Failed to update description, should be {updatableActivity.Description} got {detailedActivity.Description}");
+                        return false;
+                    }
+                    TypedDatum<string> typedDatum = new TypedDatum<string>(Activity.TagDescription, true, description);
+                    activity.AddOrReplaceDatum(typedDatum);
+                }
+                return true;
+            }
+            catch (Exception) 
+            {
+                Logging.Instance.Error("Failed to update description with exception {e}");
+                return false; 
+            }
+
         }
 
         public class UploadResult
@@ -331,6 +371,13 @@ namespace FellrnrTrainingAnalysis.Action
 
         }
 
+        private void AddTimeSeries(Activity activity, string name, uint[] time, int?[] data)
+        {
+            if (data == null)
+                return;
+            int[] nonnullvalues = Array.ConvertAll(data, x => x ?? 0);
+            AddTimeSeries(activity, name, time, nonnullvalues);
+        }
         private void AddTimeSeries(Activity activity, string name, uint[] time, int[] data)
         {
             if (data == null)

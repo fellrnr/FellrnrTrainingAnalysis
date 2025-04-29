@@ -13,7 +13,7 @@ using System.Text;
 using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-namespace FellrnrTrainingAnalysis
+namespace FellrnrTrainingAnalysis.UI
 {
     partial class ActivityReport
     {
@@ -221,29 +221,12 @@ namespace FellrnrTrainingAnalysis
             UpdateViews?.Invoke();
         }
 
-        private string AddDatum(Extensible extensible, string text, string name)
-        {
-            if (extensible.HasNamedDatum(name))
-            {
-                string formated = DatumFormatter.Format(extensible, name);
-                return $"{Environment.NewLine}{text}{formated}";
-            }
-            else
-            {
-                return string.Empty;
-            }
-        }
         private void toolStripItem1_Click_updateDescription(object? sender, EventArgs args)
         {
             Model.Activity? activity = GetActivity();
             if (activity == null) return;
-
-            string description = activity.Description;
-            description += AddDatum(activity, "Grade Adjusted Distance: ", Activity.TagGradeAdjustedDistance);
-            description += AddDatum(activity.Day, "Distance Rolling Year: ", "Σ🏃→ 1Y");
-            description += AddDatum(activity.Day, "Elevation Rolling Year: ", "Σ🏃⬆ 1Y");
-            description += AddDatum(activity.Day, "Grade Adjusted Distance Rolling Year: ", "Σ🏃📐 1Y");
-            description += AddDatum(activity, "", Activity.TagClimbed);
+            string? description = activity.UpdatedDescription();
+            if(description == null) return;
 
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(description);
             largeTextDialogForm.ShowDialog();
@@ -594,7 +577,8 @@ namespace FellrnrTrainingAnalysis
             if (mouseLocation == null || sender == null)
                 return;
             ToolStripMenuItem toolStripMenuItem = (ToolStripMenuItem)sender;
-            TagActivities aTagActivities = (TagActivities)toolStripMenuItem.Tag;
+            TagActivities? aTagActivities = (TagActivities?)toolStripMenuItem.Tag;
+            if (aTagActivities == null) return; //should never happen
             string tag = aTagActivities.Tag;
 
             DataGridViewRow row = activityDataGridView.Rows[mouseLocation.RowIndex];
@@ -618,7 +602,8 @@ namespace FellrnrTrainingAnalysis
         {
             if (sender == null) return;
             ToolStripMenuItem toolStripMenuItem = (ToolStripMenuItem)sender;
-            TagActivities aTagActivities = (TagActivities)toolStripMenuItem.Tag;
+            TagActivities? aTagActivities = (TagActivities?)toolStripMenuItem.Tag;
+            if (aTagActivities == null) return; //should never happen
             string tag = aTagActivities.Tag;
 
             List<Activity> aActivities = new List<Activity>();

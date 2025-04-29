@@ -65,7 +65,9 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (string name in athlete.ActivityFieldNames)
             {
                 ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name); //NB, look up without the prefix
-                if (activityDatumMetadata != null && activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                if (activityDatumMetadata != null && 
+                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None &&
+                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
                 {
                     if (!Filters.ContainsKey(name))
                     {
@@ -77,7 +79,9 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (string name in athlete.DayFieldNames)
             {
                 ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name);
-                if (activityDatumMetadata != null && activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None)
+                if (activityDatumMetadata != null && 
+                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None &&
+                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
                 {
                     if (!Filters.ContainsKey(name))
                     {
@@ -100,6 +104,7 @@ namespace FellrnrTrainingAnalysis.UI
         }
 
         private List<Axis> CurrentAxis { get; set; } = new List<Axis>();
+        private Dictionary<int, Axis> ReusedAxis { get; set; } = new Dictionary<int, Axis>();
         private int axisIndex = 0;
 
         private void RefreshGraph()
@@ -109,6 +114,7 @@ namespace FellrnrTrainingAnalysis.UI
             formsPlotProgress.Plot.Clear();
             foreach (Axis axis in CurrentAxis) { formsPlotProgress.Plot.RemoveAxis(axis); }
             CurrentAxis.Clear();
+            ReusedAxis.Clear();
             axisIndex = 0;
             if (_database == null || _database.CurrentAthlete == null || _database.CurrentAthlete.ActivitiesByLocalDateTime.Count == 0 || _filterActivities == null) { return; }
 
@@ -143,6 +149,9 @@ namespace FellrnrTrainingAnalysis.UI
                         }
                     }
                 }
+
+                if (values.Count == 0)
+                    continue;
                 double[] xArray = dateTimes.Select(x => x.ToOADate()).ToArray();
                 double[] yArray = values.ToArray();
                 if (filterRow.Smoothing > 0)
@@ -173,22 +182,32 @@ namespace FellrnrTrainingAnalysis.UI
 
                 formsPlotProgress.Plot.XAxis.DateTimeFormat(true);
                 Axis yAxis;
-                if (axisIndex == 0)
+                int forcedAxis = filterRow.Axis;
+                if (forcedAxis > 0 && ReusedAxis.ContainsKey(forcedAxis))
                 {
-                    yAxis = formsPlotProgress.Plot.YAxis;
-                    plottable.YAxisIndex = 0;
-
+                    yAxis = ReusedAxis[forcedAxis];
+                    yAxis.Label($"{yAxis.Label()}/{filterRow.Name}");
                 }
                 else
                 {
-                    yAxis = formsPlotProgress.Plot.AddAxis(Edge.Left);
-                    //yAxis.AxisIndex = axisIndex + 4; //there are 4 default axises we have to skip
-                    plottable.YAxisIndex = yAxis.AxisIndex;
-                    CurrentAxis.Add(yAxis);
+                    if (axisIndex == 0)
+                    {
+                        yAxis = formsPlotProgress.Plot.YAxis;
+                        plottable.YAxisIndex = 0;
+                    }
+                    else
+                    {
+                        yAxis = formsPlotProgress.Plot.AddAxis(Edge.Left);
+                        //yAxis.AxisIndex = axisIndex + 4; //there are 4 default axises we have to skip
+                        plottable.YAxisIndex = yAxis.AxisIndex;
+                        CurrentAxis.Add(yAxis);
+                    }
+                    yAxis.Label(filterRow.Name);
+                    yAxis.Color(myPalette.GetColor(axisIndex));
+                    axisIndex++;
+                    if(forcedAxis >= 0)
+                        ReusedAxis[forcedAxis] = yAxis;
                 }
-                yAxis.Label(filterRow.Name);
-                yAxis.Color(myPalette.GetColor(axisIndex));
-                axisIndex++;
 
             }
             formsPlotProgress.Refresh();
@@ -239,7 +258,7 @@ namespace FellrnrTrainingAnalysis.UI
         {
             public enum FieldTypeEnum { Activity, Day, TimeSeries };
             public FieldTypeEnum FieldType { get; set; }
-            public string Name {  get; set; }
+            public string Name { get; set; }
 
             public string Operation { get { if (OperationBox != null) return OperationBox.Text; else return ""; } }
 
@@ -249,6 +268,7 @@ namespace FellrnrTrainingAnalysis.UI
             protected ComboBox? GraphStyleBox;
             protected ComboBox? OperationBox;
             protected NumericUpDown? SmoothingBox;
+            protected NumericUpDown? AxisBox;
             protected int Row;
             private DoRefresh DoRefresh;
             private TableLayoutPanel TableLayoutPanel;
@@ -268,25 +288,31 @@ namespace FellrnrTrainingAnalysis.UI
 
             public bool IsChecked { get { return FieldName.Checked; } }
             public decimal Smoothing { get { return SmoothingBox == null ? 0 : SmoothingBox.Value; } }
+            public int Axis { get { return AxisBox == null ? 0 : (int)AxisBox.Value; } }
 
             protected void ChangedHandler(object? sender, EventArgs e)
             {
                 if (GraphStyleBox == null)
                 {
-                    GraphStyleBox = new ComboBox { Text = LINE, Anchor = AnchorStyles.Left, AutoSize = true };
-                    GraphStyleBox.Items.AddRange(new string[] { LINE, BAR, SCATTER });
-                    GraphStyleBox.SelectedIndexChanged += ChangedHandler;
-                    TableLayoutPanel.Controls.Add(GraphStyleBox, 1, Row);
-                    SmoothingBox = new NumericUpDown { Value = 0, Anchor = AnchorStyles.Left, AutoSize = true, Increment = 1 };
-                    SmoothingBox.ValueChanged += ChangedHandler;
-                    TableLayoutPanel.Controls.Add(SmoothingBox, 2, Row);
                     if (FieldType == FieldTypeEnum.TimeSeries)
                     {
                         OperationBox = new ComboBox { Text = TimeSeriesBase.StaticsValueNames.Last(), Anchor = AnchorStyles.Left, AutoSize = true };
                         OperationBox.Items.AddRange(TimeSeriesBase.StaticsValueNames);
                         OperationBox.SelectedIndexChanged += ChangedHandler;
-                        TableLayoutPanel.Controls.Add(OperationBox, 4, Row);
+                        TableLayoutPanel.Controls.Add(OperationBox, 1, Row);
                     }
+                    GraphStyleBox = new ComboBox { Text = LINE, Anchor = AnchorStyles.Left, AutoSize = true };
+                    GraphStyleBox.Items.AddRange(new string[] { LINE, BAR, SCATTER });
+                    GraphStyleBox.SelectedIndexChanged += ChangedHandler;
+                    TableLayoutPanel.Controls.Add(GraphStyleBox, 2, Row);
+
+                    SmoothingBox = new NumericUpDown { Value = 0, Anchor = AnchorStyles.Left, AutoSize = true, Increment = 1 };
+                    SmoothingBox.ValueChanged += ChangedHandler;
+                    TableLayoutPanel.Controls.Add(SmoothingBox, 3, Row);
+
+                    AxisBox = new NumericUpDown { Minimum = -1, Value = -1, Anchor = AnchorStyles.Left, AutoSize = true, Increment = 1 };
+                    AxisBox.ValueChanged += ChangedHandler;
+                    TableLayoutPanel.Controls.Add(AxisBox, 4, Row);
                 }
                 DoRefresh.Invoke();
             }

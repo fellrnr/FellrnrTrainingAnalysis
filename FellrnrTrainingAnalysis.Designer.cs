@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FellrnrTrainingAnalysisForm));
             menuStrip1 = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
@@ -46,10 +47,12 @@
             dataSourcesToolStripMenuItem = new ToolStripMenuItem();
             bootstrapToolStripMenuItem = new ToolStripMenuItem();
             connectToStravaToolStripMenuItem = new ToolStripMenuItem();
+            syncWithStravaAndUpdateToolStripMenuItem = new ToolStripMenuItem();
             syncWithStravaToolStripMenuItem = new ToolStripMenuItem();
             loadWeightDataToolStripMenuItem = new ToolStripMenuItem();
             verifyAgainstFitlogToolStripMenuItem = new ToolStripMenuItem();
             updateFromFitlogToolStripMenuItem = new ToolStripMenuItem();
+            pollStravaToolStripMenuItem = new ToolStripMenuItem();
             viewToolStripMenuItem = new ToolStripMenuItem();
             logToolStripMenuItem = new ToolStripMenuItem();
             normalLogToolStripMenuItem = new ToolStripMenuItem();
@@ -70,30 +73,31 @@
             experimentalToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem1 = new ToolStripMenuItem();
-            clearFiltersToolStripMenuItem = new ToolStripMenuItem();
             showOnlyToolStripMenuItem = new ToolStripMenuItem();
+            fixResultsToolStripMenuItem = new ToolStripMenuItem();
+            toggleFilterToolStripMenuItem = new ToolStripMenuItem();
+            clearFiltersToolStripMenuItem = new ToolStripMenuItem();
             stravaToolStripMenuItem = new ToolStripMenuItem();
             graphTabPage = new TabPage();
-            progressGraph1 = new UI.ProgressGraph();
+            progressGraph1 = new FellrnrTrainingAnalysis.UI.ProgressGraph();
             summaryTabPage = new TabPage();
             summaryTextBox = new TextBox();
             tabControl1 = new TabControl();
             activityReport = new TabPage();
-            activityReport1 = new ActivityReport();
+            activityReport1 = new FellrnrTrainingAnalysis.UI.ActivityReport();
             activityTreeTabPage = new TabPage();
             splitContainer4 = new SplitContainer();
-            activityTree1 = new UI.ActivityTree();
+            activityTree1 = new FellrnrTrainingAnalysis.UI.ActivityTree();
             activityFormsPlot = new ScottPlot.FormsPlot();
             goalsTabPage = new TabPage();
             goalsSplitContainer4 = new SplitContainer();
             goalsTextBox = new TextBox();
             goalsDataGridView = new DataGridView();
             tabPage1 = new TabPage();
-            overviewMap1 = new UI.OverviewMap();
+            overviewMap1 = new FellrnrTrainingAnalysis.UI.OverviewMap();
             loadStravaCsvBackgroundWorker = new System.ComponentModel.BackgroundWorker();
             recalculateBackgroundWorker1 = new System.ComponentModel.BackgroundWorker();
-            fixResultsToolStripMenuItem = new ToolStripMenuItem();
-            toggleFilterToolStripMenuItem = new ToolStripMenuItem();
+            timerSyncStrava = new System.Windows.Forms.Timer(components);
             menuStrip1.SuspendLayout();
             graphTabPage.SuspendLayout();
             summaryTabPage.SuspendLayout();
@@ -216,7 +220,7 @@
             // 
             // dataSourcesToolStripMenuItem
             // 
-            dataSourcesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bootstrapToolStripMenuItem, connectToStravaToolStripMenuItem, syncWithStravaToolStripMenuItem, loadWeightDataToolStripMenuItem, verifyAgainstFitlogToolStripMenuItem, updateFromFitlogToolStripMenuItem });
+            dataSourcesToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { bootstrapToolStripMenuItem, connectToStravaToolStripMenuItem, syncWithStravaAndUpdateToolStripMenuItem, syncWithStravaToolStripMenuItem, loadWeightDataToolStripMenuItem, verifyAgainstFitlogToolStripMenuItem, updateFromFitlogToolStripMenuItem, pollStravaToolStripMenuItem });
             dataSourcesToolStripMenuItem.Name = "dataSourcesToolStripMenuItem";
             dataSourcesToolStripMenuItem.Size = new Size(132, 35);
             dataSourcesToolStripMenuItem.Text = "Data Sources";
@@ -224,7 +228,7 @@
             // bootstrapToolStripMenuItem
             // 
             bootstrapToolStripMenuItem.Name = "bootstrapToolStripMenuItem";
-            bootstrapToolStripMenuItem.Size = new Size(471, 58);
+            bootstrapToolStripMenuItem.Size = new Size(508, 58);
             bootstrapToolStripMenuItem.Text = "Load From Strava CSV...";
             bootstrapToolStripMenuItem.Click += loadFromStravaCsvToolStripMenuItem_Click;
             // 
@@ -233,37 +237,53 @@
             connectToStravaToolStripMenuItem.Image = (Image)resources.GetObject("connectToStravaToolStripMenuItem.Image");
             connectToStravaToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             connectToStravaToolStripMenuItem.Name = "connectToStravaToolStripMenuItem";
-            connectToStravaToolStripMenuItem.Size = new Size(471, 58);
+            connectToStravaToolStripMenuItem.Size = new Size(508, 58);
             connectToStravaToolStripMenuItem.Text = "Connect to Strava...";
             connectToStravaToolStripMenuItem.Click += connectToStravaToolStripMenuItem_Click;
+            // 
+            // syncWithStravaAndUpdateToolStripMenuItem
+            // 
+            syncWithStravaAndUpdateToolStripMenuItem.Name = "syncWithStravaAndUpdateToolStripMenuItem";
+            syncWithStravaAndUpdateToolStripMenuItem.Size = new Size(508, 58);
+            syncWithStravaAndUpdateToolStripMenuItem.Text = "Sync with Strava and Update";
+            syncWithStravaAndUpdateToolStripMenuItem.Click += syncWithStravaAndUpdateToolStripMenuItem_Click;
             // 
             // syncWithStravaToolStripMenuItem
             // 
             syncWithStravaToolStripMenuItem.Name = "syncWithStravaToolStripMenuItem";
-            syncWithStravaToolStripMenuItem.Size = new Size(471, 58);
+            syncWithStravaToolStripMenuItem.Size = new Size(508, 58);
             syncWithStravaToolStripMenuItem.Text = "Sync with Strava";
             syncWithStravaToolStripMenuItem.Click += syncWithStravaToolStripMenuItem_Click;
             // 
             // loadWeightDataToolStripMenuItem
             // 
             loadWeightDataToolStripMenuItem.Name = "loadWeightDataToolStripMenuItem";
-            loadWeightDataToolStripMenuItem.Size = new Size(471, 58);
+            loadWeightDataToolStripMenuItem.Size = new Size(508, 58);
             loadWeightDataToolStripMenuItem.Text = "Load Weight Data...";
             loadWeightDataToolStripMenuItem.Click += loadWeightDataToolStripMenuItem_Click;
             // 
             // verifyAgainstFitlogToolStripMenuItem
             // 
             verifyAgainstFitlogToolStripMenuItem.Name = "verifyAgainstFitlogToolStripMenuItem";
-            verifyAgainstFitlogToolStripMenuItem.Size = new Size(471, 58);
+            verifyAgainstFitlogToolStripMenuItem.Size = new Size(508, 58);
             verifyAgainstFitlogToolStripMenuItem.Text = "Verify against Fitlog...";
             verifyAgainstFitlogToolStripMenuItem.Click += verifyAgainstFitlogToolStripMenuItem_Click;
             // 
             // updateFromFitlogToolStripMenuItem
             // 
             updateFromFitlogToolStripMenuItem.Name = "updateFromFitlogToolStripMenuItem";
-            updateFromFitlogToolStripMenuItem.Size = new Size(471, 58);
+            updateFromFitlogToolStripMenuItem.Size = new Size(508, 58);
             updateFromFitlogToolStripMenuItem.Text = "Update from Fitlog...";
             updateFromFitlogToolStripMenuItem.Click += updateFromFitlogToolStripMenuItem_Click;
+            // 
+            // pollStravaToolStripMenuItem
+            // 
+            pollStravaToolStripMenuItem.Checked = true;
+            pollStravaToolStripMenuItem.CheckState = CheckState.Checked;
+            pollStravaToolStripMenuItem.Name = "pollStravaToolStripMenuItem";
+            pollStravaToolStripMenuItem.Size = new Size(508, 58);
+            pollStravaToolStripMenuItem.Text = "Poll Strava";
+            pollStravaToolStripMenuItem.Click += pollStravaToolStripMenuItem_Click;
             // 
             // viewToolStripMenuItem
             // 
@@ -399,22 +419,36 @@
             // filterToolStripMenuItem1
             // 
             filterToolStripMenuItem1.Name = "filterToolStripMenuItem1";
-            filterToolStripMenuItem1.Size = new Size(270, 34);
+            filterToolStripMenuItem1.Size = new Size(210, 34);
             filterToolStripMenuItem1.Text = "Filter...";
             filterToolStripMenuItem1.Click += filterToolStripMenuItem1_Click;
-            // 
-            // clearFiltersToolStripMenuItem
-            // 
-            clearFiltersToolStripMenuItem.Name = "clearFiltersToolStripMenuItem";
-            clearFiltersToolStripMenuItem.Size = new Size(270, 34);
-            clearFiltersToolStripMenuItem.Text = "Clear Filters";
-            clearFiltersToolStripMenuItem.Click += clearFiltersToolStripMenuItem_Click;
             // 
             // showOnlyToolStripMenuItem
             // 
             showOnlyToolStripMenuItem.Name = "showOnlyToolStripMenuItem";
-            showOnlyToolStripMenuItem.Size = new Size(270, 34);
+            showOnlyToolStripMenuItem.Size = new Size(210, 34);
             showOnlyToolStripMenuItem.Text = "Show Only";
+            // 
+            // fixResultsToolStripMenuItem
+            // 
+            fixResultsToolStripMenuItem.Name = "fixResultsToolStripMenuItem";
+            fixResultsToolStripMenuItem.Size = new Size(210, 34);
+            fixResultsToolStripMenuItem.Text = "Fix Results";
+            fixResultsToolStripMenuItem.Click += fixResultsToolStripMenuItem_Click;
+            // 
+            // toggleFilterToolStripMenuItem
+            // 
+            toggleFilterToolStripMenuItem.Name = "toggleFilterToolStripMenuItem";
+            toggleFilterToolStripMenuItem.Size = new Size(210, 34);
+            toggleFilterToolStripMenuItem.Text = "Toggle Filter";
+            toggleFilterToolStripMenuItem.Click += toggleFilterToolStripMenuItem_Click;
+            // 
+            // clearFiltersToolStripMenuItem
+            // 
+            clearFiltersToolStripMenuItem.Name = "clearFiltersToolStripMenuItem";
+            clearFiltersToolStripMenuItem.Size = new Size(210, 34);
+            clearFiltersToolStripMenuItem.Text = "Clear Filters";
+            clearFiltersToolStripMenuItem.Click += clearFiltersToolStripMenuItem_Click;
             // 
             // stravaToolStripMenuItem
             // 
@@ -422,6 +456,7 @@
             stravaToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             stravaToolStripMenuItem.Name = "stravaToolStripMenuItem";
             stravaToolStripMenuItem.Size = new Size(185, 35);
+            stravaToolStripMenuItem.Click += stravaToolStripMenuItem_Click;
             // 
             // graphTabPage
             // 
@@ -591,7 +626,6 @@
             goalsDataGridView.ReadOnly = true;
             goalsDataGridView.RowHeadersVisible = false;
             goalsDataGridView.RowHeadersWidth = 62;
-            goalsDataGridView.RowTemplate.Height = 33;
             goalsDataGridView.Size = new Size(186, 21);
             goalsDataGridView.TabIndex = 2;
             // 
@@ -627,19 +661,9 @@
             recalculateBackgroundWorker1.ProgressChanged += backgroundWorker_ProgressChanged;
             recalculateBackgroundWorker1.RunWorkerCompleted += backgroundWorker_RunWorkerCompleted;
             // 
-            // fixResultsToolStripMenuItem
+            // timerSyncStrava
             // 
-            fixResultsToolStripMenuItem.Name = "fixResultsToolStripMenuItem";
-            fixResultsToolStripMenuItem.Size = new Size(270, 34);
-            fixResultsToolStripMenuItem.Text = "Fix Results";
-            fixResultsToolStripMenuItem.Click += fixResultsToolStripMenuItem_Click;
-            // 
-            // toggleFilterToolStripMenuItem
-            // 
-            toggleFilterToolStripMenuItem.Name = "toggleFilterToolStripMenuItem";
-            toggleFilterToolStripMenuItem.Size = new Size(270, 34);
-            toggleFilterToolStripMenuItem.Text = "Toggle Filter";
-            toggleFilterToolStripMenuItem.Click += toggleFilterToolStripMenuItem_Click;
+            timerSyncStrava.Tick += timerSyncStrava_Tick;
             // 
             // FellrnrTrainingAnalysisForm
             // 
@@ -717,7 +741,7 @@
         private ToolStripMenuItem toolsToolStripMenuItem;
         private ToolStripMenuItem findDataQualityIssuesToolStripMenuItem;
         private TabPage activityReport;
-        private ActivityReport activityReport1;
+        private UI.ActivityReport activityReport1;
         private ToolStripMenuItem filterToolStripMenuItem;
         private ToolStripMenuItem rescanForDataQualityIssuesToolStripMenuItem;
         private ToolStripMenuItem scanForDataQualityIssueToolStripMenuItem;
@@ -746,5 +770,8 @@
         private ToolStripMenuItem clearFiltersToolStripMenuItem;
         private ToolStripMenuItem fixResultsToolStripMenuItem;
         private ToolStripMenuItem toggleFilterToolStripMenuItem;
+        private ToolStripMenuItem syncWithStravaAndUpdateToolStripMenuItem;
+        private ToolStripMenuItem pollStravaToolStripMenuItem;
+        private System.Windows.Forms.Timer timerSyncStrava;
     }
 }

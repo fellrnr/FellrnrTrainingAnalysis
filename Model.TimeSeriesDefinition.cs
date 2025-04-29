@@ -12,6 +12,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public bool ShowReportGraph { get; set; } = true;
 
+        public int Axis { get; set; } = 0;
+
         public string Description { get; set; } = "";
 
         public string DisplayTitle { get; set; } = "";
@@ -99,6 +101,9 @@ namespace FellrnrTrainingAnalysis.Model
         private static Dictionary<string, TimeSeriesDefinition> ReadFromCsv()
         {
             Dictionary<string, TimeSeriesDefinition> returnMap = new Dictionary<string, TimeSeriesDefinition>();
+
+            if(!File.Exists(PathToCsv)) { return returnMap; }
+
             using (var reader = new StreamReader(PathToCsv))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {

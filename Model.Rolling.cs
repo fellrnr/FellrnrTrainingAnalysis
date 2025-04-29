@@ -1,4 +1,5 @@
-﻿using FellrnrTrainingAnalysis.Utils;
+﻿using FellrnrTrainingAnalysis.Action;
+using FellrnrTrainingAnalysis.Utils;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -51,7 +52,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         private string FirstField { get; set; }
 
-        public enum ModeEnum { Sum, Avg }
+        public enum ModeEnum { Sum, Avg, First }
 
         private ModeEnum Mode { get; set; }
 
@@ -59,6 +60,7 @@ namespace FellrnrTrainingAnalysis.Model
         {
             float dailyAccumulator = 0;
             int count = 0;
+            DateTime? first = null;
             foreach (Activity activity in day.Activities)
             {
                 if (!activity.CheckSportType(SportsToInclude))
@@ -66,11 +68,28 @@ namespace FellrnrTrainingAnalysis.Model
 
                 float? value = activity.GetNamedFloatDatum(FirstField);
 
-
-                if (value != null)
+                if (Mode == ModeEnum.First)
                 {
-                    dailyAccumulator += (float)value;
-                    count++;
+                    if (first == null || first > activity.StartDateTimeLocal)
+                    {
+                        first = activity.StartDateTimeLocal;
+                        if (value != null) //it's not the first with a value, it's the first that matches
+                        {
+                            dailyAccumulator = (float)value;
+                        }
+                        else
+                        {
+                            dailyAccumulator = 0; //reset if an earlier value is missing
+                        }
+                    }
+                }
+                else
+                {
+                    if (value != null)
+                    {
+                        dailyAccumulator += (float)value;
+                        count++;
+                    }
                 }
             }
             if (Mode == ModeEnum.Avg && count > 0)
@@ -78,6 +97,8 @@ namespace FellrnrTrainingAnalysis.Model
 
             if (dailyAccumulator != 0)
                 day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, dailyAccumulator));
+            else
+                day.RemoveNamedDatum(FieldNameToAdd);
         }
     }
 
@@ -229,10 +250,150 @@ namespace FellrnrTrainingAnalysis.Model
 
     }
 
+    public class RollingOneHourPower : Rolling
+    {
+        public RollingOneHourPower(List<string> sportsToInclude, string fieldNameToAdd, int duration) : base(sportsToInclude, fieldNameToAdd)
+        {
+            Duration = duration;
+        }
+
+        private int Duration;
+
+
+        public override void Recalculate(Database database, bool force)
+        {
+
+            if (!Options.Instance.DebugBlockParallel)
+            {
+                database.CurrentAthlete.Days
+                    .AsParallel()
+                    .ForAll(kvp => Recalculate(database, kvp.Value, force));
+            }
+            else
+            {
+                foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+                {
+                    Day day = kvp2.Value;
+                    Recalculate(database, day, force);
+                }
+            }
+
+
+        }
+
+        private void Recalculate(Database database, Day day, bool force)
+        {
+            if (!force && day.HasNamedDatum(FieldNameToAdd))
+                return;
+
+            PowerDistributionCurve.BestCurve? bestCurve = database.CurrentAthlete.CalculateDistrubutionCurve(Activity.TagPowerDistributionCurve, day.Date, duration: Duration);
+
+            if (force)
+                day.RemoveNamedDatum(FieldNameToAdd);
+
+            int offset = PowerDistributionCurve.OneHourOffset();
+
+            if (bestCurve != null && bestCurve.TimeValueList != null && bestCurve.TimeValueList.Length > offset)
+            {
+                TimeValueList best = bestCurve.TimeValueList;
+                float powerAtTarget = best.Values[offset];
+                day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, powerAtTarget));
+            }
+
+        }
+
+    }
+
+
+    public class RollingDistributionCurve : Rolling
+    {
+        public RollingDistributionCurve(List<string> sportsToInclude, string fieldNameToAdd, PdmFit fit, int duration) : base(sportsToInclude, fieldNameToAdd)
+        {
+            Fit = fit;
+            Duration = duration;
+        }
+
+        private int Duration;
+        private PdmFit Fit;
+
+        public override void Recalculate(Database database, bool force)
+        {
+
+            if (!Options.Instance.DebugBlockParallel)
+            {
+                database.CurrentAthlete.Days
+                    .AsParallel()
+                    .ForAll(kvp => Recalculate(database, kvp.Value, force));
+            }
+            else
+            {
+                foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+                {
+                    Day day = kvp2.Value;
+                    Recalculate(database, day, force);
+                }
+            }
+
+
+        }
+
+        private void Recalculate(Database database, Day day, bool force)
+        {
+            if (!force && day.HasNamedDatum(FieldNameToAdd))
+                return;
+
+            PowerDistributionCurve.BestCurve? bestCurve = database.CurrentAthlete.CalculateDistrubutionCurve(Activity.TagPowerDistributionCurve, day.Date, duration: Duration);
+
+            //if(day.Date == new DateTime(2024, 7,2)) { 
+            //    Logging.Instance.Debug($"Now");  
+            //}
+
+            if (force)
+                day.RemoveNamedDatum(FieldNameToAdd);
+
+            if (bestCurve != null && bestCurve.TimeValueList != null)
+            {
+                PdmFit clone = Fit.DeepCopy();
+                clone.DeriveCPParameters(bestCurve.TimeValueList);
+
+                PdmModel model = clone.Model;
+
+                if (model.CP != null)
+                {
+                    day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, (float)model.CP));
+                }
+                //if (model != null)
+                //{
+                //    if (model.CP != null)
+                //    {
+                //        //day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, (float)model.CP));
+                //        double? cpn = model.CP;
+                //        double cp = (double)cpn.Value;
+                //        float cpf = (float)cp;
+                //        TypedDatum<float> datum = new TypedDatum<float>(FieldNameToAdd, false, cpf);
+                //        if (day != null)
+                //        {
+                //            day.AddOrReplaceDatum(datum);
+                //        }
+                //        else
+                //        {
+                //            Logging.Instance.Debug($"Huh, that's odd");
+                //        }
+                //    }
+                //}
+                //else
+                //{
+                //    Logging.Instance.Debug($"Huh, that's odd");
+                //}
+            }
+
+        }
+
+    }
 
     public class RollingFactory
     {
-        public static List<Rolling> GetRollings()
+        public static List<Rolling> GetPostRollings()
         {
             //Σ🏃🚶→
             return new List<Rolling>
@@ -258,15 +419,38 @@ namespace FellrnrTrainingAnalysis.Model
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP anaerobic", "TRIMP anaerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
                 new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP anaerobic%", "ΣTRIMP anaerobic"),
 
+                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTSS", "TSS", RollingRollUpActivityToDay.ModeEnum.Sum),
+
+
                 //roll up HrPwr values
                 new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "Avg HrPwr 5 Min", "Avg HrPwr 5 Min", RollingRollUpActivityToDay.ModeEnum.Avg),
+                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "1st HrPwr 5 Min", "Avg HrPwr 5 Min", RollingRollUpActivityToDay.ModeEnum.First),
                 new RollingPercentMax(Activity.ActivityTypeRun, "HrPwr%", "Avg HrPwr 5 Min"),
-                //new RollingForceOverwrite(new List<string>(), Day.RestingHeartRateTag, 45.0f), //hack to correct problems
-                //new RollingForceOverwrite(new List<string>(), Day.TagWPrime, 15000), //hack to correct problems
-                //new RollingForceOverwrite(new List<string>(), Day.TagCriticalPower, 280), //hack to correct problems
+
+                new RollingOneHourPower(Activity.ActivityTypeRun, "90 Day " + Activity.Tag1HrPwr, 90),
+
+            //new RollingForceOverwrite(new List<string>(), Day.RestingHeartRateTag, 45.0f), //hack to correct problems
+            //new RollingForceOverwrite(new List<string>(), Day.TagWPrime, 15000), //hack to correct problems
+            //new RollingForceOverwrite(new List<string>(), Day.TagCriticalPower, 280), //hack to correct problems
             };
 
         }
+
+        public static List<Rolling> GetPreRollings()
+        {
+            //Σ🏃🚶→
+            return new List<Rolling>
+            {
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LR)", new PdmFitLinearRegression(new PdmModel2Param()), duration: 90),
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-2P)", new PdmFitLeastSquares(new PdmModel2Param()), duration: 90),
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-3P)", new PdmFitLeastSquares(new PdmModel3Param(modelDecayForLeastSquares: false)), duration: 90),
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-3P-D)", new PdmFitLeastSquares(new PdmModel3Param(modelDecayForLeastSquares: true)), duration: 90),
+                new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-3P)", new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-2P)", new PdmFitEnvelope(new PdmModel2Param()), duration: 90),
+            };
+
+        }
+
     }
 
 }

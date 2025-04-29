@@ -75,8 +75,8 @@ namespace FellrnrTrainingAnalysis.UI
                 table.StartBody();
                 foreach (Goal goal in goals)
                 {
-                    Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
-                    Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                    Model.Day latestDay = Database.CurrentAthlete.Days.Last().Value;
+                    Dictionary<Model.Period, float>? rolling = goal.GetGoalsForDay(Database, latestDay);
                     if (rolling == null)
                         continue;
                     using (var tr = table.AddRow())
@@ -128,8 +128,8 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (Goal goal in goals)
             {
                 string[] row = new string[periods.Count + extraColumns];
-                Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
-                Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                Model.Day latestDay = Database.CurrentAthlete.Days.Last().Value;
+                Dictionary<Model.Period, float>? rolling = goal.GetGoalsForDay(Database, latestDay);
                 if (rolling == null)
                     continue;
                 i = 0;
@@ -176,8 +176,8 @@ namespace FellrnrTrainingAnalysis.UI
             //List<int> periods = new List<int>() { 7 };
             foreach (Goal goal in goals)
             {
-                Model.Day latestActivity = Database.CurrentAthlete.Days.Last().Value;
-                Dictionary<Model.Period, float>? rolling = goal.GetGoalUpdate(Database, periods, latestActivity);
+                Model.Day latestDay = Database.CurrentAthlete.Days.Last().Value;
+                Dictionary<Model.Period, float>? rolling = goal.GetGoalsForDay(Database, latestDay);
                 if (rolling == null)
                     continue;
                 stringBuilder.Append(string.Format("{0}: ", goal.TargetColumn)); //TODO: should be display name, not column name

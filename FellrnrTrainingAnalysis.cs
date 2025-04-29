@@ -59,6 +59,9 @@ namespace FellrnrTrainingAnalysis
 
             activityReport1.UpdateViews += UpdateViewsEventHandler;
 
+            timerSyncStrava.Interval = 20 * 60 * 1000; //20 min
+            timerSyncStrava.Start();
+
             //Model.Goal.test();
             Logging.Instance.TraceLeave();
         }
@@ -90,7 +93,7 @@ namespace FellrnrTrainingAnalysis
             if (CurrentFilterBadData != null)
                 CurrentFilterActivities.Filters.Add(CurrentFilterBadData);
 
-            if (!string.IsNullOrEmpty(Options.Instance.OnlyShowActivityTypes))
+            if (!string.IsNullOrEmpty(Options.Instance.OnlyShowActivityTypes) && !Options.Instance.OnlyShowActivityTypes.Contains("All"))
             {
                 CurrentTypeFilter = new FilterString(Activity.TagType, "in", Options.Instance.OnlyShowActivityTypes);
                 CurrentFilterActivities.Filters.Add(CurrentTypeFilter);

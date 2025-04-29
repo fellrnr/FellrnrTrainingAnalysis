@@ -16,7 +16,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public string Name { get; set; } = "";
         public string Title { get; set; } = "";
-        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, Float, Percent, None }; //Integer is misc value
+        public enum DisplayUnitsType { Meters, Kilometers, Pace, TimeSpan, BPM, Integer, Float, Percent, String, None }; //Integer is misc value
 
         public DisplayUnitsType DisplayUnits { get; set; } = DisplayUnitsType.None;
 
@@ -72,6 +72,9 @@ namespace FellrnrTrainingAnalysis.Model
                 activityDatumMetadata.PositionInTree = null;
                 activityDatumMetadata.InReport = false;
                 activityDatumMetadata.InTree = false;
+                activityDatumMetadata.DecimalPlaces = 1; //guess
+                activityDatumMetadata.DisplayUnits = DisplayUnitsType.Float; //guess
+                activityDatumMetadata.Level = LevelType.Activity;
                 Map.Add(name, activityDatumMetadata);
 
                 return activityDatumMetadata;

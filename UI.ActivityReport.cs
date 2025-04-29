@@ -10,7 +10,7 @@ using ScottPlot.Renderable;
 using System.Reflection;
 using System.Text;
 
-namespace FellrnrTrainingAnalysis
+namespace FellrnrTrainingAnalysis.UI
 {
     public partial class ActivityReport : UserControl
     {
@@ -24,31 +24,8 @@ namespace FellrnrTrainingAnalysis
                activityDataGridView,
                new object[] { true });
 
-            Definitions = TimeSeriesDefinition.GetDefinitions();
-
-            CreateTimeSeriesPane();
         }
 
-        public List<TimeSeriesDefinition>? Definitions { get; }
-
-        private void CreateTimeSeriesPane()
-        {
-            if (Definitions != null)
-            {
-                /**/
-                objectListViewTimeSeries.SuspendLayout();
-
-                objectListViewTimeSeries.ShowGroups = false;
-                objectListViewTimeSeries.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
-                //Generator.GenerateColumns(objectListView1, definitions);
-                Generator.GenerateColumns(this.objectListViewTimeSeries, typeof(TimeSeriesDefinition), true);
-                objectListViewTimeSeries.SetObjects(Definitions);
-                objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-                objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-                objectListViewTimeSeries.ResumeLayout();
-                /**/
-            }
-        }
 
         Database? Database = null;
         FilterActivities? FilterActivities = null;
@@ -277,13 +254,28 @@ namespace FellrnrTrainingAnalysis
             }
             activityData1.DisplayActivity(Database!.CurrentAthlete, activity); //if we've got here, we have to have a database with an athlete
             activityMap1.DisplayActivity(activity, Database!.Hills);
+            powerDistributionCurveGraph1.DisplayActivity(activity);
+
             Logging.Instance.TraceLeave();
         }
 
         public void UpdateSelectedRow()
         {
             Logging.Instance.TraceEntry("UpdateSelectedRow");
-            UpdateTimeSeriesGraph();
+
+            if (Database == null)
+                return;
+
+            DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
+
+            Model.Activity? activity = null;
+            if (dataGridViewSelectedRowCollection.Count > 0)
+            {
+                DataGridViewRow row = dataGridViewSelectedRowCollection[0];
+                activity = GetActivityForRow(row);
+            }
+
+            activityTimeGraph1.UpdateTimeSeriesGraph(activity);
             UpdateActivityDisplay();
             Logging.Instance.TraceLeave();
         }

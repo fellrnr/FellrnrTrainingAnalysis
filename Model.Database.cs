@@ -44,6 +44,18 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("RecalculateActivities");
 
+
+
+            //do this first to calculate today's CP
+            int i = 0;
+            List<Rolling> rollings = RollingFactory.GetPreRollings();
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Pre Rolling Data ({rollings.Count})", rollings.Count));
+            foreach (Rolling rolling in rollings)
+            {
+                rolling.Recalculate(this, force);
+                if (worker != null) worker.ReportProgress(++i);
+            }
+
             LastForceCount = force ? LastForceCount + 1 : LastForceCount;
 
             foreach (KeyValuePair<string, Athlete> kvp in Athletes)
@@ -62,19 +74,18 @@ namespace FellrnrTrainingAnalysis.Model
         {
             Logging.Instance.TraceEntry("RecalculateGoals");
             //It's important that calendar nodes don't accumulate goals, partly because of order, and partly because it doesn't make sense. To add all the days in a week's value for 30 running is meaningless 
-            List<Goal> goals = GoalFactory.GetGoals();
-            List<Model.Period> periods = Model.Period.DefaultStorePeriods;
+            List<Cumulative> Cumulatives = CumulativeFactory.GetCumulatives();
 
-            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Goals ({goals.Count})", goals.Count));
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Cumulatives ({Cumulatives.Count})", Cumulatives.Count));
             int i = 0;
-            foreach (Goal goal in goals)
+            foreach (Cumulative Cumulative in Cumulatives)
             {
-                goal.UpdateActivityGoals(this, periods, force);
+                Cumulative.UpdateActivityCumulatives(this, force);
                 if (worker != null) worker.ReportProgress(++i);
             }
 
             i = 0;
-            List<Rolling> rollings = RollingFactory.GetRollings();
+            List<Rolling> rollings = RollingFactory.GetPostRollings();
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Rolling Data ({rollings.Count})", rollings.Count));
             foreach (Rolling rolling in rollings)
             {
@@ -82,6 +93,18 @@ namespace FellrnrTrainingAnalysis.Model
                 if (worker != null) worker.ReportProgress(++i);
             }
 
+            i = 0;
+            List<CalculateFieldBase> calcdays = Model.CaclulateFieldFactory.Instance.DayCalculators;
+            if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Rolling Data ({CurrentAthlete.Days.Count})", CurrentAthlete.Days.Count));
+            foreach (KeyValuePair<DateTime, Day> kvp in CurrentAthlete.Days)
+            {
+                Day day = kvp.Value;
+                foreach (CalculateFieldBase calc in calcdays)
+                {
+                    calc.Recalculate(day, LastForceCount, false); //LastForceCount updated above in activity recalculate
+                    if (worker != null) worker.ReportProgress(++i);
+                }
+            }
             Logging.Instance.TraceLeave();
         }
 
@@ -156,10 +179,10 @@ namespace FellrnrTrainingAnalysis.Model
                 string newPath = path + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 File.Move(path, newPath);
             }
+#pragma warning disable SYSLIB0011
             IFormatter formatter = new BinaryFormatter();
             using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-#pragma warning disable SYSLIB0011
                 formatter.Serialize(stream, this);
 #pragma warning restore SYSLIB0011
             }
@@ -260,10 +283,10 @@ namespace FellrnrTrainingAnalysis.Model
             Stopwatch deserialize = new Stopwatch();
             deserialize.Start();
             Database retval;
+#pragma warning disable SYSLIB0011
             IFormatter formatter = new BinaryFormatter();
             using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None)) //TODO: allow for loading specific database file, and history of files
             {
-#pragma warning disable SYSLIB0011
                 try
                 {
 

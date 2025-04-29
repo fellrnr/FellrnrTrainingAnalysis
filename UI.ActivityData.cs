@@ -183,6 +183,8 @@ namespace FellrnrTrainingAnalysis.UI
                 string entryName = fieldName + postfix;
                 if (Rows.ContainsKey(entryName))
                 {
+                    //if (fieldName == Activity.TagClimbed)
+                    //    Logging.Instance.Debug("Huh");
 
                     Row row = Rows[entryName];
                     ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldName);
@@ -190,7 +192,7 @@ namespace FellrnrTrainingAnalysis.UI
                     {
                         const int ArbitraryWrapLiength = 50;
 
-                        string s = DatumFormatter.FormatForGrid(activity.GetNamedDatum(fieldName), activityDatumMetadata);
+                        string s = DatumFormatter.FormatForGrid(datum, activityDatumMetadata);
                         s = Utils.Misc.WordWrap(s, ArbitraryWrapLiength, " ".ToCharArray());
                         row.Value.Text = s;
                         row.Notes.Text = $"Recorded {datum.Recorded}";

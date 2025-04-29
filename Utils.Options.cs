@@ -98,7 +98,8 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Strava doesn't tell you where the timer pauses are, so you have to guess. If there's a gap longer than this in the time stream, we'll assume it's a timer pause")]
         public int StravaMaximumGap = 5;
 
-
+        [Description("How many activities to get from strava at a time")]
+        public int StravaSyncSize = 25;
 
 
         //Grade adjusted pace
@@ -130,7 +131,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public float GradeAdjustmentFactor { get; set; } = 1;
 
         [Description("Add the offset to get the cost ")]
-        public float GradeAdjustmentOffset { get; set; } = 0;
+        public float GradeAdjustmentOffset { get; set; } = 1.0f; //must be close to one, as this is the cost on flat ground
 
         [Description("Min slope (GPX can have noise that creates silly slopes)")]
         public float MinSlope { get; set; } = -0.5f;
@@ -227,7 +228,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public int StartingCriticalPower { get; set; } = 250;
 
         [Description("Starting point (in the absense of daily values) for Max Heart Rate")]
-        public int StartingMaxHeartRate { get; set; } = 174;
+        public int StartingMaxHeartRate { get; set; } = 175; //update other references!
 
         [Description("Starting point (in the absense of daily values) for Resting Heart Rate")]
         public int StartingRestingHeartRate { get; set; } = 45;
@@ -240,6 +241,16 @@ namespace FellrnrTrainingAnalysis.Utils
 
         [Description("Starting point (in the absense of daily values) for W', AKA W Prime, in jules")]
         public float StartingWPrime { get; set; } = 15000.0f;
+
+        [Description("Starting point (in the absense of daily values) for 5 zone HR models")]
+        public int[] StartingHR5Zones { get; set; } = { 88, 123, 138, 149, 158, 175+1 };
+
+        [Description("Starting point (in the absense of daily values) for 3 zone HR models")]
+        public int[] StartingHR3Zones { get; set; } = { 88, 138, 158, 175+1 };
+
+        [Description("Starting point (in the absense of daily values) for 5 zone HR, Zone 5a")]
+        public int StartingHR5a { get; set; } = 165; //95% of max hr (175) is 166
+
 
         //Display
         //    _____  _           _             
@@ -265,6 +276,9 @@ namespace FellrnrTrainingAnalysis.Utils
 
         [Description("Copy an image of the goals to the clipboard")]
         public bool CopyGoalsToClibboard { get; set; } = false;
+
+        [Description("The minimum time on the power distribution curve (when running, less than 10 seconds is probably meaningless)")]
+        public int MinimumTimeForPowerDistributionCurve { get; set; } = 1;
 
 
         //Mapping API

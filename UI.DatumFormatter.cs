@@ -58,16 +58,17 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.Integer:
                 case ActivityDatumMetadata.DisplayUnitsType.Float:
                 case ActivityDatumMetadata.DisplayUnitsType.Percent:
-                    if (datum is not TypedDatum<float>) { return ""; }
+                    if (datum is not TypedDatum<float>) { return "<Not a float>"; }
 
                     TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
                     value = floatDatum.Data;
                     break;
                 case ActivityDatumMetadata.DisplayUnitsType.None:
+                case ActivityDatumMetadata.DisplayUnitsType.String:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     break;
                 default:
-                    return "";
+                    return "<Bad Display Unit>";
             }
 
 
@@ -88,6 +89,7 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.Float:
                     return value.ToString("N" + activityDatumMetadata.DecimalPlaces);
                 case ActivityDatumMetadata.DisplayUnitsType.None:
+                case ActivityDatumMetadata.DisplayUnitsType.String:
                 case ActivityDatumMetadata.DisplayUnitsType.BPM:
                     return datum.DataAsString()!;
                 default:
@@ -112,6 +114,7 @@ namespace FellrnrTrainingAnalysis.UI
                 case ActivityDatumMetadata.DisplayUnitsType.Percent:
                     return true;
                 case ActivityDatumMetadata.DisplayUnitsType.None:
+                case ActivityDatumMetadata.DisplayUnitsType.String:
                 default:
                     return false;
             }

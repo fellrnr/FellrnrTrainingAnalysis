@@ -190,16 +190,76 @@ namespace FellrnrTrainingAnalysis
 
         private void syncWithStravaToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            SyncWithStrava(false, true);
+        }
+
+
+        private void stravaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SyncWithStrava(true, true);
+        }
+
+        private void syncWithStravaAndUpdateToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SyncWithStrava(true, true);
+        }
+
+        private void pollStravaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            timerSyncStrava.Enabled = pollStravaToolStripMenuItem.Checked;
+            Logging.Instance.Debug($"timerSyncStrava.Enabled set to {pollStravaToolStripMenuItem.Checked}");
+        }
+
+        private void timerSyncStrava_Tick(object sender, EventArgs e)
+        {
+            Logging.Instance.Debug($"timerSyncStrava_Tick called");
+            SyncWithStrava(true, false);
+        }
+
+
+        private void SyncWithStrava(bool updateDescriptions, bool notify)
+        {
             Application.UseWaitCursor = true;
-            Tuple<int, int> count = Action.StravaApi.Instance.SyncNewActivites(Database);
+            StravaApi.SyncedData synced = Action.StravaApi.Instance.SyncNewActivites(Database);
 
             Database.MasterRecalculate(forceActivities: false, forceHills: false, forceGoals: true);
 
+            if (updateDescriptions)
+            {
+                foreach(Activity activity in synced.activities)
+                {
+                    if(activity.CheckSportType(Activity.ActivityTypeRun))
+                    {
+                        string? description = activity.UpdatedDescription();
+                        if(description != null)
+                        {
+                            if (!Action.StravaApi.Instance.UpdateActivityDetails(activity, null, description))
+                            {
+                                Logging.Instance.Error("Update Description Failed (returned false) for " + activity);
+                            }
+                            activity.Description = description;
+                        }
+                    }
+                }
+            }
+
             Application.UseWaitCursor = false;
 
-            MessageBox.Show($"Synced {count.Item1} activities, with at least {count.Item2} remaining");
             UpdateViews();
+
+            if (notify)
+            {
+                if (synced.remaining > 0)
+                {
+                    MessageBox.Show($"Synced {synced.synced} activities, with {synced.remaining} remaining");
+                }
+                else
+                {
+                    MessageBox.Show($"Synced {synced.synced} activities");
+                }
+            }
         }
+
 
         private class WeightData
         {
@@ -289,7 +349,6 @@ namespace FellrnrTrainingAnalysis
 
 
         //View
-        #endregion
         private void LoadFromStravaCsv(string filePath)
         {
             Logging.Instance.ResetAndStartTimer("Async");
@@ -311,6 +370,7 @@ namespace FellrnrTrainingAnalysis
 
             //MessageBox.Show($"Loaded {count} activities from archive");
         }
+        #endregion
         #region View
         private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
         {

@@ -96,6 +96,11 @@ namespace FellrnrTrainingAnalysis.Utils
                 filename = newfile;
             }
 
+            if (new System.IO.FileInfo(filename).Length == 0)
+            {
+                throw new Exception("File " + filename + " is empty");
+            }
+
             FileStream fitSource = new FileStream(filename, FileMode.Open, FileAccess.Read);
             return fitSource;
         }
@@ -319,7 +324,74 @@ namespace FellrnrTrainingAnalysis.Utils
         {
             CheckCalendar(database, sb);
             CheckForNaN(database, sb);
+            CheckLists(database, sb);
+            sb.AppendLine("Done");
         }
+
+        private static void CheckLists(Database database, StringBuilder sb, bool cleanup = true)
+        {
+            Athlete athlete = database.CurrentAthlete;
+            List<Activity> deleteme = new List<Activity>();
+            foreach (KeyValuePair<string, Model.Activity> kvp in athlete.Activities)
+            {
+                Activity activity = kvp.Value;
+                if(activity.StartDateTimeLocal == null)
+                {
+                    sb.AppendLine($"Activity with no local time {activity}");
+                }
+                else if (!athlete.ActivitiesByLocalDateTime.ContainsKey(activity.StartDateTimeLocal.Value))
+                {
+                    sb.AppendLine($"Activity in activity list but not ActivitiesByLocalDateTime {activity}");
+                }
+                else if (athlete.ActivitiesByLocalDateTime[activity.StartDateTimeLocal.Value].PrimaryKey() != activity.PrimaryKey())
+                {
+                    sb.AppendLine($"Activity {activity} with same local time as {athlete.ActivitiesByLocalDateTime[activity.StartDateTimeLocal.Value]} but wrong key");
+                }
+
+                if (activity.StartDateTimeUTC == null)
+                {
+                    sb.AppendLine($"Activity with no UTC time {activity}");
+                }
+                else if (!athlete.ActivitiesByUTCDateTime.ContainsKey(activity.StartDateTimeUTC.Value))
+                {
+                    sb.AppendLine($"Activity in activity list but not ActivitiesByUTCDateTime {activity}");
+                }
+                else if (athlete.ActivitiesByUTCDateTime[activity.StartDateTimeUTC.Value].PrimaryKey() != activity.PrimaryKey())
+                {
+                    sb.AppendLine($"Activity {activity} with same UTC time as {athlete.ActivitiesByUTCDateTime[activity.StartDateTimeUTC.Value]} but wrong key");
+                    if(cleanup) deleteme.Add(activity);
+                }
+            }
+            foreach (var activity in deleteme)
+                athlete.DeleteActivityBeforeRecalcualte(activity);
+
+            foreach (var kvp in athlete.ActivitiesByLocalDateTime)
+            {
+                Activity activity = kvp.Value;
+                if (activity.StartDateTimeLocal == null)
+                {
+                    sb.AppendLine($"Activity with no local time {activity}");
+                }
+                else if (!athlete.Activities.ContainsKey(activity.PrimaryKey()))
+                {
+                    sb.AppendLine($"Activity in ActivitiesByLocalDateTime but not Activities {activity}");
+                }
+            }
+            foreach (var kvp in athlete.ActivitiesByUTCDateTime)
+            {
+                Activity activity = kvp.Value;
+                if (activity.StartDateTimeUTC == null)
+                {
+                    sb.AppendLine($"Activity with no UTC time {activity}");
+                }
+                else if (!athlete.Activities.ContainsKey(activity.PrimaryKey()))
+                {
+                    sb.AppendLine($"Activity in ActivitiesByUTCDateTime but not Activities {activity}");
+                }
+            }
+
+        }
+
 
         private static void CheckForNaN(Database database, StringBuilder sb)
         {
@@ -497,7 +569,7 @@ namespace FellrnrTrainingAnalysis.Utils
         }
     }
     */
-
+    /*
     public static class Extensions
     {
         public static IEnumerable<T> WithProgressReporting<T>(this IEnumerable<T> sequence, Action<int> reportProgress)
@@ -530,6 +602,6 @@ namespace FellrnrTrainingAnalysis.Utils
             }
         }
     }
-
+*/
 }
 

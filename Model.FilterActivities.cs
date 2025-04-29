@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using FellrnrTrainingAnalysis.Utils;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json.Serialization;
 
@@ -20,10 +21,10 @@ namespace FellrnrTrainingAnalysis.Model
             if (!File.Exists(path))
                 return null;
 
+#pragma warning disable SYSLIB0011
             IFormatter formatter = new BinaryFormatter();
             using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None)) //TODO: allow for loading specific database file, and history of files
             {
-#pragma warning disable SYSLIB0011
                 Object deserialized = formatter.Deserialize(stream);
                 if (deserialized != null && deserialized is Model.FilterActivities)
                 {
@@ -63,10 +64,12 @@ namespace FellrnrTrainingAnalysis.Model
             string path = Path.Combine(AppDataPath, fileName);
             //File.WriteAllText(path, json);
 
+            //https://learn.microsoft.com/en-us/dotnet/core/compatibility/serialization/7.0/binaryformatter-apis-produce-errors
+            //<EnableUnsafeBinaryFormatterSerialization> property
+#pragma warning disable SYSLIB0011
             IFormatter formatter = new BinaryFormatter();
             using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-#pragma warning disable SYSLIB0011
                 formatter.Serialize(stream, this);
 #pragma warning restore SYSLIB0011
             }
@@ -462,6 +465,8 @@ namespace FellrnrTrainingAnalysis.Model
             List<Activity> returnActivities = new List<Activity>();
             foreach (Activity activity in activities)
             {
+                if (activity.PrimaryKey().Contains("383255263"))
+                    Logging.Instance.Debug("Huh");
                 string? value = activity.GetNamedStringDatum(FieldName);
 
                 bool addIt = false;

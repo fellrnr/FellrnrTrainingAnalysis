@@ -2,30 +2,36 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64</Platforms>
+    <ApplicationIcon>fellrnr.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;NU1701</NoWarn>
+    <NoWarn>1701;1702;NU1701;CS9193;9193;9192</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1701;1702;NU1701</NoWarn>
+    <NoWarn>1701;1702;NU1701;CS9193;9193;9192</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NoWarn>1701;1702;NU1701</NoWarn>
+    <NoWarn>1701;1702;NU1701;CS9193;9193;9192</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NoWarn>1701;1702;NU1701</NoWarn>
+    <NoWarn>1701;1702;NU1701;CS9193;9193;9192</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="fellrnr.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="csmpfit" Version="1.1.2" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="GMap.NET.Core" Version="2.1.7" />
     <PackageReference Include="GMap.NET.WinForms" Version="2.1.7" />
@@ -35,7 +41,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="7.0.1" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1462.37" />
     <PackageReference Include="pi.science.api" Version="1.4.0" />
-    <PackageReference Include="RestSharp" Version="110.2.0" />
+    <PackageReference Include="RestSharp" Version="112.1.0" />
     <PackageReference Include="ScottPlot.WinForms" Version="4.1.72" />
   </ItemGroup>
 

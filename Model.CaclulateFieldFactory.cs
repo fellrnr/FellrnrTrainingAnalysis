@@ -18,18 +18,31 @@
                                                            CalculateDataFieldFromTimeSeriesSimple.Mode.Min,
                                                            "Calc.Climb",
                                                            new List < string > { "Run", "Virtual Run" }),
-                
+
 
                 new CalculateDataFieldFromTimeSeriesSimple("Avg GAP",
                                                            CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
                                                            Activity.TagGradeAdjustedPace,
-                                                           Activity.ActivityTypeRun), //meters per second
+                                                           Activity.ActivityTypeOnFoot), //meters per second
+
+                new CalculateDataFieldFromTimeSeriesSimple(Activity.TagAveragePower,
+                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
+                                                           Activity.TagPower,
+                                                           Activity.ActivityTypeRun), 
 
                 new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
 
                 new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun),
 
-                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun, 5*60, 10*60),
+
+                //find out how flat the last five mins of the first ten mins were
+                new CalculateDataFieldFromTimeSeriesWindow("Vertical 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.SumAbsDeltas, Activity.TagAltitude, Activity.ActivityTypeRun, 5*60, 10*60),
+
+                //find out how low our speed was for the last five mins of the first ten mins were
+                new CalculateDataFieldFromTimeSeriesWindow("Min Speed 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Min, Activity.TagSpeed, Activity.ActivityTypeRun, 5*60, 10*60),
+
+
+                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun, 5*60, 10*60, flatStartOnly: true),
 
 
                 //TRIMP fields will be rolled up using Model.Rolling
@@ -68,6 +81,25 @@
                                            overrideRecordedZeroOnly: false,
                                            sportsToInclude:Activity.ActivityTypeRun),
                 */
+
+
+                new CalculateDataFieldFromTimeSeriesZones("5-Zone-", 
+                                                          Utils.Options.Instance.StartingHR5Zones,
+                                                          Activity.TagHeartRate),
+
+                new CalculateDataFieldFromTimeSeriesZones("3-Zone-",
+                                                          Utils.Options.Instance.StartingHR3Zones,
+                                                          Activity.TagHeartRate),
+
+                //cheat to get 5a
+                new CalculateDataFieldFromTimeSeriesThreashold("5-Zone-5a",
+                                                               CalculateDataFieldFromTimeSeriesThreashold.Mode.AboveAbs,
+                                                               Utils.Options.Instance.StartingHR5a,
+                                                               Activity.TagHeartRate,
+                                                               null),
+
+                new CalculateFieldTSS("TSS"), //actually calculated on the activity from CP in the day, rolled up
+
             };
 
             PreTimeSeriesCalulators = new List<CalculateFieldBase>
@@ -81,12 +113,17 @@
 
             };
 
+            DayCalculators = new List<CalculateFieldBase>
+            {
+                new CalculateFieldPolarizationIndex("PolarizationIndex 30D"),
+            };
 
         }
 
-        public static CaclulateFieldFactory Instance { get; set; } = new CaclulateFieldFactory();
+        public static CaclulateFieldFactory Instance { get; } = new CaclulateFieldFactory();
 
-        public List<CalculateFieldBase> PostTimeSeriesCalulators { get; set; }
-        public List<CalculateFieldBase> PreTimeSeriesCalulators { get; set; }
+        public List<CalculateFieldBase> PostTimeSeriesCalulators { get; }
+        public List<CalculateFieldBase> PreTimeSeriesCalulators { get; }
+        public List<CalculateFieldBase> DayCalculators { get; }
     }
 }
