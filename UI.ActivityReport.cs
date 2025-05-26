@@ -92,7 +92,10 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     int positionInReport = (int)activityDatumMetadata.PositionInReport;
                     DataGridViewColumn dataGridViewColumn = activityDataGridView.Columns[positionInReport];
-                    dataGridViewColumn.Name = activityDatumMetadata.Title;
+                    string title = activityDatumMetadata.Title;
+                    if (title != Activity.TagPrimarykey)
+                        title = title.Replace(" ", Environment.NewLine);
+                    dataGridViewColumn.Name = title;
 
                     if (UI.DatumFormatter.RightJustify(activityDatumMetadata))
                         dataGridViewColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -107,7 +110,7 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                     else
                     {
-                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                        dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells; //
                     }
 
                     AddRightClicks(dataGridViewColumn);
@@ -165,6 +168,21 @@ namespace FellrnrTrainingAnalysis.UI
                     }
                 }
                 activityDataGridView.Rows.Add(row);
+                DataGridViewRow dgvrow = activityDataGridView.Rows[activityDataGridView.Rows.Count - 1];
+
+                foreach (ActivityDatumMetadata activityDatumMetadata in columnMetadata)
+                {
+                    //ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(fieldname);
+                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInReport != null)
+                    {
+                        int positionInReport = (int)activityDatumMetadata.PositionInReport;
+                        if (activityDatumMetadata.Level == ActivityDatumMetadata.LevelType.Day)
+                        {
+                            dgvrow.Cells[positionInReport].Style.ForeColor = Color.DarkBlue;
+                        }
+                    }
+                }
+
                 //dataGridViewRows.Add(new DataGridViewRow(row));
             }
             activityDataGridView.ResumeLayout();

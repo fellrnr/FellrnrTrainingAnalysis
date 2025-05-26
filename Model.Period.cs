@@ -10,13 +10,15 @@
 
         public abstract string FullName { get; }
         public abstract string ShortName { get; }
-        public abstract int? ApproxDays { get; }
+        public abstract int ApproxDays { get; }
 
         //public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 6), new PeriodRolling(0, 0, 7), new PeriodRolling(0, 1, 0), new PeriodRolling(1, 0, 0), new PeriodYearToDate() };
         public static List<Period> DefaultDisplayPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
         public static List<Period> DefaultEmailPeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
         public static List<Period> DefaultStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30), new PeriodRolling(1, 0, 0), new PeriodYearToDate(), new PeriodLifetime() };
         public static List<Period> ShortStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7), new PeriodRolling(0, 0, 30) };
+
+        public static List<Period> WeekStorePeriods = new List<Period> { new PeriodRolling(0, 0, 7) };
     }
 
     internal class PeriodRolling : Period
@@ -51,7 +53,7 @@
         private int Months { get; set; }
         private int Days { get; set; }
 
-        public override int? ApproxDays { get { return Years * 365 + Months * 30 + Days; } }
+        public override int ApproxDays { get { return Years * 365 + Months * 30 + Days; } }
 
     }
 
@@ -76,7 +78,7 @@
         public override string ShortName { get { return "YTD"; } }
 
 
-        public override int? ApproxDays { get { return DateTime.Now.DayOfYear; } }
+        public override int ApproxDays { get { return DateTime.Now.DayOfYear; } }
 
     }
 
@@ -95,7 +97,7 @@
         public override string ShortName { get { return "All"; } }
 
 
-        public override int? ApproxDays { get { return null; } }
+        public override int ApproxDays { get { return 1; } }
 
     }
 

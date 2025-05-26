@@ -38,11 +38,12 @@
             splitContainer1 = new SplitContainer();
             formsPlotProgress = new ScottPlot.FormsPlot();
             tableLayoutPanel1 = new TableLayoutPanel();
-            operationLabelCol1 = new Label();
             dataLabelCol0 = new Label();
+            axisLabelCol4 = new Label();
+            operationLabelCol1 = new Label();
             typeLabelCol2 = new Label();
             smoothLabelCol3 = new Label();
-            axisLabelCol4 = new Label();
+            presetComboBox = new ComboBox();
             flowLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -53,15 +54,17 @@
             // 
             // flowLayoutPanel1
             // 
+            flowLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             flowLayoutPanel1.Controls.Add(label1);
             flowLayoutPanel1.Controls.Add(timePeriodComboBox);
             flowLayoutPanel1.Controls.Add(label2);
             flowLayoutPanel1.Controls.Add(dateTimePickerStart);
             flowLayoutPanel1.Controls.Add(label3);
             flowLayoutPanel1.Controls.Add(dateTimePickerEnd);
+            flowLayoutPanel1.Controls.Add(presetComboBox);
             flowLayoutPanel1.Location = new Point(0, 0);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Size = new Size(2288, 73);
+            flowLayoutPanel1.Size = new Size(1347, 73);
             flowLayoutPanel1.TabIndex = 0;
             // 
             // label1
@@ -130,8 +133,8 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(tableLayoutPanel1);
-            splitContainer1.Size = new Size(1028, 600);
-            splitContainer1.SplitterDistance = 641;
+            splitContainer1.Size = new Size(1341, 600);
+            splitContainer1.SplitterDistance = 836;
             splitContainer1.TabIndex = 1;
             // 
             // formsPlotProgress
@@ -140,7 +143,7 @@
             formsPlotProgress.Location = new Point(0, 0);
             formsPlotProgress.Margin = new Padding(6, 5, 6, 5);
             formsPlotProgress.Name = "formsPlotProgress";
-            formsPlotProgress.Size = new Size(635, 595);
+            formsPlotProgress.Size = new Size(830, 595);
             formsPlotProgress.TabIndex = 0;
             // 
             // tableLayoutPanel1
@@ -162,17 +165,8 @@
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 1;
             tableLayoutPanel1.RowStyles.Add(new RowStyle());
-            tableLayoutPanel1.Size = new Size(377, 597);
+            tableLayoutPanel1.Size = new Size(495, 597);
             tableLayoutPanel1.TabIndex = 0;
-            // 
-            // operationLabelCol1
-            // 
-            operationLabelCol1.AutoSize = true;
-            operationLabelCol1.Location = new Point(58, 0);
-            operationLabelCol1.Name = "operationLabelCol1";
-            operationLabelCol1.Size = new Size(92, 25);
-            operationLabelCol1.TabIndex = 3;
-            operationLabelCol1.Text = "Operation";
             // 
             // dataLabelCol0
             // 
@@ -182,6 +176,24 @@
             dataLabelCol0.Size = new Size(49, 25);
             dataLabelCol0.TabIndex = 0;
             dataLabelCol0.Text = "Data";
+            // 
+            // axisLabelCol4
+            // 
+            axisLabelCol4.AutoSize = true;
+            axisLabelCol4.Location = new Point(293, 0);
+            axisLabelCol4.Name = "axisLabelCol4";
+            axisLabelCol4.Size = new Size(44, 25);
+            axisLabelCol4.TabIndex = 4;
+            axisLabelCol4.Text = "Axis";
+            // 
+            // operationLabelCol1
+            // 
+            operationLabelCol1.AutoSize = true;
+            operationLabelCol1.Location = new Point(58, 0);
+            operationLabelCol1.Name = "operationLabelCol1";
+            operationLabelCol1.Size = new Size(92, 25);
+            operationLabelCol1.TabIndex = 3;
+            operationLabelCol1.Text = "Operation";
             // 
             // typeLabelCol2
             // 
@@ -201,14 +213,15 @@
             smoothLabelCol3.TabIndex = 2;
             smoothLabelCol3.Text = "Smooth";
             // 
-            // axisLabelCol4
+            // presetComboBox
             // 
-            axisLabelCol4.AutoSize = true;
-            axisLabelCol4.Location = new Point(293, 0);
-            axisLabelCol4.Name = "axisLabelCol4";
-            axisLabelCol4.Size = new Size(44, 25);
-            axisLabelCol4.TabIndex = 4;
-            axisLabelCol4.Text = "Axis";
+            presetComboBox.FormattingEnabled = true;
+            presetComboBox.Items.AddRange(new object[] { "", "TSB" });
+            presetComboBox.Location = new Point(885, 3);
+            presetComboBox.Name = "presetComboBox";
+            presetComboBox.Size = new Size(182, 33);
+            presetComboBox.TabIndex = 6;
+            presetComboBox.SelectedIndexChanged += presetComboBox_SelectedIndexChanged;
             // 
             // ProgressGraph
             // 
@@ -217,7 +230,7 @@
             Controls.Add(splitContainer1);
             Controls.Add(flowLayoutPanel1);
             Name = "ProgressGraph";
-            Size = new Size(1034, 679);
+            Size = new Size(1347, 679);
             flowLayoutPanel1.ResumeLayout(false);
             flowLayoutPanel1.PerformLayout();
             splitContainer1.Panel1.ResumeLayout(false);
@@ -246,5 +259,6 @@
         private Label smoothLabelCol3;
         private Label operationLabelCol1;
         private Label axisLabelCol4;
+        private ComboBox presetComboBox;
     }
 }

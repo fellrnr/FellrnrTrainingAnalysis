@@ -1,6 +1,7 @@
 ﻿using FellrnrTrainingAnalysis.Utils;
 using MemoryPack;
 using System.ComponentModel;
+using System.Text;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -22,54 +23,78 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackInclude]
         [MemoryPackOrder(20)] //start at 20 to avoid conflict with Activity
-        protected Dictionary<string, Datum> Data { get; set; }
+        protected Dictionary<string, Datum> Data { get; set; } //should be private but for memory pack
 
         public virtual Utils.DateTimeTree Id() { return new DateTimeTree(); }
 
         [MemoryPackIgnore]
-        public IReadOnlyCollection<string> DataNames { get { return Data.Keys.ToList().AsReadOnly(); } }
+        public IReadOnlyCollection<string> DataNames
+        {
+            get
+            {
+                lock (Data)
+                {
+                    return Data.Keys.ToList().AsReadOnly();
+                }
+            }
+        }
         [MemoryPackIgnore]
-        public IReadOnlyCollection<Datum> DataValues { get { return Data.Values.ToList().AsReadOnly(); } }
+        public IReadOnlyCollection<Datum> DataValues
+        {
+            get
+            {
+                lock (Data)
+                {
+                    return Data.Values.ToList().AsReadOnly();
+                }
+            }
+        }
 
-        public Datum? GetNamedDatum(string name) { if (Data.ContainsKey(name)) return Data[name]; else return null; }
+        public Datum? GetNamedDatum(string name) { lock (Data) { if (Data.ContainsKey(name)) return Data[name]; else return null; } }
 
-        public bool HasNamedDatum(string name) { return Data.ContainsKey(name); }
+        public bool HasNamedDatum(string name) { lock (Data) { return Data.ContainsKey(name); } }
 
-        public void RemoveNamedDatum(string name) { Data.Remove(name); }
+        public void RemoveNamedDatum(string name) { lock (Data) { Data.Remove(name); } }
 
-        public string GetNamedDatumForDisplay(string name) { if (Data.ContainsKey(name)) return Data[name].DataAsString()!; else return ""; }
+        public string GetNamedDatumForDisplay(string name) { lock (Data) { if (Data.ContainsKey(name)) return Data[name].DataAsString()!; else return ""; } }
 
-        public string? GetNamedStringDatum(string name) { return HasNamedDatum(name) ? ((TypedDatum<string>)Data[name]).Data : null; }
+        public string? GetNamedStringDatum(string name) { lock (Data) { return HasNamedDatum(name) ? ((TypedDatum<string>)Data[name]).Data : null; } }
         public DateTime? GetNamedDateTimeDatum(string name)
         {
-            //return HasNamedDatum(name) ? ((TypedDatum<DateTime>)Data[name]).Data : null; 
-            if (HasNamedDatum(name))
+            lock (Data)
             {
-                Datum datum = Data[name];
-                if (datum == null) return null;
-                TypedDatum<DateTime> typedDatum = (TypedDatum<DateTime>)datum;
-                DateTime dateTime = typedDatum.Data;
-                return dateTime;
-            }
-            else
-            {
-                return null;
+                //return HasNamedDatum(name) ? ((TypedDatum<DateTime>)Data[name]).Data : null; 
+                if (HasNamedDatum(name))
+                {
+                    Datum datum = Data[name];
+                    if (datum == null) return null;
+                    TypedDatum<DateTime> typedDatum = (TypedDatum<DateTime>)datum;
+                    DateTime dateTime = typedDatum.Data;
+                    return dateTime;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
         public float? GetNamedFloatDatum(string name)
         {
-            if (HasNamedDatum(name))
+            lock (Data)
             {
-                Datum datum = Data[name];
-                if (datum == null) return null;
-                if (datum is not TypedDatum<float>) return null;
-                TypedDatum<float> typedDatum = (TypedDatum<float>)datum;
-                float value = typedDatum.Data;
-                return value;
-            }
-            else
-            {
-                return null;
+                if (HasNamedDatum(name))
+                {
+                    Datum datum = Data[name];
+                    if (datum == null) return null;
+                    if (datum is not TypedDatum<float>) return null;
+                    TypedDatum<float> typedDatum = (TypedDatum<float>)datum;
+                    float value = typedDatum.Data;
+                    return value;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
@@ -77,7 +102,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void AddOrReplaceDatum(Datum datum)
         {
-            lock(Data)
+            lock (Data)
             {
                 if (!Data.ContainsKey(datum.Name))
                 {
@@ -94,12 +119,15 @@ namespace FellrnrTrainingAnalysis.Model
             if (activityDatumMapping != null && activityDatumMapping.Import)
             {
                 TypedDatum<T> datum = new TypedDatum<T>(name, true, data);
-                if (!Data.ContainsKey(name))
+                lock (Data)
                 {
-                    Data.Add(name, datum);
-                    NewDatumNameAdded(name);
+                    if (!Data.ContainsKey(name))
+                    {
+                        Data.Add(name, datum);
+                        NewDatumNameAdded(name);
+                    }
+                    Data[name] = datum;
                 }
-                Data[name] = datum;
             }
         }
 
@@ -116,16 +144,32 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void Clean()
         {
-            List<string> toDelete = new List<string>();
-            foreach (KeyValuePair<string, Datum> kvp in Data)
+            lock (Data)
             {
-                if (!kvp.Value.Recorded)
-                    toDelete.Add(kvp.Key);
+                List<string> toDelete = new List<string>();
+                foreach (KeyValuePair<string, Datum> kvp in Data)
+                {
+                    if (!kvp.Value.Recorded)
+                        toDelete.Add(kvp.Key);
+                }
+                foreach (string s in toDelete)
+                    Data.Remove(s);
             }
-            foreach (string s in toDelete)
-                Data.Remove(s);
         }
-
         public virtual bool CheckSportType(List<string>? sportsToInclude) { return true; }
+
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+            lock (Data)
+            {
+                sb.Append(string.Format("Extensible has {0} attributes\r\n", Data.Count));
+                foreach (KeyValuePair<string, Datum> kvp in Data)
+                {
+                    sb.Append(string.Format("{0} is {1}\r\n", kvp.Key, kvp.Value));
+                }
+                return sb.ToString();
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ FitFile,TimeSeries,Distance,Distance,Float,TRUE,1,,
 FitFile,TimeSeries,EnhancedAltitude,Altitude,Float,TRUE,1,"Garmin records this instead of Altitude, not as well as",
 FitFile,TimeSeries,EnhancedSpeed,Speed,Float,TRUE,1,,
 FitFile,TimeSeries,Fellrnr_FS_power,Power,Float,TRUE,1,,
-FitFile,TimeSeries,Fellrnr_SHP_power,Power,Float,TRUE,1,,
+FitFile,TimeSeries,Fellrnr_SHP_power,SHP_Power,Float,FALSE,1,,"Not actually power"
 FitFile,TimeSeries,FractionalCadence,Fractional Cadence,Float,FALSE,1,,
 FitFile,TimeSeries,HeartRate,Heart Rate,Float,TRUE,1,,
 FitFile,TimeSeries,LeftRightBalance,Left/Right Balance,Float,FALSE,1,,

@@ -42,6 +42,7 @@ namespace FellrnrTrainingAnalysis.UI
             AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
             AddContextMenu("Refresh ALL From Strava", new EventHandler(toolStripItem1_Click_refreshAll));
             AddContextMenu("Reread FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadDataFile));
+            AddContextMenu("Reread ALL FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadAllDataFiles));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Show Relationship Combinations...", new EventHandler(toolStripItem1_Click_showRelationships));
             AddContextMenu("Explore Relationships...", new EventHandler(toolStripItem1_Click_exploreRelationships));
@@ -327,12 +328,41 @@ namespace FellrnrTrainingAnalysis.UI
             MessageBox.Show("Done");
         }
 
+        private void toolStripItem1_Click_rereadAllDataFiles(object? sender, EventArgs args)
+        {
+            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            {
+                Model.Activity? activity = GetActivityForRow(row);
+                if (activity == null)
+                    return;
+
+                RereadDataFile(activity);
+
+                Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles activity {activity}");
+                activity.Recalculate(true);
+            }
+
+            Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles update views");
+            UpdateViews?.Invoke();
+
+            Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles done");
+            MessageBox.Show("Done");
+
+        }
 
         private void toolStripItem1_Click_rereadDataFile(object? sender, EventArgs args)
         {
             Model.Activity? activity = GetActivity();
             if (activity == null) return;
 
+            RereadDataFile(activity);
+            UpdateViews?.Invoke();
+            MessageBox.Show("Completed GPX/FIT Reread");
+
+        }
+
+        private static void RereadDataFile(Activity activity)
+        {
             string? filepath = activity.FileFullPath;
             if (filepath == null)
             {
@@ -352,7 +382,6 @@ namespace FellrnrTrainingAnalysis.UI
                     MessageBox.Show($"Exception thrown reading FIT file {filepath}, {e}");
                     return;
                 }
-                MessageBox.Show("Completed FIT Reread");
             }
             else if (filepath.ToLower().EndsWith(".gpx") || filepath.ToLower().EndsWith(".gpx.gz"))
             {
@@ -360,13 +389,11 @@ namespace FellrnrTrainingAnalysis.UI
 
                 gpxProcessor.ProcessGpx();
 
-                MessageBox.Show("Completed GPX Reread");
             }
             else
             {
                 MessageBox.Show("Activity file is not recognized type " + filepath);
             }
-            UpdateViews?.Invoke();
         }
 
         private void toolStripItem1_Click_openGarmin(object? sender, EventArgs args)

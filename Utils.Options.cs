@@ -99,7 +99,7 @@ namespace FellrnrTrainingAnalysis.Utils
         public int StravaMaximumGap = 5;
 
         [Description("How many activities to get from strava at a time")]
-        public int StravaSyncSize = 25;
+        public int StravaSyncSize = 20; //100 reads/15 min, but extra to get the list, so set to 20
 
 
         //Grade adjusted pace
@@ -224,11 +224,18 @@ namespace FellrnrTrainingAnalysis.Utils
         //   |_|    |_| |_|\__, |___/_|\___/|_|\___/ \__, |_|\___\__,_|_| |_|  |_|\___|\__|_|  |_|\___|___/
         //                  __/ |                     __/ |                                                
         //                 |___/                     |___/                                                 
+
+        [Description("Male/female, used in TRIMP calcualtion")]
+        public bool isMale { get; set; } = true;
+
         [Description("Starting point (in the absense of daily values) for Critical Power in Watts")]
         public int StartingCriticalPower { get; set; } = 250;
 
         [Description("Starting point (in the absense of daily values) for Max Heart Rate")]
         public int StartingMaxHeartRate { get; set; } = 175; //update other references!
+
+        [Description("Starting point (in the absense of daily values) for Lactate Threshold (LT2) Heart Rate")]
+        public int StartingLT2HeartRate { get; set; } = 158; 
 
         [Description("Starting point (in the absense of daily values) for Resting Heart Rate")]
         public int StartingRestingHeartRate { get; set; } = 45;
@@ -251,6 +258,11 @@ namespace FellrnrTrainingAnalysis.Utils
         [Description("Starting point (in the absense of daily values) for 5 zone HR, Zone 5a")]
         public int StartingHR5a { get; set; } = 165; //95% of max hr (175) is 166
 
+        [Description("Decay constant in days for simple stress balance model acute/fatigue load")]
+        public int StressBalanceDaysATL { get; set; } = 7;
+
+        [Description("Decay constant in days for simple stress balance model cronic/performance load")]
+        public int StressBalanceDaysCTL { get; set; } = 42;
 
         //Display
         //    _____  _           _             

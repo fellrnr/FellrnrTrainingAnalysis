@@ -48,7 +48,7 @@ namespace FellrnrTrainingAnalysis.Model
 
             //do this first to calculate today's CP
             int i = 0;
-            List<Rolling> rollings = RollingFactory.GetPreRollings();
+            List<Rolling> rollings = RollingFactory.GetPreActivityRollings();
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Pre Rolling Data ({rollings.Count})", rollings.Count));
             foreach (Rolling rolling in rollings)
             {

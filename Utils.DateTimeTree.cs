@@ -40,15 +40,15 @@ namespace FellrnrTrainingAnalysis.Utils
             switch (Type)
             {
                 case DateTreeType.Root:
-                    return "DateTreeType.Root";
+                    return "Root";
                 case DateTreeType.Year:
-                    return "DateTreeType.Year:" + DateTime.ToString(FormatAsYear);
+                    return DateTime.ToString(FormatAsYear);
                 case DateTreeType.Month:
-                    return "DateTreeType.Month:" + DateTime.ToString(FormatAsMonth);
+                    return DateTime.ToString(FormatAsMonth);
                 case DateTreeType.Day:
-                    return "DateTreeType.Day:" + DateTime.ToString(FormatAsDay);
+                    return DateTime.ToString(FormatAsDay);
                 case DateTreeType.Time:
-                    return "DateTreeType.Time:" + DateTime.ToString(FormatAsTime);
+                    return DateTime.ToString(FormatAsTime);
             }
             return DateTime.ToString();
         }

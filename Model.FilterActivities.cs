@@ -440,7 +440,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class FilterString : FilterBase
     {
-        public const string IN = "in"; //used to fix search results to a list of strava ids
+        public const string IN = "in"; //used to fix search results to a list of StravaIDs
         public static readonly string[] filterCommands = new string[] { "", "=", "contains", "doesn't contain", "has", "missing", IN };
 
 

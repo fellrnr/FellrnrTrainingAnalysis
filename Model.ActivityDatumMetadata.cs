@@ -28,7 +28,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public int? DecimalPlaces { get; set; } //Only for floating point numbers, obviously
 
-        public bool? Invisible { get; set; } //for hidden columns like Strava ID
+        public bool? Invisible { get; set; } //for hidden columns like StravaID
 
         public string Comment { get; set; } = ""; //for commenting the CSV file
 
@@ -97,6 +97,7 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     if (record.InReport) { record.PositionInReport = possInReport; possInReport++; }
                     if (record.InTree) { record.PositionInTree = possInTree; possInTree++; }
+                    if(string.IsNullOrEmpty(record.Title)) { record.Title = record.Name;  }
                     if (!returnMap.ContainsKey(record.Name))
                     {
                         returnMap.Add(record.Name, record);

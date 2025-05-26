@@ -27,8 +27,7 @@
 
                 new CalculateDataFieldFromTimeSeriesSimple(Activity.TagAveragePower,
                                                            CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
-                                                           Activity.TagPower,
-                                                           Activity.ActivityTypeRun), 
+                                                           Activity.TagPower), 
 
                 new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
 
@@ -46,16 +45,17 @@
 
 
                 //TRIMP fields will be rolled up using Model.Rolling
-                new CalculateDataFieldFromTimeSeriesAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
+                //new CalculateDataFieldFromTimeSeriesAUC("TRIMP aerobic", false, 138, 180, "Heart Rate"), //hard code zone 4 as 138 and max as 180 as anythign above is bad data
 
-                new CalculateDataFieldFromTimeSeriesAUC("TRIMP anaerobic", false, 250, null, "Power"), //hard code critical power as 250 
+                //new CalculateDataFieldFromTimeSeriesAUC("TRIMP anaerobic", false, 250, null, "Power"), //hard code critical power as 250 
 
-                new CalculateDataFieldFromTimeSeriesAUC("TRIMP downhill", true, 10, null, "Calc.Climb", Activity.ActivityTypeRun), //hard code start of downhill as 10 meters/minute
+                //new CalculateDataFieldFromTimeSeriesAUC("TRIMP downhill", true, 10, null, "Calc.Climb", Activity.ActivityTypeRun), //hard code start of downhill as 10 meters/minute
 
                 //calculate percent of time spent running
                 new CalculateDataFieldFromTimeSeriesThreashold("Percent Run",
                                                                CalculateDataFieldFromTimeSeriesThreashold.Mode.AbovePercent,
                                                                75,
+                                                               ignoreZeros: true,
                                                                "Cadence",
                                                                Activity.ActivityTypeRun), //cadence is both legs, so 75 = 150
 
@@ -95,11 +95,43 @@
                 new CalculateDataFieldFromTimeSeriesThreashold("5-Zone-5a",
                                                                CalculateDataFieldFromTimeSeriesThreashold.Mode.AboveAbs,
                                                                Utils.Options.Instance.StartingHR5a,
+                                                               ignoreZeros: false,
                                                                Activity.TagHeartRate,
                                                                null),
 
-                new CalculateFieldTSS("TSS"), //actually calculated on the activity from CP in the day, rolled up
+                //note: CP only calculated on runs from Stryd, not enough data for bike CP, so offset
 
+                new CalculateFieldIF("IF", cpScalingFactor: 1.0f, Activity.ActivityTypeRun),   //actually calculated on the activity from CP in the day, rolled up
+                //new CalculateFieldTRIMP("TRIMP", cpScalingFactor: 1.0f, Activity.ActivityTypeRun), //actually calculated on the activity from CP in the day, rolled up
+
+                new CalculateFieldIF("IF", cpScalingFactor: 0.65f, Activity.ActivityTypeRide),   //actually calculated on the activity from CP in the day, rolled up
+                //new CalculateFieldTRIMP("TRIMP", cpScalingFactor: 0.65f, Activity.ActivityTypeRide), //actually calculated on the activity from CP in the day, rolled up
+
+                //new CalculateDataFieldFromTimeSeriesTRIMPi("TRIMPi",
+                //                                          Activity.TagPower,
+                //                                          cpScalingFactor: 1.0f,
+                //                                          Activity.ActivityTypeRun),
+                //new CalculateDataFieldFromTimeSeriesTRIMPi("TRIMPi",
+                //                                          Activity.TagPower,
+                //                                          cpScalingFactor: 0.65f,
+                //                                          Activity.ActivityTypeRide),
+
+                new CalculateDataFieldFromTimeSeriesTRIMPhr("TRIMPhr",
+                                                          Activity.TagHeartRate),
+
+                new CalculateDataFieldFromTimeSeriesTRIMPnp("TRIMPnp",
+                                                          Activity.TagPower,
+                                                          cpScalingFactor: 1.0f,
+                                                          Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesTRIMPnp("TRIMPnp",
+                                                          Activity.TagPower,
+                                                          cpScalingFactor: 0.65f,
+                                                          Activity.ActivityTypeRide),
+                new CalculateFieldSimpleMath(activityFieldname: "TRIMP",
+                                           firstFieldName: "TRIMPhr",
+                                           secondFieldname: "TRIMPnp",
+                                           extractionMode: CalculateFieldSimpleMath.Mode.Max,
+                                           overrideWhen: CalculateFieldSimple.OverrideMode.OverrideRecordedZeroOnly),
             };
 
             PreTimeSeriesCalulators = new List<CalculateFieldBase>

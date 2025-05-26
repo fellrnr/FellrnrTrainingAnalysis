@@ -30,11 +30,13 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class VolumeCumulative : Cumulative
     {
-        public VolumeCumulative(List<string>? sportsToInclude, string targetColumn, string activityFieldname, List<Model.Period> periods)
+        public VolumeCumulative(List<string>? sportsToInclude, string targetColumn, string activityFieldname, List<Model.Period> periods, bool average=false)
             : base(sportsToInclude, targetColumn, activityFieldname, periods)
         {
+            Average = average;
         }
 
+        private bool Average { get; set; }
 
         public override void UpdateActivityCumulatives(Database database, bool force)
         {
@@ -88,8 +90,14 @@ namespace FellrnrTrainingAnalysis.Model
 
                     string CumulativeActivityFieldname = FieldName(period);
                     //if we've done the hard work of calculation, replace regardless of force
-                    day.AddOrReplaceDatum(new TypedDatum<float>(CumulativeActivityFieldname, false, rolling[period])); 
-                    
+                    if (Average)
+                    {
+                        day.AddOrReplaceDatum(new TypedDatum<float>(CumulativeActivityFieldname, false, rolling[period]/period.ApproxDays));
+                    }
+                    else
+                    {
+                        day.AddOrReplaceDatum(new TypedDatum<float>(CumulativeActivityFieldname, false, rolling[period]));
+                    }
                     //if(day.Date == new DateTime(year:2024, month:2, day:27))
                     //{
                     //    Logging.Instance.Debug($"On {day.Date}, Period {period}, {rolling[period]}");
@@ -170,7 +178,9 @@ namespace FellrnrTrainingAnalysis.Model
                 new VolumeCumulative(Activity.ActivityTypeOnFoot, "Elevation Gain", "Σ🦶⬆", Model.Period.DefaultStorePeriods),
                 new VolumeCumulative(Activity.ActivityTypeOnFoot, "Grade Adjusted Distance", "Σ🦶📐", Model.Period.DefaultStorePeriods),
 
+                new VolumeCumulative(Activity.ActivityTypeOnFoot, "Grade Adjusted Distance", "Σ🦶📐", Model.Period.DefaultStorePeriods),
 
+                new VolumeCumulative(Activity.ActivityTypeAll, "TRIMP", "X̄TRIMP", Model.Period.WeekStorePeriods, average: true),
             };
 
             for (int i = 0; i < Utils.Options.Instance.StartingHR5Zones.Length - 1; i++)

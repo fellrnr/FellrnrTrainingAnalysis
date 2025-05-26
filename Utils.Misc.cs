@@ -550,6 +550,16 @@ namespace FellrnrTrainingAnalysis.Utils
             double sd = (double)Math.Sqrt(sumSqDiff / array.Length);
             return sd;
         }
+
+        public static float? Max(float? a, float? b)
+        {
+            if (a == null)
+                return b;
+            if(b == null) 
+                return a;
+            return a > b ? a : b;
+        }
+
     }
 
 

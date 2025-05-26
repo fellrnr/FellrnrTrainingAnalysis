@@ -1,17 +1,18 @@
 ﻿using FellrnrTrainingAnalysis.Action;
 using FellrnrTrainingAnalysis.Utils;
+using System.Windows.Forms;
 
 namespace FellrnrTrainingAnalysis.Model
 {
     public abstract class Rolling
     {
-        public Rolling(List<string> sportsToInclude, string fieldNameToAdd)
+        public Rolling(List<string>? sportsToInclude, string fieldNameToAdd)
         {
             SportsToInclude = sportsToInclude;
             FieldNameToAdd = fieldNameToAdd;
         }
         public string FieldNameToAdd { get; set; }
-        protected List<string> SportsToInclude { get; set; }
+        protected List<string>? SportsToInclude { get; set; }
 
         public abstract void Recalculate(Database database, bool force);
     }
@@ -20,7 +21,7 @@ namespace FellrnrTrainingAnalysis.Model
     //For where you don't need to keep track from day to day
     public abstract class RollingSimple : Rolling
     {
-        public RollingSimple(List<string> sportsToInclude, string fieldNameToAdd) : base(sportsToInclude, fieldNameToAdd)
+        public RollingSimple(List<string>? sportsToInclude, string fieldNameToAdd) : base(sportsToInclude, fieldNameToAdd)
         {
         }
 
@@ -44,15 +45,18 @@ namespace FellrnrTrainingAnalysis.Model
     //Roll up (add) values from activites to their day
     public class RollingRollUpActivityToDay : RollingSimple
     {
-        public RollingRollUpActivityToDay(List<string> sportsToInclude, string fieldNameToAdd, string firstField, ModeEnum mode) : base(sportsToInclude, fieldNameToAdd)
+        public RollingRollUpActivityToDay(List<string>? sportsToInclude, string fieldNameToAdd, string firstField, ModeEnum mode, string? secondField = null) : base(sportsToInclude, fieldNameToAdd)
         {
             FirstField = firstField;
+            SecondField = secondField;
             this.Mode = mode;
         }
 
         private string FirstField { get; set; }
 
-        public enum ModeEnum { Sum, Avg, First }
+        private string? SecondField { get; set; }
+
+        public enum ModeEnum { Sum, Avg, First, SumBigger }
 
         private ModeEnum Mode { get; set; }
 
@@ -67,6 +71,7 @@ namespace FellrnrTrainingAnalysis.Model
                     continue;
 
                 float? value = activity.GetNamedFloatDatum(FirstField);
+                float? value2 = SecondField != null ? activity.GetNamedFloatDatum(SecondField) : null;
 
                 if (Mode == ModeEnum.First)
                 {
@@ -85,10 +90,34 @@ namespace FellrnrTrainingAnalysis.Model
                 }
                 else
                 {
-                    if (value != null)
+                    if (Mode == ModeEnum.SumBigger)
                     {
-                        dailyAccumulator += (float)value;
-                        count++;
+                        //if (activity.StartDateNoTimeLocal == new DateTime(2025, 5, 15))
+                            //Logging.Instance.Debug("Breakpoint here");
+                        if (value != null && value2 != null)
+                        {
+                            dailyAccumulator += (float)Math.Max((double)value, (double)value2);
+                            count++;
+                        }
+                        else if (value2 != null)
+                        {
+                            dailyAccumulator += (float)value2;
+                            count++;
+                        }
+                        else if (value != null)
+                        {
+                            dailyAccumulator += (float)value;
+                            count++;
+                        }
+
+                    }
+                    else
+                    {
+                        if (value != null)
+                        {
+                            dailyAccumulator += (float)value;
+                            count++;
+                        }
                     }
                 }
             }
@@ -102,9 +131,11 @@ namespace FellrnrTrainingAnalysis.Model
         }
     }
 
+
+
     public class RollingNormaliseAbsolute : RollingSimple
     {
-        public RollingNormaliseAbsolute(List<string> sportsToInclude, string fieldNameToAdd, string firstField, float divisor) : base(sportsToInclude, fieldNameToAdd)
+        public RollingNormaliseAbsolute(List<string>? sportsToInclude, string fieldNameToAdd, string firstField, float divisor) : base(sportsToInclude, fieldNameToAdd)
         {
             FirstField = firstField;
             Divisor = divisor;
@@ -131,7 +162,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingDifference : RollingSimple
     {
-        public RollingDifference(List<string> sportsToInclude, string fieldNameToAdd, string firstField, string secondField) : base(sportsToInclude, fieldNameToAdd)
+        public RollingDifference(List<string>? sportsToInclude, string fieldNameToAdd, string firstField, string secondField) : base(sportsToInclude, fieldNameToAdd)
         {
             FirstField = firstField;
             SecondField = secondField;
@@ -156,7 +187,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingRatio : RollingSimple
     {
-        public RollingRatio(List<string> sportsToInclude, string fieldNameToAdd, string firstField, string secondField) : base(sportsToInclude, fieldNameToAdd)
+        public RollingRatio(List<string>? sportsToInclude, string fieldNameToAdd, string firstField, string secondField) : base(sportsToInclude, fieldNameToAdd)
         {
             FirstField = firstField;
             SecondField = secondField;
@@ -184,7 +215,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingForceOverwrite : RollingSimple
     {
-        public RollingForceOverwrite(List<string> sportsToInclude, string fieldNameToAdd, float value) : base(sportsToInclude, fieldNameToAdd)
+        public RollingForceOverwrite(List<string>? sportsToInclude, string fieldNameToAdd, float value) : base(sportsToInclude, fieldNameToAdd)
         {
             Value = value;
         }
@@ -201,7 +232,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingPercentMax : Rolling
     {
-        public RollingPercentMax(List<string> sportsToInclude, string fieldNameToAdd, string firstField) : base(sportsToInclude, fieldNameToAdd)
+        public RollingPercentMax(List<string>? sportsToInclude, string fieldNameToAdd, string firstField) : base(sportsToInclude, fieldNameToAdd)
         {
             FirstField = firstField;
         }
@@ -214,9 +245,11 @@ namespace FellrnrTrainingAnalysis.Model
             //first pass - find max
             float max = float.MinValue;
 
+
             foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
             {
                 Day day = kvp2.Value;
+
 
                 float? value1 = day.GetNamedFloatDatum(FirstField);
 
@@ -252,7 +285,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingOneHourPower : Rolling
     {
-        public RollingOneHourPower(List<string> sportsToInclude, string fieldNameToAdd, int duration) : base(sportsToInclude, fieldNameToAdd)
+        public RollingOneHourPower(List<string>? sportsToInclude, string fieldNameToAdd, int duration) : base(sportsToInclude, fieldNameToAdd)
         {
             Duration = duration;
         }
@@ -307,7 +340,7 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class RollingDistributionCurve : Rolling
     {
-        public RollingDistributionCurve(List<string> sportsToInclude, string fieldNameToAdd, PdmFit fit, int duration) : base(sportsToInclude, fieldNameToAdd)
+        public RollingDistributionCurve(List<string>? sportsToInclude, string fieldNameToAdd, PdmFit fit, int duration) : base(sportsToInclude, fieldNameToAdd)
         {
             Fit = fit;
             Duration = duration;
@@ -362,34 +395,55 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, (float)model.CP));
                 }
-                //if (model != null)
-                //{
-                //    if (model.CP != null)
-                //    {
-                //        //day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, (float)model.CP));
-                //        double? cpn = model.CP;
-                //        double cp = (double)cpn.Value;
-                //        float cpf = (float)cp;
-                //        TypedDatum<float> datum = new TypedDatum<float>(FieldNameToAdd, false, cpf);
-                //        if (day != null)
-                //        {
-                //            day.AddOrReplaceDatum(datum);
-                //        }
-                //        else
-                //        {
-                //            Logging.Instance.Debug($"Huh, that's odd");
-                //        }
-                //    }
-                //}
-                //else
-                //{
-                //    Logging.Instance.Debug($"Huh, that's odd");
-                //}
             }
 
         }
 
     }
+
+    public class RollingStressBalance : Rolling
+    {
+        public RollingStressBalance(List<string>? sportsToInclude, string fieldNameToAdd, StressBalanceModeller model) : base(sportsToInclude, fieldNameToAdd)
+        {
+            Model = model;
+        }
+
+        private StressBalanceModeller Model;
+
+        public override void Recalculate(Database database, bool force)
+        {
+            StressBalanceModeller.StressData? stress = null;
+
+            //this cannot be done in parallel - each day feeds the next
+            foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+            {
+                Day day = kvp2.Value;
+
+                //debug hack (simpler than conditional breakpoint)
+                //if (day.Date.Year == 2025 && day.Date.Month == 04 && day.Date.Day == 29)
+                //    Logging.Instance.Debug("debug");
+
+                if (!force && day.HasNamedDatum(FieldNameToAdd))
+                    continue;
+                if (force)
+                {
+                    day.RemoveNamedDatum("CTL" + FieldNameToAdd);
+                    day.RemoveNamedDatum("ATL" + FieldNameToAdd);
+                    day.RemoveNamedDatum("TSB" + FieldNameToAdd);
+                }
+                stress = Model.Calculate(stress, day);
+
+                day.AddOrReplaceDatum(new TypedDatum<float>("CTL" + FieldNameToAdd, false, stress.CTL));
+                day.AddOrReplaceDatum(new TypedDatum<float>("ATL" + FieldNameToAdd, false, stress.ATL));
+                day.AddOrReplaceDatum(new TypedDatum<float>("TSB" + FieldNameToAdd, false, stress.TSB));
+
+            }
+
+        }
+
+
+    }
+
 
     public class RollingFactory
     {
@@ -408,18 +462,19 @@ namespace FellrnrTrainingAnalysis.Model
                 new RollingNormaliseAbsolute(Activity.ActivityTypeRun, "Σ🏃📐X̄ 30D", "Σ🏃📐 30D", 30.0f),
                 new RollingRatio(Activity.ActivityTypeRun, "🏃📐X̄ 7/30", "Σ🏃📐X̄ 7D", "Σ🏃📐X̄ 30D"),
 
+                
 
                 //roll up TRIMP values
-                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP downhill", "TRIMP downhill", RollingRollUpActivityToDay.ModeEnum.Sum),
-                new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP downhill%", "ΣTRIMP downhill"),
+                //new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP downhill", "TRIMP downhill", RollingRollUpActivityToDay.ModeEnum.Sum),
+                //new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP downhill%", "ΣTRIMP downhill"),
 
-                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP aerobic", "TRIMP aerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
-                new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP aerobic%", "ΣTRIMP aerobic"),
+                //new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP aerobic", "TRIMP aerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
+                //new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP aerobic%", "ΣTRIMP aerobic"),
 
-                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP anaerobic", "TRIMP anaerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
-                new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP anaerobic%", "ΣTRIMP anaerobic"),
+                //new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTRIMP anaerobic", "TRIMP anaerobic", RollingRollUpActivityToDay.ModeEnum.Sum),
+                //new RollingPercentMax(Activity.ActivityTypeRun, "ΣTRIMP anaerobic%", "ΣTRIMP anaerobic"),
 
-                new RollingRollUpActivityToDay(Activity.ActivityTypeRun, "ΣTSS", "TSS", RollingRollUpActivityToDay.ModeEnum.Sum),
+                new RollingRollUpActivityToDay(Activity.ActivityTypeAll, "ΣTRIMP", "TRIMPnp", RollingRollUpActivityToDay.ModeEnum.SumBigger, "TRIMPhr"),
 
 
                 //roll up HrPwr values
@@ -429,6 +484,12 @@ namespace FellrnrTrainingAnalysis.Model
 
                 new RollingOneHourPower(Activity.ActivityTypeRun, "90 Day " + Activity.Tag1HrPwr, 90),
 
+                new RollingStressBalance(Activity.ActivityTypeAll, "", 
+                                         new StressBalanceModellerSimple("ΣTRIMP", 
+                                                                         dATL: Options.Instance.StressBalanceDaysATL, 
+                                                                         dCTL: Options.Instance.StressBalanceDaysCTL)),
+                
+
             //new RollingForceOverwrite(new List<string>(), Day.RestingHeartRateTag, 45.0f), //hack to correct problems
             //new RollingForceOverwrite(new List<string>(), Day.TagWPrime, 15000), //hack to correct problems
             //new RollingForceOverwrite(new List<string>(), Day.TagCriticalPower, 280), //hack to correct problems
@@ -436,7 +497,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        public static List<Rolling> GetPreRollings()
+        public static List<Rolling> GetPreActivityRollings()
         {
             //Σ🏃🚶→
             return new List<Rolling>
@@ -445,8 +506,9 @@ namespace FellrnrTrainingAnalysis.Model
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-2P)", new PdmFitLeastSquares(new PdmModel2Param()), duration: 90),
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-3P)", new PdmFitLeastSquares(new PdmModel3Param(modelDecayForLeastSquares: false)), duration: 90),
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-3P-D)", new PdmFitLeastSquares(new PdmModel3Param(modelDecayForLeastSquares: true)), duration: 90),
-                new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-3P)", new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
+                //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-3P)", new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-2P)", new PdmFitEnvelope(new PdmModel2Param()), duration: 90),
+                new RollingDistributionCurve(Activity.ActivityTypeRun, Day.TagCriticalPower, new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
             };
 
         }

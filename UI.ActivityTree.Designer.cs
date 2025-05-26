@@ -28,43 +28,38 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            this.dataTreeListView = new BrightIdeasSoftware.DataTreeListView();
-            ((System.ComponentModel.ISupportInitialize)(this.dataTreeListView)).BeginInit();
-            this.SuspendLayout();
+            components = new System.ComponentModel.Container();
+            calendarTreeListView = new BrightIdeasSoftware.TreeListView();
+            ((System.ComponentModel.ISupportInitialize)calendarTreeListView).BeginInit();
+            SuspendLayout();
             // 
-            // dataTreeListView
+            // calendarTreeListView
             // 
-            this.dataTreeListView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.dataTreeListView.DataSource = null;
-            this.dataTreeListView.KeyAspectName = "num";
-            this.dataTreeListView.Location = new System.Drawing.Point(3, 3);
-            this.dataTreeListView.Name = "dataTreeListView";
-            this.dataTreeListView.ParentKeyAspectName = "pid";
-            this.dataTreeListView.RootKeyValueString = "";
-            this.dataTreeListView.ShowGroups = false;
-            this.dataTreeListView.Size = new System.Drawing.Size(986, 631);
-            this.dataTreeListView.TabIndex = 2;
-            this.dataTreeListView.UseCompatibleStateImageBehavior = false;
-            this.dataTreeListView.View = System.Windows.Forms.View.Details;
-            this.dataTreeListView.VirtualMode = true;
+            calendarTreeListView.AlternateRowBackColor = Color.FromArgb(192, 255, 255);
+            calendarTreeListView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            calendarTreeListView.GridLines = true;
+            calendarTreeListView.Location = new Point(3, 3);
+            calendarTreeListView.Name = "calendarTreeListView";
+            calendarTreeListView.ShowGroups = false;
+            calendarTreeListView.Size = new Size(986, 631);
+            calendarTreeListView.TabIndex = 0;
+            calendarTreeListView.View = View.Details;
+            calendarTreeListView.VirtualMode = true;
             // 
-            // ActivityList
+            // ActivityTree
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.dataTreeListView);
-            this.Name = "ActivityList";
-            this.Size = new System.Drawing.Size(992, 637);
-            ((System.ComponentModel.ISupportInitialize)(this.dataTreeListView)).EndInit();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(calendarTreeListView);
+            Name = "ActivityTree";
+            Size = new Size(992, 637);
+            ((System.ComponentModel.ISupportInitialize)calendarTreeListView).EndInit();
+            ResumeLayout(false);
 
         }
 
         #endregion
 
-        private BrightIdeasSoftware.DataTreeListView dataTreeListView;
+        private BrightIdeasSoftware.TreeListView calendarTreeListView;
     }
 }

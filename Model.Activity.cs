@@ -80,7 +80,7 @@ namespace FellrnrTrainingAnalysis.Model
         //This needs to be static so callers can find an activity given a dictionary of string/Datum by primary keys
         public static string ExpectedPrimaryKey(Dictionary<string, Datum> activityData) { return ((TypedDatum<string>)activityData[TagStravaActivityID]).Data; }
 
-        public string PrimaryKey() { return ((TypedDatum<string>)Data[TagStravaActivityID]).Data; }
+        public string PrimaryKey() { return GetNamedStringDatum(TagStravaActivityID)!; }
 
 
         //This needs to be static so callers can find the date to check if it's after the loading date. Has to be UTC as that's all we have from the Strava CSV file
@@ -427,6 +427,9 @@ namespace FellrnrTrainingAnalysis.Model
         public const string Tag1HrPwr = "1Hr Pwr";
         public static List<string> ActivityTypeRun = new List<string> { "Run", "Virtual Run" };
         public static List<string> ActivityTypeOnFoot = new List<string> { "Run", "Walk", "Hike", "Virtual Run" };
+        public static List<string> ActivityTypeAll = new List<string> { }; //empty list is all
+        public static List<string> ActivityTypeRide = new List<string> { "Ride" };
+        public static List<string> ActivityTypeWalk = new List<string> { "Walk", "Hike" };
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";
@@ -529,7 +532,7 @@ namespace FellrnrTrainingAnalysis.Model
             //{
             //    MessageBox.Show(activitySportType);
             //}
-            if (sportsToInclude == null)
+            if (sportsToInclude == null || sportsToInclude.Count == 0)
                 return true;
             if (activitySportType == null)
                 return false;

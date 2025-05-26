@@ -50,7 +50,7 @@ namespace FellrnrTrainingAnalysis.Model
             //always remove if we're recalculating
             extensible.RemoveNamedDatum(ActivityFieldname);
 
-            if (SportsToInclude != null && !extensible.CheckSportType(SportsToInclude))
+            if (!extensible.CheckSportType(SportsToInclude))
                 return;
 
             float? value = ExtractValue(extensible, forceJustMe);
@@ -165,7 +165,7 @@ namespace FellrnrTrainingAnalysis.Model
         public string FirstFieldname { get; set; }
         public string SecondFieldname { get; set; }
 
-        public enum Mode { Subtract } //add others as needed
+        public enum Mode { Subtract, Max } //add others as needed
         Mode ExtractionMode { get; set; }
 
         public override string ToString()
@@ -189,6 +189,10 @@ namespace FellrnrTrainingAnalysis.Model
             if (f1 != null && f2 != null && ExtractionMode == Mode.Subtract)
             {
                 result = (float)f1 - (float)f2;
+            }
+            if (ExtractionMode == Mode.Max)
+            {
+                result = Utils.Misc.Max(f1, f2);
             }
 
             if (forceJustMe)
@@ -262,10 +266,13 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateFieldTSS : CalculateFieldSimple
     {
-        public CalculateFieldTSS(string activityFieldname) :
-            base(activityFieldname, OverrideMode.Always, null)
+        public CalculateFieldTSS(string activityFieldname, float cpScalingFactor = 1.0f, List<string>? sportsToInclude = null) :
+            base(activityFieldname, OverrideMode.Always, sportsToInclude)
         {
+            CpScalingFactor = cpScalingFactor;
         }
+
+        float CpScalingFactor { get; set;  }
 
         public override string ToString()
         {
@@ -276,7 +283,7 @@ namespace FellrnrTrainingAnalysis.Model
         protected override float? ExtractValue(Extensible extensible, bool forceJustMe)
         {
             if (forceJustMe)
-                Logging.Instance.Debug($"CalculateFieldSimpleMath Forced ExtractValue {ActivityFieldname}");
+                Logging.Instance.Debug($"CalculateFieldTSS Forced ExtractValue {ActivityFieldname}");
             if (!extensible.HasNamedDatum(Activity.TagAveragePower))
                 return null;
             if (!extensible.HasNamedDatum(Activity.TagElapsedTime))
@@ -291,19 +298,68 @@ namespace FellrnrTrainingAnalysis.Model
             if (!day.HasNamedDatum(Day.TagCriticalPower))
                 return null;
 
-            float? cp = day.GetNamedFloatDatum(Day.TagCriticalPower);
+            float? cp = day.GetNamedFloatDatum(Day.TagCriticalPower) * CpScalingFactor;
             float? ap = extensible.GetNamedFloatDatum(Activity.TagAveragePower);
             float? sec = extensible.GetNamedFloatDatum(Activity.TagElapsedTime);
-            float? tss = null;
+            float? trimp = null;
             if (cp != null && ap != null)
             {
                 float intensity = (float)ap / (float)cp;
-                tss = (sec * ap * intensity)/ (cp * 3600.0f) * 100.0f;
+                trimp = (sec * ap * intensity)/ (cp * 3600.0f) * 100.0f;
             }
             if (forceJustMe)
-                Logging.Instance.Debug($"CalculateFieldTSS Forced ExtractValue retval {tss}");
-            return tss;
+                Logging.Instance.Debug($"CalculateFieldTSS Forced ExtractValue retval {trimp}");
+            return trimp;
         }
 
     }
+
+    public class CalculateFieldIF : CalculateFieldSimple
+    {
+        public CalculateFieldIF(string activityFieldname, float cpScalingFactor = 1.0f, List<string>? sportsToInclude = null) :
+            base(activityFieldname, OverrideMode.Always, sportsToInclude)
+        {
+            CpScalingFactor = cpScalingFactor;
+        }
+
+        float CpScalingFactor { get; set; }
+
+        public override string ToString()
+        {
+            return $"CalculateFieldIF [Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
+        }
+
+        //https://www.trainingpeaks.com/learn/articles/estimating-training-stress-score-tss/
+        protected override float? ExtractValue(Extensible extensible, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldIF Forced ExtractValue {ActivityFieldname}");
+            if (!extensible.HasNamedDatum(Activity.TagAveragePower))
+                return null;
+            if (!extensible.HasNamedDatum(Activity.TagElapsedTime))
+                return null;
+
+            if (extensible is not Activity)
+                return null;
+
+            Activity activity = (Activity)extensible;
+            Day day = activity.Day;
+
+            if (!day.HasNamedDatum(Day.TagCriticalPower))
+                return null;
+
+            float? cp = day.GetNamedFloatDatum(Day.TagCriticalPower) * CpScalingFactor;
+            float? ap = extensible.GetNamedFloatDatum(Activity.TagAveragePower);
+            float? intensity = null;
+            if (cp != null && ap != null)
+            {
+                intensity = (float)ap / (float)cp;
+            }
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldIF Forced ExtractValue retval {intensity}");
+            return intensity;
+        }
+
+    }
+
 }

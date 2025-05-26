@@ -74,7 +74,7 @@ namespace FellrnrTrainingAnalysis.Model
                 //always remove if we're recalculating
                 activity.RemoveNamedDatum(activityFieldname);
             }
-            if (SportsToInclude != null && !activity.CheckSportType(SportsToInclude))
+            if (!activity.CheckSportType(SportsToInclude))
             {
                 if (forceJustMe) Logging.Instance.TraceLeave($"Wrong type {activity.ActivityType}");
                 return;
@@ -103,7 +103,7 @@ namespace FellrnrTrainingAnalysis.Model
                 return;
             }
 
-            float[]? values = ExtractValue(data, force);
+            float[]? values = ExtractValue(data, activity, force);
 
 
             if (values != null)
@@ -117,7 +117,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
             if (forceJustMe) Logging.Instance.TraceLeave($"CalculateDataFieldFromTimeSeriesBase Forced ExtractValue {ActivityFieldnames[0]} retval {values}");
         }
-        protected abstract float[]? ExtractValue(TimeValueList data, bool forceJustMe);
+        protected abstract float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe);
 
         public override string ToString()
         {
@@ -135,7 +135,7 @@ namespace FellrnrTrainingAnalysis.Model
         public enum Mode { LastValue, Average, Min, Max }
         Mode ExtractionMode { get; set; }
 
-        protected override float[]? ExtractValue(TimeValueList data, bool forceJustMe)
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             float? value = null;
             if (ExtractionMode == Mode.LastValue)
@@ -163,22 +163,25 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromTimeSeriesThreashold : CalculateDataFieldFromTimeSeriesBase
     {
-        public CalculateDataFieldFromTimeSeriesThreashold(string activityFieldname, Mode extractionMode, float threashold, string sourceStreamName, List<string>? sportsToInclude = null) :
+        public CalculateDataFieldFromTimeSeriesThreashold(string activityFieldname, Mode extractionMode, float threashold, bool ignoreZeros, string sourceStreamName, List<string>? sportsToInclude = null) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
             Threashold = threashold;
+            IgnoreZeros = ignoreZeros;
         }
         public enum Mode { AboveAbs, BelowAbs, AbovePercent, BelowPercent }
         Mode ExtractionMode { get; set; }
 
         float Threashold { get; set; }
 
-        protected override float[]? ExtractValue(TimeValueList data, bool forceJustMe)
+        bool IgnoreZeros { get; set; }
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesThreashold Forced ExtractValue {ActivityFieldnames[0]}");
             uint pastThreashold = 0;
+            uint total = 0;
             for (int i = 0; i < data.Length; i++)
             {
                 float thisValue = data.Values[i];
@@ -198,11 +201,13 @@ namespace FellrnrTrainingAnalysis.Model
                 {
                     pastThreashold++;
                 }
+                if (thisValue > 0 || !IgnoreZeros)
+                    total++;
             }
 
             if (ExtractionMode == Mode.AbovePercent || ExtractionMode == Mode.BelowPercent)
             {
-                float percent = (pastThreashold * 100.0f) / ((float)data.Length);
+                float percent = (pastThreashold * 100.0f) / ((float)total);
                 return new float[] { percent };
             }
             else
@@ -224,7 +229,7 @@ namespace FellrnrTrainingAnalysis.Model
         float Min { get; set; }
         float? Max { get; set; }
 
-        protected override float[]? ExtractValue(TimeValueList data, bool forceJustMe)
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
@@ -274,7 +279,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         int Start { get; set; }
         int End { get; set; }
-        protected override float[]? ExtractValue(TimeValueList data, bool forceJustMe)
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             float? value = null;
 
@@ -341,7 +346,7 @@ namespace FellrnrTrainingAnalysis.Model
         }
         int[] Zones { get; set; }
 
-        protected override float[]? ExtractValue(TimeValueList data, bool forceJustMe)
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesZones Forced ExtractValue {ActivityFieldnames[0]}");
@@ -368,6 +373,135 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
             return accumulator.Concat(percent).ToArray();
+        }
+    }
+
+    public class CalculateDataFieldFromTimeSeriesTRIMPi : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesTRIMPi(string activityFieldname, string sourceStreamName, float cpScalingFactor = 1.0f, List<string>? sportsToInclude = null) :
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            CpScalingFactor = cpScalingFactor;
+        }
+        float CpScalingFactor { get; set; }
+
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
+
+            Day day = activity.Day;
+
+            float? cpn = day.GetNamedFloatDatum(Day.TagCriticalPower);
+            if (cpn == null)
+                return null;
+            double cp = cpn.Value * CpScalingFactor;
+
+            if (data.Length == 0)
+                return null;
+
+            double trimp = 0;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                double value = data.Values[i];
+
+                double intensity = value / cp;
+                trimp += (1 * value * intensity) / (cp * 3600.0f) * 100.0f;
+            }
+            return new float[] { (float)trimp };
+        }
+    }
+
+    public class CalculateDataFieldFromTimeSeriesTRIMPnp : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesTRIMPnp(string activityFieldname, string sourceStreamName, float cpScalingFactor = 1.0f, List<string>? sportsToInclude = null) :
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            CpScalingFactor = cpScalingFactor;
+        }
+        float CpScalingFactor { get; set; }
+
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
+
+            Day day = activity.Day;
+
+            float? cpn = day.GetNamedFloatDatum(Day.TagCriticalPower);
+            if (cpn == null || cpn == 0)
+                return null;
+            double cp = cpn.Value * CpScalingFactor;
+
+            if (data.Length == 0)
+                return null;
+
+            TimeValueList? rolled = data.RollilngAverage(30); //hardcode 30 seconds
+            if (rolled == null) return null;
+
+            double sum = 0;
+            for (int i = 0; i < data.Length; i++)
+            {
+                sum += Math.Pow(data.Values[i], 4.0);
+            }
+            float ap = (float)sum / data.Length;
+            ap = (float)Math.Pow(ap, 1.0 / 4.0); //fourth root
+
+            float? secn = activity.GetNamedFloatDatum(Activity.TagElapsedTime);
+            if (secn != null)
+            {
+                float sec = secn.Value;
+                float intensity = (float)ap / (float)cp;
+                float tss = (float)((sec * ap * intensity) / (cp * 3600.0f) * 100.0f);
+                return new float[] { (float)tss };
+            }
+            return new float[0];
+        }
+    }
+
+
+    public class CalculateDataFieldFromTimeSeriesTRIMPhr : CalculateDataFieldFromTimeSeriesBase
+    {
+        public CalculateDataFieldFromTimeSeriesTRIMPhr(string activityFieldname, string sourceStreamName, float cpScalingFactor = 1.0f, List<string>? sportsToInclude = null) :
+            base(activityFieldname, sourceStreamName, sportsToInclude)
+        {
+            CpScalingFactor = cpScalingFactor;
+        }
+        float CpScalingFactor { get; set; }
+
+        protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
+
+
+            double lt2hr = Options.Instance.StartingLT2HeartRate; //could assume this is zone 5 start, but let's be explicit for now
+            double resthr = Options.Instance.StartingRestingHeartRate;
+            double maxhr = Options.Instance.StartingMaxHeartRate; 
+
+            double ltfraction = (lt2hr - resthr) / (maxhr - resthr);
+            //TRIMP of 100 is 60 minutes at LT2, so let's work out that first
+            double k = Options.Instance.isMale ? 1.92 : 1.67;
+            double oneHourSec = 3600.0;
+            double trimpOneHourCp = oneHourSec * ltfraction * 0.64 * Math.Exp(ltfraction*k);
+
+            double trimpsum = 0;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                double hr = data.Values[i];
+
+                if(hr > resthr)
+                {
+                    double hrfraction = (hr - resthr) / (maxhr - resthr);
+                    double trimpsec = 1.0 * hrfraction * 0.64 * Math.Exp(hrfraction * k);
+                    trimpsum += trimpsec;
+                }
+            }
+
+            double trimp = trimpsum / trimpOneHourCp * 100;
+            return new float[] { (float)trimp };
         }
     }
 

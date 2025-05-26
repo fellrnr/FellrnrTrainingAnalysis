@@ -32,7 +32,21 @@ namespace FellrnrTrainingAnalysis.Model
         private SortedDictionary<DateTime, Extensible> _children = new SortedDictionary<DateTime, Extensible>();
 
         [MemoryPackIgnore]
-        public IReadOnlyDictionary<DateTime, Extensible> Children { get { return _children; } }
+        public IReadOnlyDictionary<DateTime, Extensible> Children 
+        { 
+            get 
+            {
+                //do we want to skip levels with one child? Maybe not
+                //if (_children.Count == 1)
+                //{
+                //    Extensible e = _children.First().Value;
+                //    if(e is not CalendarNode)
+                //        return 
+                //}
+                        
+                return _children; 
+            } 
+        }
 
         public void AddChild(DateTime dateAndTime, Extensible child)
         {

@@ -98,19 +98,30 @@ namespace FellrnrTrainingAnalysis.Model
                                                     sportsToInclude:Activity.ActivityTypeRun,
                                                     offset:Options.Instance.RestingHeartRateToStanding),
 
-                new TimeSeriesWPrimeBalance(name:"W' Balance",
-                                            parent: activity,
-                                            persistCache:true,  //this is more expensive than most ts
-                                            requiredFields: new List<string> { "Power" },
-                                            opposingFields: null,
-                                            sportsToInclude:Activity.ActivityTypeRun),
+                new TimeSeriesEnergyCostOfRunning(name:"ECOR",
+                                                    parent: activity,
+                                                    persistCache:true,  //this is more expensive than most ts
+                                                    requiredFields: new List<string> { "Speed", "Power" },
+                                                    opposingFields: null,
+                                                    sportsToInclude:Activity.ActivityTypeRun),
 
+
+                //sets one hour power for this activity (critical power is set by a rolling PDC calcualtion as it's the best over a number of days)
                 new PowerDistributionCurve(name:Activity.TagPowerDistributionCurve,
                                             parent: activity,
                                             persistCache:true,
                                             requiredFields: new List<string> { Activity.TagPower },
                                             opposingFields: null,
                                             sportsToInclude:Activity.ActivityTypeRun),
+
+                /*
+                new TimeSeriesWPrimeBalance(name:"W' Balance",
+                                            parent: activity,
+                                            persistCache:true,  //this is more expensive than most ts
+                                            requiredFields: new List<string> { "Power" },
+                                            opposingFields: null,
+                                            sportsToInclude:Activity.ActivityTypeRun),
+                */
 
 
                 //You can grade adjust speed rather than delta on distance, but the result is surprisingly close

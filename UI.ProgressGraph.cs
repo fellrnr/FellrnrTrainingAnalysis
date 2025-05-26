@@ -19,10 +19,10 @@ namespace FellrnrTrainingAnalysis.UI
 
         private Database? _database;
         private FilterActivities? _filterActivities;
-        private Dictionary<string, GraphLineSelection> Filters = new Dictionary<string, GraphLineSelection>();
+        private Dictionary<string, GraphLineSelection> Selections = new Dictionary<string, GraphLineSelection>();
         private int Row = 1; //row zero is the headers
         private delegate void DoRefresh();
-
+        private bool PauseUpdating = false;
 
         //TimeSeries are the form "TS.{operation}.{name}";
 
@@ -50,6 +50,7 @@ namespace FellrnrTrainingAnalysis.UI
             dateTimePickerStart.Value = earliest;
             dateTimePickerEnd.Value = latest;
             CreateFilterRows(database, athlete);
+            timePeriodComboBox.Text = "3M"; //let update callback set dates
             RefreshGraph();
             Logging.Instance.TraceLeave();
         }
@@ -65,13 +66,13 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (string name in athlete.ActivityFieldNames)
             {
                 ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name); //NB, look up without the prefix
-                if (activityDatumMetadata != null && 
+                if (activityDatumMetadata != null &&
                     activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None &&
                     activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
                 {
-                    if (!Filters.ContainsKey(name))
+                    if (!Selections.ContainsKey(name))
                     {
-                        Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.Activity, Row++, RefreshGraph));
+                        Selections.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.Activity, Row++, RefreshGraph));
                     }
                 }
             }
@@ -79,13 +80,13 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (string name in athlete.DayFieldNames)
             {
                 ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(name);
-                if (activityDatumMetadata != null && 
+                if (activityDatumMetadata != null &&
                     activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None &&
                     activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
                 {
-                    if (!Filters.ContainsKey(name))
+                    if (!Selections.ContainsKey(name))
                     {
-                        Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.Day, Row++, RefreshGraph));
+                        Selections.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.Day, Row++, RefreshGraph));
                     }
                 }
             }
@@ -94,9 +95,9 @@ namespace FellrnrTrainingAnalysis.UI
             IReadOnlyCollection<String> timeSeriesNames = database.CurrentAthlete.AllTimeSeriesNames;
             foreach (string name in timeSeriesNames)
             {
-                if (!Filters.ContainsKey(name))
+                if (!Selections.ContainsKey(name))
                 {
-                    Filters.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.TimeSeries, Row++, RefreshGraph));
+                    Selections.Add(name, new GraphLineSelection(tableLayoutPanel1, name, GraphLineSelection.FieldTypeEnum.TimeSeries, Row++, RefreshGraph));
                 }
 
             }
@@ -109,7 +110,9 @@ namespace FellrnrTrainingAnalysis.UI
 
         private void RefreshGraph()
         {
-            ScottPlot.Palettes.Category20 myPalette = new ScottPlot.Palettes.Category20();
+            if(PauseUpdating) return;
+
+            ScottPlot.Palettes.Category10 myPalette = new ScottPlot.Palettes.Category10();
 
             formsPlotProgress.Plot.Clear();
             foreach (Axis axis in CurrentAxis) { formsPlotProgress.Plot.RemoveAxis(axis); }
@@ -122,7 +125,7 @@ namespace FellrnrTrainingAnalysis.UI
             List<Activity> activities = _filterActivities.GetActivities(_database);
             ReadOnlyDictionary<DateTime, Model.Day> days = _database.CurrentAthlete.Days;
 
-            foreach (KeyValuePair<string, GraphLineSelection> kvp in Filters)
+            foreach (KeyValuePair<string, GraphLineSelection> kvp in Selections)
             {
                 GraphLineSelection filterRow = kvp.Value;
                 string name = kvp.Key;
@@ -133,23 +136,44 @@ namespace FellrnrTrainingAnalysis.UI
                 List<double> values = new List<double>();
 
                 //foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
-                foreach (Activity activity in activities)
+                if (filterRow.FieldType == GraphLineSelection.FieldTypeEnum.Day)
                 {
-                    //DateTime dateTime = kvp.Key;
-                    DateTime? startDateTime = activity.StartDateTimeLocal;
-                    if (startDateTime != null && startDateTime >= dateTimePickerStart.Value && startDateTime <= dateTimePickerEnd.Value)
+                    foreach (KeyValuePair<DateTime, Model.Day> kvp2 in days)
                     {
-                        //Activity activity = kvp.Value;
-
-                        float? value = GetValue(filterRow, activity);
-                        if (value != null)
+                        Model.Day day = kvp2.Value;
+                        DateTime dt = kvp2.Key;
+                        if (dt >= dateTimePickerStart.Value && dt <= dateTimePickerEnd.Value)
                         {
-                            dateTimes.Add(startDateTime.Value);
-                            values.Add((double)value);
+                            //Activity activity = kvp.Value;
+                            float? value = GetValue(filterRow, day);
+                            if (value != null)
+                            {
+                                dateTimes.Add(dt);
+                                values.Add((double)value);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    foreach (Activity activity in activities)
+                    {
+                        //DateTime dateTime = kvp.Key;
+                        //Note we put activities on the timeline with time included so they're offset slightly, but days are for midnight
+                        DateTime? startDateTime = activity.StartDateTimeLocal;
+                        if (startDateTime != null && startDateTime >= dateTimePickerStart.Value && startDateTime <= dateTimePickerEnd.Value)
+                        {
+                            //Activity activity = kvp.Value;
 
+                            float? value = GetValue(filterRow, activity);
+                            if (value != null)
+                            {
+                                dateTimes.Add(startDateTime.Value);
+                                values.Add((double)value);
+                            }
+                        }
+                    }
+                }
                 if (values.Count == 0)
                     continue;
                 double[] xArray = dateTimes.Select(x => x.ToOADate()).ToArray();
@@ -162,23 +186,28 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     BarPlot barPlot = formsPlotProgress.Plot.AddBar(yArray, xArray);
                     barPlot.Color = myPalette.GetColor(axisIndex);
+                    barPlot.Label = filterRow.Name;
                     plottable = barPlot;
                 }
                 else if (filterRow.GraphStyle == SCATTER)
                 {
                     ScatterPlot scatterPlot = formsPlotProgress.Plot.AddScatter(yArray, xArray);
                     scatterPlot.Color = myPalette.GetColor(axisIndex);
+                    scatterPlot.Label = filterRow.Name;
                     plottable = scatterPlot;
                 }
                 else
                 {
                     ScatterPlot scatterGraph = formsPlotProgress.Plot.AddScatter(xArray, yArray);
-                    scatterGraph.MarkerShape = MarkerShape.none;
+                    scatterGraph.MarkerShape = MarkerShape.filledCircle;
+                    scatterGraph.MarkerSize = 15;
                     scatterGraph.LineWidth = 2;
-                    scatterGraph.Color = myPalette.GetColor(axisIndex);
-
+                    scatterGraph.Smooth = true;
+                    //scatterGraph.Color = myPalette.GetColor(axisIndex);
+                    scatterGraph.Label = filterRow.Name;
                     plottable = scatterGraph;
                 }
+
 
                 formsPlotProgress.Plot.XAxis.DateTimeFormat(true);
                 Axis yAxis;
@@ -203,13 +232,15 @@ namespace FellrnrTrainingAnalysis.UI
                         CurrentAxis.Add(yAxis);
                     }
                     yAxis.Label(filterRow.Name);
-                    yAxis.Color(myPalette.GetColor(axisIndex));
+                    //yAxis.Color(myPalette.GetColor(axisIndex));
                     axisIndex++;
-                    if(forcedAxis >= 0)
+                    if (forcedAxis >= 0)
                         ReusedAxis[forcedAxis] = yAxis;
                 }
 
             }
+            formsPlotProgress.Plot.Legend(true, Alignment.UpperCenter);
+
             formsPlotProgress.Refresh();
         }
 
@@ -221,19 +252,6 @@ namespace FellrnrTrainingAnalysis.UI
                 if (activity.HasNamedDatum(name))
                 {
                     Datum? datum = activity.GetNamedDatum(name);
-                    if (datum != null && datum is TypedDatum<float>)
-                    {
-                        TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
-                        return floatDatum.Data;
-                    }
-                }
-            }
-            else if (filterRow.FieldType == GraphLineSelection.FieldTypeEnum.Day)
-            {
-                Model.Day day = activity.Day;
-                if (day.HasNamedDatum(name))
-                {
-                    Datum? datum = day.GetNamedDatum(name);
                     if (datum != null && datum is TypedDatum<float>)
                     {
                         TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
@@ -254,6 +272,20 @@ namespace FellrnrTrainingAnalysis.UI
             return null;
         }
 
+        private float? GetValue(GraphLineSelection filterRow, Model.Day day)
+        {
+            string name = filterRow.Name;
+            if (day.HasNamedDatum(name))
+            {
+                Datum? datum = day.GetNamedDatum(name);
+                if (datum != null && datum is TypedDatum<float>)
+                {
+                    TypedDatum<float> floatDatum = (TypedDatum<float>)datum;
+                    return floatDatum.Data;
+                }
+            }
+            return null;
+        }
         private class GraphLineSelection
         {
             public enum FieldTypeEnum { Activity, Day, TimeSeries };
@@ -286,11 +318,53 @@ namespace FellrnrTrainingAnalysis.UI
                 tableLayoutPanel.Controls.Add(FieldName, 0, row);
             }
 
+
+            public void RestoreValues(GraphStore store)
+            {
+                CreateMissingControls();
+                FieldName.Checked = store.IsChecked;
+                if (SmoothingBox != null) SmoothingBox.Value = store.Smoothing;
+                if (AxisBox != null) AxisBox.Value = store.Axis;
+                if (OperationBox != null) OperationBox.Text = store.Operation;
+                if (GraphStyleBox != null) GraphStyleBox.Text = store.Graphstyle;
+            }
+
+            public void Clear()
+            {
+                FieldName.Checked = false;
+            }
+
             public bool IsChecked { get { return FieldName.Checked; } }
             public decimal Smoothing { get { return SmoothingBox == null ? 0 : SmoothingBox.Value; } }
             public int Axis { get { return AxisBox == null ? 0 : (int)AxisBox.Value; } }
 
+            public class GraphStore
+            {
+                public string Name;
+                public bool IsChecked;
+                public decimal Smoothing;
+                public int Axis;
+                public string Operation;
+                public string Graphstyle;
+
+                public GraphStore(string name, bool isChecked, decimal smoothing, int axis, string operation, string graphstyle)
+                {
+                    Name = name;
+                    IsChecked = isChecked;
+                    Smoothing = smoothing;
+                    Axis = axis;
+                    Operation = operation;
+                    Graphstyle = graphstyle;
+                }
+            }
+
             protected void ChangedHandler(object? sender, EventArgs e)
+            {
+                CreateMissingControls();
+                DoRefresh.Invoke();
+            }
+
+            private void CreateMissingControls()
             {
                 if (GraphStyleBox == null)
                 {
@@ -314,7 +388,6 @@ namespace FellrnrTrainingAnalysis.UI
                     AxisBox.ValueChanged += ChangedHandler;
                     TableLayoutPanel.Controls.Add(AxisBox, 4, Row);
                 }
-                DoRefresh.Invoke();
             }
         }
 
@@ -364,5 +437,36 @@ namespace FellrnrTrainingAnalysis.UI
             RefreshGraph();
         }
 
+        private Dictionary<string, List<GraphLineSelection.GraphStore>> Presets = new Dictionary<string, List<GraphLineSelection.GraphStore>>()
+        {
+            {
+                "TSB", new List<GraphLineSelection.GraphStore> 
+                {
+                    new GraphLineSelection.GraphStore("CTL", true, 0, 2, "", LINE),
+                    new GraphLineSelection.GraphStore("ATL", true, 0, 2, "", LINE),
+                    new GraphLineSelection.GraphStore("TSB", true, 0, 2, "", LINE),
+                }
+            }
+        };
+
+        private void presetComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            PauseUpdating = true;
+            //do this as a cheat for now, then add saving and restoring
+            if (Presets.ContainsKey(presetComboBox.Text))
+            {
+                List<GraphLineSelection.GraphStore> graphStores = Presets[presetComboBox.Text];
+                foreach (KeyValuePair<string, GraphLineSelection> kvp in Selections)
+                {
+                    kvp.Value.Clear();
+                }
+                foreach (GraphLineSelection.GraphStore store in graphStores)
+                {
+                    Selections[store.Name].RestoreValues(store);
+                }
+            }
+            PauseUpdating = false;
+            RefreshGraph();
+        }
     }
 }

@@ -133,8 +133,11 @@ namespace FellrnrTrainingAnalysis.Action
 
         public void RefreshActivity(Database database, Activity activity)
         {
-            long key = long.Parse(activity.PrimaryKey());
-            GetActivityFromStrava(database, key);
+            if (activity.PrimaryKey() != null)
+            {
+                long key = long.Parse(activity.PrimaryKey());
+                GetActivityFromStrava(database, key);
+            }
         }
 
         private Activity? GetActivityFromStrava(Database database, long stravaId)

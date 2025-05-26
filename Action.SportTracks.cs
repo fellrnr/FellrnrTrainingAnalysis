@@ -537,7 +537,7 @@ namespace FellrnrTrainingAnalysis.Action
                     {
                         //near hit
                         Activity activity = athlete.ActivitiesByUTCDateTime[date];
-                        if (!MatchedStravaIds.Contains(activity.PrimaryKey())) //not one we've already matched
+                        if (activity.PrimaryKey() != null && !MatchedStravaIds.Contains(activity.PrimaryKey())) //not one we've already matched
                         {
                             //fitlog and strava from different devices may be off by up to a minute or so (different start presses)
                             return activity;

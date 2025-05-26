@@ -173,18 +173,30 @@ namespace FellrnrTrainingAnalysis.Action
                 Logging.Instance.Debug(String.Format("RecordMesgEvent: elapsedTime {0}, recordTime {1} activityStart {2}, totalStopped {3}",
                     elapsedTime, recordTime, Calculation.activityStartUTC, Calculation.totalStopped));
 
-
+            List<string> nativeFields = new List<string>();
             foreach (var field in myRecordMesg.Fields)
             {
                 if (field.Num == RecordMesg.FieldDefNum.Timestamp)
                     continue; //handled above
 
-                ProcessFitRecordField(recordTime, elapsedTime, field);
+                string? fieldName = ExtractFieldName(field!.GetName().ToString(), field.Num);
+
+                if (fieldName != null)
+                {
+                    ProcessFitRecordField(recordTime, elapsedTime, field, fieldName);
+                    nativeFields.Add(fieldName);
+                }
             }
 
             foreach (var field in myRecordMesg.DeveloperFields)
             {
-                ProcessFitRecordField(recordTime, elapsedTime, field);
+                string? fieldName = ExtractFieldName(field!.GetName().ToString(), field.Num);
+
+                //don't overrite a native field with a developer field of the same name (this caused problems with power)
+                if (fieldName != null && !nativeFields.Contains(fieldName))
+                {
+                    ProcessFitRecordField(recordTime, elapsedTime, field, fieldName);
+                }
             }
 
             //handle lat long specially
@@ -229,26 +241,25 @@ namespace FellrnrTrainingAnalysis.Action
             Accumulation.LocationLons.Add(lon);
         }
 
-        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, Field? field)
+        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, Field field, string fieldName)
         {
             if (field == null || field!.GetName() == null)
             {
                 return;
             }
-            ProcessFitRecordField(recordTime, elapsedTime, field, field.Num); //Num is not on FieldBase, but duplicated on Field and DeveloperField
+            ProcessFitRecordField(recordTime, elapsedTime, field, field.Num, fieldName); //Num is not on FieldBase, but duplicated on Field and DeveloperField
         }
-        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, DeveloperField? field)
+        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, DeveloperField field, string fieldName)
         {
             if (field == null || field!.GetName() == null)
             {
                 return;
             }
-            ProcessFitRecordField(recordTime, elapsedTime, field, field.Num); //Num is not on FieldBase, but duplicated on Field and DeveloperField
+            ProcessFitRecordField(recordTime, elapsedTime, field, field.Num, fieldName); //Num is not on FieldBase, but duplicated on Field and DeveloperField
         }
 
-        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, FieldBase? field, byte fieldNum)
+        private void ProcessFitRecordField(System.DateTime recordTime, uint elapsedTime, FieldBase field, byte fieldNum, string fieldName)
         {
-            string fieldName = field!.GetName().ToString();
             if (Options.Instance.DebugFitFields)
             {
                 if (!AccumulationData.fieldCounts.ContainsKey(fieldName))
@@ -256,23 +267,6 @@ namespace FellrnrTrainingAnalysis.Action
                 AccumulationData.fieldCounts[fieldName]++;
             }
 
-            if (fieldName.ToLower() == "unknown")
-            {
-                if (Options.Instance.ImportUnknownFitFields)
-                {
-                    fieldName = fieldName + "_" + fieldNum;
-                }
-                else
-                {
-                    return;
-                }
-            }
-            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.TimeSeries, fieldName);
-            if (activityDatumMapping == null || !activityDatumMapping.Import)
-            {
-                return;
-            }
-            fieldName = activityDatumMapping.InternalName;
 
             if (field.GetNumValues() == 1) //TODO: Handle fields with multiple values
             {
@@ -298,6 +292,27 @@ namespace FellrnrTrainingAnalysis.Action
             {
                 Logging.Instance.Log(String.Format("Activity at {0} has multiple values for field {1}", recordTime, fieldName));
             }
+        }
+
+        private string? ExtractFieldName(string fieldName, byte fieldNum)
+        {
+            if (fieldName.ToLower() == "unknown")
+            {
+                if (Options.Instance.ImportUnknownFitFields)
+                {
+                    fieldName = fieldName + "_" + fieldNum;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.TimeSeries, fieldName);
+            if (activityDatumMapping == null || !activityDatumMapping.Import)
+            {
+                return null;
+            }
+            return activityDatumMapping.InternalName;
         }
 
         private void AddTimeSeriesDatum(string name, uint elapsedTime, float data)

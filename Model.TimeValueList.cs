@@ -90,12 +90,12 @@ namespace FellrnrTrainingAnalysis.Model
                 if (i - before < 0)
                     prior_i = 0;
                 else
-                    prior_i = i-before;
+                    prior_i = i - before;
                 prior = data[prior_i];
 
                 float ahead;
                 int ahead_i;
-                if (i + after > data.Length-1)
+                if (i + after > data.Length - 1)
                     ahead_i = data.Length - 1;
                 else
                     ahead_i = i + after;
@@ -125,6 +125,8 @@ namespace FellrnrTrainingAnalysis.Model
             return newData;
         }
 
+
+
         //This is doing more than span - it's averaging the deltas over the period
         public static TimeValueList? SpanDeltasWithSmoothing(TimeValueList data, float scalingFactor, float? numerator, float? limit, float period, bool extraDebug)
         {
@@ -135,7 +137,7 @@ namespace FellrnrTrainingAnalysis.Model
             //uint lastTime = 0;
             deltas[0] = 0; //first value has no predecessor, so it has to be zero
                            //List<uint> absoluteTimeStack = new List<uint>();
-            //List<uint> incrementTimeStack = new List<uint>();
+                           //List<uint> incrementTimeStack = new List<uint>();
             List<float> deltaStack = new List<float>();
 
             float deltaSum = 0;
@@ -223,5 +225,32 @@ namespace FellrnrTrainingAnalysis.Model
 
             return newData;
         }
+
+        public TimeValueList? RollilngAverage(int period)
+        {
+            if (Length < period)
+                return null;
+
+            float[] buffer = new float[period];
+
+            float[] rolling = new float[this.Length];
+            int index = 0;
+            float sum = 0;
+
+            for (int i = 0; i < Length; i++)
+            {
+                sum = sum - buffer[index] + this.Values[i];
+                buffer[index] = this.Values[i];
+
+                // increment the index (wrapping back to 0)
+                index = (index + 1) % period;
+
+                // calculate the average
+                float rolled = sum / period;
+                rolling[i] = rolled;
+            }
+            return new TimeValueList(rolling);
+        }
     }
+
 }
