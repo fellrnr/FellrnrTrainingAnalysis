@@ -34,8 +34,13 @@ namespace FellrnrTrainingAnalysis.Action
             public List<uint> LocationTimes = new List<uint>();
             public List<float> LocationLats = new List<float>();
             public List<float> LocationLons = new List<float>();
-
+            public List<short> RRIntervals = new List<short>();
             public static SortedDictionary<string, int> fieldCounts = new SortedDictionary<string, int>();
+
+            public List<Lap> Laps { get; set; } = new List<Lap>();
+
+            public string activitySportType = "";
+
         }
 
         //put all the variables for ongoing calculations that don't get emitted in a seperate class for clarity
@@ -115,6 +120,7 @@ namespace FellrnrTrainingAnalysis.Action
             }
 
             Accumulation.activity.AddTimeSeriesSet(Accumulation.timeSeriesSet, reload);
+            Accumulation.activity.Laps = Accumulation.Laps;
 
             if (Accumulation.LocationTimes.Count > 0)
                 Accumulation.activity.LocationStream = new LocationStream(Accumulation.LocationTimes.ToArray(), Accumulation.LocationLats.ToArray(), Accumulation.LocationLons.ToArray());
@@ -129,7 +135,7 @@ namespace FellrnrTrainingAnalysis.Action
                 Accumulation.activity.StartDateTimeLocal = Calculation.activityStartUTC; //last ditch fallback
             }
             Accumulation.activity.StartDateTimeUTC = Calculation.activityStartUTC;
-
+            Accumulation.activity.RRIntervals = Accumulation.RRIntervals.ToArray();
             Calculation.Overall.Stop();
 
 
@@ -190,12 +196,19 @@ namespace FellrnrTrainingAnalysis.Action
 
             foreach (var field in myRecordMesg.DeveloperFields)
             {
-                string? fieldName = ExtractFieldName(field!.GetName().ToString(), field.Num);
-
-                //don't overrite a native field with a developer field of the same name (this caused problems with power)
-                if (fieldName != null && !nativeFields.Contains(fieldName))
+                if (field != null && field.GetName() != null)
                 {
-                    ProcessFitRecordField(recordTime, elapsedTime, field, fieldName);
+                    string devName = field.GetName().ToString();
+                    devName += " IQ";
+
+                    string? fieldName = ExtractFieldName(devName, field.Num);
+
+                    //don't overrite a native field with a developer field of the same name (this caused problems with power)
+                    //actually, we want the Connect IQ power rather than native running power 
+                    if (fieldName != null) // && !nativeFields.Contains(fieldName))
+                    {
+                        ProcessFitRecordField(recordTime, elapsedTime, field, fieldName);
+                    }
                 }
             }
 
@@ -307,7 +320,10 @@ namespace FellrnrTrainingAnalysis.Action
                     return null;
                 }
             }
-            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.TimeSeries, fieldName);
+            ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile, 
+                                            ActivityDatumMapping.LevelType.TimeSeries, 
+                                            fieldName,
+                                            Accumulation.activitySportType);
             if (activityDatumMapping == null || !activityDatumMapping.Import)
             {
                 return null;
@@ -443,7 +459,7 @@ namespace FellrnrTrainingAnalysis.Action
             string fieldName = e.mesg.Name; //normally "Sport"
 
             ActivityDatumMapping? activityDatumMapping = ActivityDatumMapping.MapRecord(ActivityDatumMapping.DataSourceEnum.FitFile,
-                ActivityDatumMapping.LevelType.Activity, fieldName);
+                ActivityDatumMapping.LevelType.Activity, fieldName, "");
             if (activityDatumMapping == null || !activityDatumMapping.Import)
             {
                 return;
@@ -454,6 +470,7 @@ namespace FellrnrTrainingAnalysis.Action
                 string activitySportType = ((Sport)aSport).ToString();
                 //mesg.name is "Sport", value it "Running" rather than "Run"
                 Accumulation.activity.ImportDatum(activityDatumMapping.InternalName, ActivityDatumMapping.DataSourceEnum.FitFile, ActivityDatumMapping.LevelType.Activity, activitySportType);
+                Accumulation.activitySportType = activitySportType;
             }
             Calculation.Other.Stop();
         }
@@ -505,8 +522,10 @@ namespace FellrnrTrainingAnalysis.Action
 
                     //the first start is the start of the activity (the activity event comes at the end of the file)
                     if (Calculation.activityStartUTC == null)
+                    {
                         Calculation.activityStartUTC = restartTime;
-
+                        Logging.Instance.Debug($"Got start time in start event {restartTime}");
+                    }
                     if (!Calculation.IsRunning)
                     {
 
@@ -556,6 +575,68 @@ namespace FellrnrTrainingAnalysis.Action
 
         }
 
+        void OnLapMesgEvent(object sender, MesgEventArgs e)
+        {
+            //timestamps are UTC unless they say "local"
+            //Logging.Instance.Debug(String.Format("LapMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
+            LapMesg myLapMesg = (LapMesg)e.mesg;
+            if (Calculation.activityStartUTC == null)
+            {
+                //LapMesg with no start time, so use lap start as the start of the activity
+                Calculation.activityStartUTC = myLapMesg.GetStartTime().GetDateTime(); //start of first lap is start of activity
+            }
+
+
+
+            //timestamp isn't useful as it's when the lap is recorded, and may not be related to start or end of lap
+            //System.DateTime endLapUTC = myLapMesg.GetTimestamp().GetDateTime();
+            System.DateTime startLapUTC = myLapMesg.GetStartTime().GetDateTime();
+            float? lapDuration = myLapMesg.GetTotalElapsedTime();
+            if (lapDuration == null)
+            {
+                Logging.Instance.Debug($"Got lap {startLapUTC} with no GetTotalElapsedTime, skipping");
+                return;
+            }
+            //don't trust elapsed time
+            //float? lapDuration = myLapMesg.GetTotalElapsedTime();
+            //don't trust timer time either
+            //float? lapDuration = myLapMesg.GetTotalTimerTime(); //this is the time the timer was running, not the elapsed time
+            long ticks = ((long)lapDuration * 10000000L); //convert to ticks
+            TimeSpan lapSpan = new TimeSpan(ticks);
+
+            TimeSpan toStartOfLap = startLapUTC - (System.DateTime)Calculation.activityStartUTC;
+            int secondsToStartOfLap = (int)toStartOfLap.TotalSeconds;
+            Lap aLap = new Lap(new TimeSpan(ticks), secondsToStartOfLap, secondsToStartOfLap + (int)lapDuration);
+
+            Logging.Instance.Debug($"Got lap {startLapUTC} to start {toStartOfLap}, duration {lapSpan}");
+
+            aLap.AverageCadence = (float?)myLapMesg.GetAvgCadence();
+            aLap.AverageSpeed = (float?)myLapMesg.GetAvgSpeed();
+            aLap.Distance = myLapMesg.GetTotalDistance();
+            aLap.AverageCadence = (float?)myLapMesg.GetAvgCadence();
+            aLap.AverageHeartrate = (float?)myLapMesg.GetAvgHeartRate();
+            aLap.Name = myLapMesg.Name;
+
+            Accumulation.Laps.Add(aLap);
+        }
+
+        void OnHrvMesgEvent(object sender, MesgEventArgs e)
+        {
+            HrvMesg hrv = (HrvMesg)e.mesg;
+
+            int numTime = hrv.GetNumTime();
+            for (int i = 0; i < numTime; i++)
+            {
+                float? rr = hrv.GetTime(i);
+                if (rr != null && rr != 65535)
+                {
+                    short rrmsec = (short)(rr * 1000.0f);
+                    Accumulation.RRIntervals.Add(rrmsec);
+                }
+            }
+
+        }
+
 
         #region DebugHandlers
 
@@ -566,11 +647,6 @@ namespace FellrnrTrainingAnalysis.Action
             DebugLogEvent(e);
         }
         //TODO: process lap messages into the activity
-        void DebugOnLapMesgEvent(object sender, MesgEventArgs e)
-        {
-            Logging.Instance.Debug(String.Format("LapMesgEvent: Received {1} Mesg, it has global ID#{0}", e.mesg.Num, e.mesg.Name));
-            LapMesg myLapMesg = (LapMesg)e.mesg;
-        }
 
         //TODO: handle HRV data into the activity
         void DebugOnHrvMesgEvent(object sender, MesgEventArgs e)
@@ -847,6 +923,8 @@ namespace FellrnrTrainingAnalysis.Action
             mesgBroadcaster.EventMesgEvent += OnEventMesgEvent;
             mesgBroadcaster.SportMesgEvent += OnSportMesgEvent;
             mesgBroadcaster.ActivityMesgEvent += OnActivityMesgEvent;
+            mesgBroadcaster.LapMesgEvent += OnLapMesgEvent;
+            mesgBroadcaster.HrvMesgEvent += OnHrvMesgEvent;
             if (Options.Instance.DebugFitLoading && Options.Instance.DebugFitExtraDetails) //this will produce massive details and be very slow
             {
 
@@ -877,7 +955,6 @@ namespace FellrnrTrainingAnalysis.Action
                 mesgBroadcaster.MetZoneMesgEvent += DebugOnMetZoneMesgEvent;
                 mesgBroadcaster.GoalMesgEvent += DebugOnGoalMesgEvent;
                 mesgBroadcaster.SessionMesgEvent += DebugOnSessionMesgEvent;
-                mesgBroadcaster.LapMesgEvent += DebugOnLapMesgEvent;
                 mesgBroadcaster.LengthMesgEvent += DebugOnLengthMesgEvent;
                 mesgBroadcaster.DeviceInfoMesgEvent += DebugOnDeviceInfoMesgEvent;
                 mesgBroadcaster.HrvMesgEvent += DebugOnHrvMesgEvent;

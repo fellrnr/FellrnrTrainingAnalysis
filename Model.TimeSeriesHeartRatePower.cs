@@ -55,13 +55,13 @@ namespace FellrnrTrainingAnalysis.Model
             Athlete athlete = ParentActivity.ParentAthlete;
             if (Weight == 0)
             {
-                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.TagWeight, Options.Instance.StartingWeight);
+                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, CalendarNode.TagWeight, Options.Instance.StartingWeight);
             }
 
             if (RestingHeartRate == 0)
             {
                 RestingHeartRate = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal,
-                                                                   Day.TagRestingHeartRate,
+                                                                   CalendarNode.TagRestingHeartRate,
                                                                    Options.Instance.StartingRestingHeartRate);
             }
 

@@ -6,7 +6,7 @@ namespace FellrnrTrainingAnalysis.Model
     //This class allows us to map from an input to internal values. This is because different sources might call one datum (e.g. start time) various different things. 
     public class ActivityDatumMapping
     {
-        public ActivityDatumMapping() { ExternalName = ""; InternalName = ""; Comment = ""; }
+        public ActivityDatumMapping() { ExternalName = ""; InternalName = ""; Comment = ""; Sport = ""; }
 
 
         public enum DataSourceEnum { StravaCSV, StravaAPI, FitFile }
@@ -26,12 +26,14 @@ namespace FellrnrTrainingAnalysis.Model
 
         public bool Import { get; set; } //if there's no entry, then the default is to not import. 
 
+        public string Sport { get; set; } //this is the sport that the datum is limited to, e.g. "Run", "Bike", "Swim", etc.
+
         public float ScalingFactor { get; set; } //for type Float only
 
         public string Comment { get; set; }
 
         private static Dictionary<DataSourceEnum, Dictionary<LevelType, Dictionary<string, ActivityDatumMapping>>>? map = null;
-        public static ActivityDatumMapping? MapRecord(DataSourceEnum dataSource, LevelType level, string externalName)
+        public static ActivityDatumMapping? MapRecord(DataSourceEnum dataSource, LevelType level, string externalName, string sport = "")
         {
             if (map == null)
             {
@@ -68,6 +70,10 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
             }
             if (!map[dataSource][level].ContainsKey(externalName))
+            {
+                return null;
+            }
+            if (!String.IsNullOrEmpty(sport) && !String.IsNullOrEmpty(map[dataSource][level][externalName].Sport) && map[dataSource][level][externalName].Sport != sport)
             {
                 return null;
             }

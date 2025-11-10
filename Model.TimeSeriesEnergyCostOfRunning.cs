@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.Security.ExchangeActiveSyncProvisioning;
 
 namespace FellrnrTrainingAnalysis.Model
 {
@@ -51,7 +52,7 @@ namespace FellrnrTrainingAnalysis.Model
             Athlete athlete = ParentActivity.ParentAthlete;
             if (Weight == 0)
             {
-                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, Day.TagWeight, Options.Instance.StartingWeight);
+                Weight = athlete.FindDailyValueOrDefault((DateTime)ParentActivity.StartDateNoTimeLocal, CalendarNode.TagWeight, Options.Instance.StartingWeight);
             }
 
             AlignedTimeSeries? alignedTimeSeries = AlignedTimeSeries.Align(speedData, pwrData);
@@ -78,12 +79,14 @@ namespace FellrnrTrainingAnalysis.Model
                     float distance = speed; //speed in m/s for one second is meters
 
                     float ecor = pwrkg / distance;
-                    if (float.IsNormal(ecor) || ecor == 0)
+                    if (!float.IsNaN(ecor) && ecor > 0.5 && ecor < 1.5 && speed > 1.5) //ignore out of range ecor and speeds below walking
                     {
                         values[i] = ecor;
                         prev_ecor = ecor;
                         if (first_ecor < 0)
                             first_ecor = ecor;
+                        //if(ecor > 2)
+                        //    Logging.Instance.Debug($"ECOR too high {ecor}, speed {speed}, pwr {pwr}");
                     }
                     else
                     {

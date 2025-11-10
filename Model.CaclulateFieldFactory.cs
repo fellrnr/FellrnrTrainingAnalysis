@@ -7,41 +7,49 @@
             //TODO: replace this with configuration driven dynamic load
             PostTimeSeriesCalulators = new List<CalculateFieldBase>
             {
-                new CalculateDataFieldFromTimeSeriesSimple("Avg Pace", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, "Speed", Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("Avg ECOR", TimeValueList.StaticsValue.Mean, "ECOR", Activity.ActivityTypeRun),
+
+                new CalculateDataFieldFromTimeSeriesSimple("Avg Pace", TimeValueList.StaticsValue.Mean, "Speed", Activity.ActivityTypeRun),
 
                 //TODO: removed ", limit: 120" from climb calculation to let data quality sort out the issues
                 //meters per minute; don't do per second and scale up or we lose the intrinsic smoothing
 
-                new CalculateDataFieldFromTimeSeriesSimple("Max Climb", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Calc.Climb", Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("Max Climb", TimeValueList.StaticsValue.Max, "Calc.Climb", Activity.ActivityTypeRun),
 
                 new CalculateDataFieldFromTimeSeriesSimple("Min Climb",
-                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Min,
+                                                           TimeValueList.StaticsValue.Min,
                                                            "Calc.Climb",
                                                            new List < string > { "Run", "Virtual Run" }),
 
 
                 new CalculateDataFieldFromTimeSeriesSimple("Avg GAP",
-                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
+                                                           TimeValueList.StaticsValue.Mean,
                                                            Activity.TagGradeAdjustedPace,
                                                            Activity.ActivityTypeOnFoot), //meters per second
 
                 new CalculateDataFieldFromTimeSeriesSimple(Activity.TagAveragePower,
-                                                           CalculateDataFieldFromTimeSeriesSimple.Mode.Average,
+                                                           TimeValueList.StaticsValue.Mean,
                                                            Activity.TagPower), 
 
-                new CalculateDataFieldFromTimeSeriesSimple("Max HR", CalculateDataFieldFromTimeSeriesSimple.Mode.Max, "Heart Rate"),
+                new CalculateDataFieldFromTimeSeriesSimple("Max HR", TimeValueList.StaticsValue.Max, "Heart Rate"),
 
-                new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", CalculateDataFieldFromTimeSeriesSimple.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("Avg HrPwr", TimeValueList.StaticsValue.Mean, Activity.TagHrPwr, Activity.ActivityTypeRun),
+
+                new CalculateDataFieldFromTimeSeriesSimple("Avg SpmPwr", TimeValueList.StaticsValue.Mean, Activity.TagSpmPwr, Activity.ActivityTypeRun),
+
+                new CalculateDataFieldFromTimeSeriesSimple("90% SpmPwr", TimeValueList.StaticsValue.High90PC, Activity.TagSpmPwr, Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("2sd SpmPwr", TimeValueList.StaticsValue.SD2High, Activity.TagSpmPwr, Activity.ActivityTypeRun),
+                new CalculateDataFieldFromTimeSeriesSimple("3sd SpmPwr", TimeValueList.StaticsValue.SD3High, Activity.TagSpmPwr, Activity.ActivityTypeRun),
 
 
                 //find out how flat the last five mins of the first ten mins were
-                new CalculateDataFieldFromTimeSeriesWindow("Vertical 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.SumAbsDeltas, Activity.TagAltitude, Activity.ActivityTypeRun, 5*60, 10*60),
+                new CalculateDataFieldFromTimeSeriesWindow("Vertical 5 Min", TimeValueList.StaticsValue.SumAbsDeltas, Activity.TagAltitude, Activity.ActivityTypeRun, 5*60, 10*60),
 
                 //find out how low our speed was for the last five mins of the first ten mins were
-                new CalculateDataFieldFromTimeSeriesWindow("Min Speed 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Min, Activity.TagSpeed, Activity.ActivityTypeRun, 5*60, 10*60),
+                new CalculateDataFieldFromTimeSeriesWindow("Min Speed 5 Min", TimeValueList.StaticsValue.Min, Activity.TagSpeed, Activity.ActivityTypeRun, 5*60, 10*60),
 
 
-                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", CalculateDataFieldFromTimeSeriesWindow.Mode.Average, Activity.TagHrPwr, Activity.ActivityTypeRun, 5*60, 10*60, flatStartOnly: true),
+                new CalculateDataFieldFromTimeSeriesWindow("Avg HrPwr 5 Min", TimeValueList.StaticsValue.Mean, Activity.TagHrPwr, Activity.ActivityTypeRun, 5*60, 10*60, flatStartOnly: true),
 
 
                 //TRIMP fields will be rolled up using Model.Rolling
@@ -85,11 +93,13 @@
 
                 new CalculateDataFieldFromTimeSeriesZones("5-Zone-", 
                                                           Utils.Options.Instance.StartingHR5Zones,
-                                                          Activity.TagHeartRate),
+                                                          Activity.TagHeartRate,
+                                                          Activity.ActivityTypeAerobic),
 
                 new CalculateDataFieldFromTimeSeriesZones("3-Zone-",
                                                           Utils.Options.Instance.StartingHR3Zones,
-                                                          Activity.TagHeartRate),
+                                                          Activity.TagHeartRate,
+                                                          Activity.ActivityTypeAerobic),
 
                 //cheat to get 5a
                 new CalculateDataFieldFromTimeSeriesThreashold("5-Zone-5a",
@@ -97,7 +107,7 @@
                                                                Utils.Options.Instance.StartingHR5a,
                                                                ignoreZeros: false,
                                                                Activity.TagHeartRate,
-                                                               null),
+                                                               Activity.ActivityTypeAerobic),
 
                 //note: CP only calculated on runs from Stryd, not enough data for bike CP, so offset
 
@@ -105,6 +115,10 @@
                 //new CalculateFieldTRIMP("TRIMP", cpScalingFactor: 1.0f, Activity.ActivityTypeRun), //actually calculated on the activity from CP in the day, rolled up
 
                 new CalculateFieldIF("IF", cpScalingFactor: 0.65f, Activity.ActivityTypeRide),   //actually calculated on the activity from CP in the day, rolled up
+
+                new CalculateFieldArrhythmia("PVCs", Activity.ActivityTypeAll),   //estimate the number of premature ventricular contractions from the HR data
+                
+
                 //new CalculateFieldTRIMP("TRIMP", cpScalingFactor: 0.65f, Activity.ActivityTypeRide), //actually calculated on the activity from CP in the day, rolled up
 
                 //new CalculateDataFieldFromTimeSeriesTRIMPi("TRIMPi",

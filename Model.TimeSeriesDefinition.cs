@@ -1,17 +1,23 @@
-﻿using CsvHelper;
+﻿using BrightIdeasSoftware;
+using CsvHelper;
 using FellrnrTrainingAnalysis.Utils;
 using System.Globalization;
 
 namespace FellrnrTrainingAnalysis.Model
 {
+    //this class is represented as a CSV for backing storage
+    //it's also used to generate a user interface
     public class TimeSeriesDefinition
     {
         public TimeSeriesDefinition() { }
 
+        [OLVColumn]
         public string Name { get; set; } = "";
 
+        [OLVColumn]
         public bool ShowReportGraph { get; set; } = true;
 
+        [OLVColumn]
         public int Axis { get; set; } = 0;
 
         public string Description { get; set; } = "";
@@ -64,7 +70,7 @@ namespace FellrnrTrainingAnalysis.Model
             else if(ColorName.StartsWith("#"))
                 retval = ColorTranslator.FromHtml(ColorName);
             else
-            retval = Color.FromName(ColorName);
+                retval = Color.FromName(ColorName);
             if(retval.R == 255 && retval.G == 255 && retval.B == 255)
                 retval = Color.DarkGray;
 
@@ -72,6 +78,10 @@ namespace FellrnrTrainingAnalysis.Model
 
             return retval;
         }
+
+        public enum LapMathType { Mean, MinMax, Delta, Ignore };
+
+        public LapMathType LapMath { get; set; } = LapMathType.Ignore;
 
         //Just to comment the CSV file
         public string Comment { get; set; } = "";

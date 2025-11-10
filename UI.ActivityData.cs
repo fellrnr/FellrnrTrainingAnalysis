@@ -8,6 +8,7 @@ namespace FellrnrTrainingAnalysis.UI
 {
     public partial class ActivityData : UserControl
     {
+        //NB two instances of this class exist, one for the tree and one for the table
         public ActivityData()
         {
             InitializeComponent();
@@ -134,7 +135,7 @@ namespace FellrnrTrainingAnalysis.UI
 
             DisplayData(activity, DATUM_POSTFIX);
 
-            Model.Day day = athlete.Days[activity.StartDateNoTimeLocal!.Value];
+            Model.CalendarNode day = athlete.Days[activity.StartDateNoTimeLocal!.Value];
             DisplayData(day, DAY_POSTFIX);
 
             DisplayActivityTimeSeries(activity);

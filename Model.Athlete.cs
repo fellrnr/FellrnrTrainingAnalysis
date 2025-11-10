@@ -12,52 +12,112 @@ namespace FellrnrTrainingAnalysis.Model
     {
         public Athlete()
         {
-            _days = new SortedDictionary<DateTime, Day>();
+            _days = new SortedDictionary<DateTime, CalendarNode>();
             _calendarTree = new SortedList<DateTime, CalendarNode>();
         }
 
         [MemoryPackInclude]
-        private SortedDictionary<DateTime, Day> _days { get; set; }
+        private SortedDictionary<DateTime, CalendarNode> _days { get; set; }
 
 
 
         [MemoryPackIgnore]
-        public ReadOnlyDictionary<DateTime, Day> Days { get { return _days.AsReadOnly(); } }
+        public ReadOnlyDictionary<DateTime, CalendarNode> Days { get { return _days.AsReadOnly(); } }
 
-        public Day GetOrAddDay(DateTime date)
+        public CalendarNode GetOrAddDay(DateTime date)
         {
+            DateTime dateNoTime = date.Date; //just in case
+            DateTime dateNoTimeIterate = dateNoTime;
+            while (!_days.ContainsKey(dateNoTimeIterate) && dateNoTimeIterate <= DateTime.Now.Date)
+            {
+                //we need to add this day, and then any missing day until we reach an existing one or today.
+                AddDayToCalenderTreeAndDays(dateNoTimeIterate);
+                dateNoTimeIterate = dateNoTimeIterate.AddDays(1);
+            }
+            return _days[dateNoTime];
+
+        }
+        private CalendarNode AddDayToCalenderTreeAndDays(DateTime dayDateNoTime)
+        {
+            DateTime dt = dayDateNoTime.Date; //be paranoid
+            DateTime dateTimeOfActivity = dt;
+            DateTime dateOnlyOfActivity = dateTimeOfActivity.Date;
+            DateTime monthOnlyOfActivity = new DateTime(dateOnlyOfActivity.Year, dateOnlyOfActivity.Month, 1);
+            DateTime yearOnlyOfActivity = new DateTime(dateOnlyOfActivity.Year, 1, 1);
+
             lock (_days)
             {
-                DateTime dateNoTime = date.Date; //just in case
-                DateTime dateNoTimeIterate = dateNoTime;
-                while (!_days.ContainsKey(dateNoTimeIterate) && dateNoTimeIterate <= DateTime.Now.Date)
+
+                //add the Day to the Athlete if not already there
+                CalendarNode year;
+                if (!_calendarTree.ContainsKey(yearOnlyOfActivity))
                 {
-                    //we need to add this day, and then any missing day until we reach an existing one or today.
-                    _days.Add(dateNoTimeIterate, new Day(dateNoTimeIterate));
-                    dateNoTimeIterate = dateNoTimeIterate.AddDays(1);
+                    year = new CalendarNode(new DateTimeTree(yearOnlyOfActivity, DateTimeTree.DateTreeType.Year));
+                    _calendarTree.Add(yearOnlyOfActivity, year);
                 }
-                return _days[dateNoTime];
-                
+                else
+                {
+                    year = _calendarTree[yearOnlyOfActivity];
+                }
+
+                CalendarNode month;
+                if (!year.HasChild(monthOnlyOfActivity))
+                {
+                    month = new CalendarNode(new DateTimeTree(monthOnlyOfActivity, DateTimeTree.DateTreeType.Month));
+                    year.AddChild(monthOnlyOfActivity, month);
+                }
+                else
+                {
+                    month = (CalendarNode)year.Children[monthOnlyOfActivity];
+                }
+
+
+                //no longer have a CalendarNode for day, but specific class of Day
+                CalendarNode day;
+                if (!month.HasChild(dateOnlyOfActivity))
+                {
+                    day = new CalendarNode(new DateTimeTree(dateOnlyOfActivity, DateTimeTree.DateTreeType.Day));
+                    _days.Add(dateOnlyOfActivity, day);
+                    month.AddChild(dateOnlyOfActivity, day);
+                }
+                else
+                {
+                    day = (CalendarNode)month.Children[dateOnlyOfActivity];
+                }
+                return day;
             }
         }
+
+
+        public DateTime? GetLatestActivityDateTime()
+        {
+            if (_activitiesByUTCDateTime.Count > 0) //whatever's really the last
+            {
+                return _activitiesByUTCDateTime.Last().Key;
+            }
+            return null;
+        }
+
 
         private void FillInDays()
         {
             lock (_days)
             {
-                DateTime next = _days.First().Key;
-                while (next <= DateTime.Now.Date)
+                if (_days.Count > 0)
                 {
-                    //we need to add this day, and then any missing day until we reach an existing one or today.
-                    if (!_days.ContainsKey(next))
+                    DateTime next = _days.First().Key;
+                    while (next <= DateTime.Now.Date)
                     {
-                        _days.Add(next, new Day(next));
+                        //we need to add this day, and then any missing day until we reach an existing one or today.
+                        if (!_days.ContainsKey(next))
+                        {
+                            _days.Add(next, new CalendarNode(new DateTimeTree(next, DateTimeTree.DateTreeType.Day)));
+                        }
+                        next = next.AddDays(1);
                     }
-                    next = next.AddDays(1);
                 }
             }
         }
-
 
         //look for the given date and work backwards to find one with a datum with the name provided
         //Another n^2 problem if there are no days with the value
@@ -68,7 +128,7 @@ namespace FellrnrTrainingAnalysis.Model
             //lets see if we're lucky
             if (Days.ContainsKey(dateNoTime) && Days[dateNoTime].HasNamedDatum(name))
             {
-                Day day = Days[dateNoTime];
+                CalendarNode day = Days[dateNoTime];
                 float? retval = day.GetNamedFloatDatum(name);
                 return retval;
             }
@@ -82,10 +142,10 @@ namespace FellrnrTrainingAnalysis.Model
 
                 if (Days.ContainsKey(scan) && Days[scan].HasNamedDatum(name))
                 {
-                    Day day = Days[scan];
+                    CalendarNode day = Days[scan];
                     float? retval = day.GetNamedFloatDatum(name);
 
-                    Day originalday = GetOrAddDay(dateNoTime);
+                    CalendarNode originalday = GetOrAddDay(dateNoTime);
                     originalday.AddOrReplaceDatum(new TypedDatum<float>(name, true, retval!.Value));
 
                     Logging.Instance.PauseAccumulator("FindRecentDayWithDatum(search)");
@@ -105,7 +165,7 @@ namespace FellrnrTrainingAnalysis.Model
             if (retval == null)
             {
                 //simple optimization = add the values to the dates so next time around we'll be fast
-                Day day = GetOrAddDay(dateNoTime);
+                CalendarNode day = GetOrAddDay(dateNoTime);
                 lock (day)
                 {
                     day.AddOrReplaceDatum(new TypedDatum<float>(name, true, defaultValue));
@@ -335,9 +395,9 @@ namespace FellrnrTrainingAnalysis.Model
                     if (_dayFieldNamesCache.Count != 0)
                         return _dayFieldNamesCache;
 
-                    foreach (KeyValuePair<DateTime, Day> kvp in _days)
+                    foreach (KeyValuePair<DateTime, CalendarNode> kvp in _days)
                     {
-                        Day day = kvp.Value;
+                        CalendarNode day = kvp.Value;
                         foreach (string s in day.DataNames)
                         {
                             if (!_dayFieldNamesCache.Contains(s))
@@ -399,8 +459,9 @@ namespace FellrnrTrainingAnalysis.Model
             {
                 activity.StartDateTimeLocal = activity.StartDateTimeUTC; //default to UTC if no local time
             }
+            CalendarNode day = GetOrAddDay(activity.StartDateTimeLocal.Value);
+            day.AddChild(activity.StartDateTimeLocal.Value, activity);
 
-            AddActivityToCalenderTree(activity);
             if (_activitiesByUTCDateTime.ContainsKey(activity.StartDateTimeUTC.Value))
                 _activitiesByUTCDateTime[activity.StartDateTimeUTC.Value] = activity;
             else
@@ -410,71 +471,9 @@ namespace FellrnrTrainingAnalysis.Model
                 _activitiesByLocalDateTime[activity.StartDateTimeLocal!.Value] = activity;
             else
                 _activitiesByLocalDateTime.Add(activity.StartDateTimeLocal!.Value, activity);
-            Day day = GetOrAddDay(activity.StartDateTimeLocal.Value.Date);
-            day.AddActivity(activity);
 
         }
 
-        private void AddActivityToCalenderTree(Activity activity)
-        {
-            DateTime? dt = activity.StartDateTimeLocal;
-            if (dt == null)
-                return;
-            DateTime dateTimeOfActivity = dt.Value;
-            DateTime dateOnlyOfActivity = dateTimeOfActivity.Date;
-            DateTime monthOnlyOfActivity = new DateTime(dateOnlyOfActivity.Year, dateOnlyOfActivity.Month, 1);
-            DateTime yearOnlyOfActivity = new DateTime(dateOnlyOfActivity.Year, 1, 1);
-
-            //add the Day to the Athlete if not already there
-            CalendarNode year;
-            if (!_calendarTree.ContainsKey(yearOnlyOfActivity))
-            {
-                year = new CalendarNode(new DateTimeTree(yearOnlyOfActivity, DateTimeTree.DateTreeType.Year));
-                _calendarTree.Add(yearOnlyOfActivity, year);
-            }
-            else
-            {
-                year = _calendarTree[yearOnlyOfActivity];
-            }
-
-            CalendarNode month;
-            if (!year.HasChild(monthOnlyOfActivity))
-            {
-                month = new CalendarNode(new DateTimeTree(monthOnlyOfActivity, DateTimeTree.DateTreeType.Month));
-                year.AddChild(monthOnlyOfActivity, month);
-            }
-            else
-            {
-                month = (CalendarNode)year.Children[monthOnlyOfActivity];
-            }
-
-            CalendarNode day;
-            if (!month.HasChild(dateOnlyOfActivity))
-            {
-                day = new CalendarNode(new DateTimeTree(dateOnlyOfActivity, DateTimeTree.DateTreeType.Day));
-                month.AddChild(dateOnlyOfActivity, day);
-            }
-            else
-            {
-                day = (CalendarNode)month.Children[dateOnlyOfActivity];
-            }
-
-
-            day.AddChild(dateTimeOfActivity, activity);
-
-            //string s = $"year {year.DateTimeTree}, month {month.DateTimeTree}, day {day.DateTimeTree}";
-            //MessageBox.Show(s);
-        }
-
-
-        public DateTime? GetLatestActivityDateTime()
-        {
-            if (_activitiesByUTCDateTime.Count > 0) //whatever's really the last
-            {
-                return _activitiesByUTCDateTime.Last().Key;
-            }
-            return null;
-        }
 
         /// Override ToString() for debugging
         public override string ToString()
@@ -606,7 +605,7 @@ namespace FellrnrTrainingAnalysis.Model
             base.Clean();
             _dayFieldNamesCache = new List<string>();
             _activityFieldNamesCache = new List<string>();
-            _days = new SortedDictionary<DateTime, Day>();
+            _days = new SortedDictionary<DateTime, CalendarNode>();
             _calendarTree = new SortedList<DateTime, CalendarNode>();
             _activities = new Dictionary<string, Activity>();
             _activitiesByUTCDateTime = new SortedDictionary<DateTime, Activity>();
@@ -666,6 +665,8 @@ namespace FellrnrTrainingAnalysis.Model
             if (curves.Count == 0) return null;
 
             PowerDistributionCurve.BestCurve bestCurve = PowerDistributionCurve.BestCurves(curves, start);
+            if (bestCurve.BestActivities.Count == 0) return null;
+
             return bestCurve;
 
         }

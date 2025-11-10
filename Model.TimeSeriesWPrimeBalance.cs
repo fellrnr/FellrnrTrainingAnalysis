@@ -54,11 +54,11 @@ namespace FellrnrTrainingAnalysis.Model
             Athlete athlete = ParentActivity!.ParentAthlete!;
             if (WPrime == 0)
             {
-                WPrime = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.TagWPrime, Options.Instance.StartingWPrime);
+                WPrime = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, CalendarNode.TagWPrime, Options.Instance.StartingWPrime);
             }
             if (CriticalPower== 0)
             {
-                CriticalPower = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, Day.TagCriticalPower, Options.Instance.StartingCriticalPower);
+                CriticalPower = athlete.FindDailyValueOrDefault((DateTime)ParentActivity!.StartDateNoTimeLocal!, CalendarNode.TagCriticalPower, Options.Instance.StartingCriticalPower);
             }
 
             if(WPrime < 1000)

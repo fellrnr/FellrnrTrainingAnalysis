@@ -30,6 +30,8 @@ namespace FellrnrTrainingAnalysis.Model
 
         public void MasterRecalculate(bool forceActivities, bool forceHills, bool forceGoals, BackgroundWorker? worker = null)
         {
+            //make sure we have the current date added
+            CurrentAthlete.GetOrAddDay(DateTime.Now.Date); 
             //we still want an unforced recalculation! 
             //if (forceActivities)
                 RecalculateActivities(forceActivities, worker);
@@ -96,9 +98,9 @@ namespace FellrnrTrainingAnalysis.Model
             i = 0;
             List<CalculateFieldBase> calcdays = Model.CaclulateFieldFactory.Instance.DayCalculators;
             if (worker != null) worker.ReportProgress(0, new Misc.ProgressReport($"Recalculate Rolling Data ({CurrentAthlete.Days.Count})", CurrentAthlete.Days.Count));
-            foreach (KeyValuePair<DateTime, Day> kvp in CurrentAthlete.Days)
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp in CurrentAthlete.Days)
             {
-                Day day = kvp.Value;
+                CalendarNode day = kvp.Value;
                 foreach (CalculateFieldBase calc in calcdays)
                 {
                     calc.Recalculate(day, LastForceCount, false); //LastForceCount updated above in activity recalculate

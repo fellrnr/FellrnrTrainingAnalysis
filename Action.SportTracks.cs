@@ -696,7 +696,7 @@ namespace FellrnrTrainingAnalysis.Action
                 if (athlete.Days.ContainsKey(date) && athlete.Days[date].Activities != null && athlete.Days[date].Activities!.Count() > 0)
                 {
                     stringBuilder.AppendLine($"No activity for {act._startTime} {act._guid} {act._name} but found: ");
-                    Model.Day day = athlete.Days[date];
+                    Model.CalendarNode day = athlete.Days[date];
                     bool allmatched = true;
                     foreach (Activity activitySearch in day.Activities!)
                     {

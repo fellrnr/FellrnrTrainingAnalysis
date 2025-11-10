@@ -71,6 +71,7 @@
             emailGoalsToolStripMenuItem = new ToolStripMenuItem();
             exploreGlobalRelationshipsToolStripMenuItem = new ToolStripMenuItem();
             experimentalToolStripMenuItem = new ToolStripMenuItem();
+            resizeTreeToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem = new ToolStripMenuItem();
             filterToolStripMenuItem1 = new ToolStripMenuItem();
             showOnlyToolStripMenuItem = new ToolStripMenuItem();
@@ -88,7 +89,7 @@
             activityTreeTabPage = new TabPage();
             splitContainer4 = new SplitContainer();
             activityTree1 = new FellrnrTrainingAnalysis.UI.ActivityTree();
-            activityFormsPlot = new ScottPlot.FormsPlot();
+            activityData1 = new FellrnrTrainingAnalysis.UI.ActivityData();
             goalsTabPage = new TabPage();
             goalsSplitContainer4 = new SplitContainer();
             goalsTextBox = new TextBox();
@@ -357,7 +358,7 @@
             // 
             // toolsToolStripMenuItem
             // 
-            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { findDataQualityIssuesToolStripMenuItem, rescanForDataQualityIssuesToolStripMenuItem, scanForDataQualityIssueToolStripMenuItem, fixDataQualityIssueToolStripMenuItem, emailGoalsToolStripMenuItem, exploreGlobalRelationshipsToolStripMenuItem, experimentalToolStripMenuItem });
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { findDataQualityIssuesToolStripMenuItem, rescanForDataQualityIssuesToolStripMenuItem, scanForDataQualityIssueToolStripMenuItem, fixDataQualityIssueToolStripMenuItem, emailGoalsToolStripMenuItem, exploreGlobalRelationshipsToolStripMenuItem, experimentalToolStripMenuItem, resizeTreeToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             toolsToolStripMenuItem.Size = new Size(69, 35);
             toolsToolStripMenuItem.Text = "Tools";
@@ -408,6 +409,13 @@
             experimentalToolStripMenuItem.Size = new Size(392, 34);
             experimentalToolStripMenuItem.Text = "Experimental...";
             experimentalToolStripMenuItem.Click += experimentalToolStripMenuItem_Click;
+            // 
+            // resizeTreeToolStripMenuItem
+            // 
+            resizeTreeToolStripMenuItem.Name = "resizeTreeToolStripMenuItem";
+            resizeTreeToolStripMenuItem.Size = new Size(392, 34);
+            resizeTreeToolStripMenuItem.Text = "Resize Tree";
+            resizeTreeToolStripMenuItem.Click += resizeTreeToolStripMenuItem_Click;
             // 
             // filterToolStripMenuItem
             // 
@@ -538,7 +546,7 @@
             activityTreeTabPage.Controls.Add(splitContainer4);
             activityTreeTabPage.Location = new Point(4, 34);
             activityTreeTabPage.Name = "activityTreeTabPage";
-            activityTreeTabPage.Size = new Size(192, 62);
+            activityTreeTabPage.Size = new Size(1823, 1120);
             activityTreeTabPage.TabIndex = 4;
             activityTreeTabPage.Text = "Activity Tree";
             activityTreeTabPage.UseVisualStyleBackColor = true;
@@ -556,9 +564,9 @@
             // 
             // splitContainer4.Panel2
             // 
-            splitContainer4.Panel2.Controls.Add(activityFormsPlot);
-            splitContainer4.Size = new Size(192, 62);
-            splitContainer4.SplitterDistance = 31;
+            splitContainer4.Panel2.Controls.Add(activityData1);
+            splitContainer4.Size = new Size(1823, 1120);
+            splitContainer4.SplitterDistance = 821;
             splitContainer4.TabIndex = 0;
             // 
             // activityTree1
@@ -566,17 +574,16 @@
             activityTree1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             activityTree1.Location = new Point(8, 3);
             activityTree1.Name = "activityTree1";
-            activityTree1.Size = new Size(176, 25);
+            activityTree1.Size = new Size(1807, 815);
             activityTree1.TabIndex = 0;
             // 
-            // activityFormsPlot
+            // activityData1
             // 
-            activityFormsPlot.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            activityFormsPlot.Location = new Point(6, 5);
-            activityFormsPlot.Margin = new Padding(6, 5, 6, 5);
-            activityFormsPlot.Name = "activityFormsPlot";
-            activityFormsPlot.Size = new Size(175, 12);
-            activityFormsPlot.TabIndex = 0;
+            activityData1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            activityData1.Location = new Point(8, 3);
+            activityData1.Name = "activityData1";
+            activityData1.Size = new Size(1815, 284);
+            activityData1.TabIndex = 0;
             // 
             // goalsTabPage
             // 
@@ -729,7 +736,6 @@
         private TabPage activityTreeTabPage;
         private SplitContainer splitContainer4;
         private UI.ActivityTree activityTree1;
-        private ScottPlot.FormsPlot activityFormsPlot;
         private ToolStripMenuItem showErrorsToolStripMenuItem;
         private ToolStripMenuItem bootstrapToolStripMenuItem;
         private ToolStripMenuItem normalLogToolStripMenuItem;
@@ -773,5 +779,7 @@
         private ToolStripMenuItem syncWithStravaAndUpdateToolStripMenuItem;
         private ToolStripMenuItem pollStravaToolStripMenuItem;
         private System.Windows.Forms.Timer timerSyncStrava;
+        private ToolStripMenuItem resizeTreeToolStripMenuItem;
+        private UI.ActivityData activityData1;
     }
 }

@@ -98,6 +98,13 @@ namespace FellrnrTrainingAnalysis.Model
                                                     sportsToInclude:Activity.ActivityTypeRun,
                                                     offset:Options.Instance.RestingHeartRateToStanding),
 
+                new TimeSeriesCadencePower(name:Activity.TagSpmPwr,
+                                            parent: activity,
+                                            persistCache:true,  //this is more expensive than most ts
+                                            requiredFields: new List<string> { "Cadence", "Power" },
+                                            opposingFields: null,
+                                            sportsToInclude:Activity.ActivityTypeRun),
+
                 new TimeSeriesEnergyCostOfRunning(name:"ECOR",
                                                     parent: activity,
                                                     persistCache:true,  //this is more expensive than most ts

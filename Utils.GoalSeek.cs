@@ -102,7 +102,7 @@ namespace FellrnrTrainingAnalysis.Utils
 
         private float GetStandardDeviationOfError(Activity activity, AlignedTimeSeries alignedGapPower)
         {
-            float weight = Athlete.FindDailyValueOrDefault((DateTime)activity.StartDateNoTimeLocal!, Model.Day.TagWeight, Options.Instance.StartingWeight);
+            float weight = Athlete.FindDailyValueOrDefault((DateTime)activity.StartDateNoTimeLocal!, Model.CalendarNode.TagWeight, Options.Instance.StartingWeight);
 
             float[] power = alignedGapPower.Primary;
             float[] gap = alignedGapPower.Secondary;

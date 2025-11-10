@@ -216,7 +216,6 @@
             // presetComboBox
             // 
             presetComboBox.FormattingEnabled = true;
-            presetComboBox.Items.AddRange(new object[] { "", "TSB" });
             presetComboBox.Location = new Point(885, 3);
             presetComboBox.Name = "presetComboBox";
             presetComboBox.Size = new Size(182, 33);

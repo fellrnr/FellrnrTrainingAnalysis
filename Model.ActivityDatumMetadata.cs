@@ -24,11 +24,17 @@ namespace FellrnrTrainingAnalysis.Model
         public bool InTree { get; set; }
         public bool InReport { get; set; }
 
-        public int? ColumnSize { get; set; } //null for resize dynamically
+        public int? TableColumnLimit { get; set; } //null for resize dynamically
+
+        public int? TreeColumnSize { get; set; } 
 
         public int? DecimalPlaces { get; set; } //Only for floating point numbers, obviously
 
         public bool? Invisible { get; set; } //for hidden columns like StravaID
+
+        public enum AggregationModeType { Ignore, OneOrMixed, Sum, Average, SumDaysThenAverage, Min, Max, TimeWeightedAverage }; 
+
+        public AggregationModeType? AggregationMode { get; set; } = AggregationModeType.Ignore; 
 
         public string Comment { get; set; } = ""; //for commenting the CSV file
 
@@ -38,7 +44,8 @@ namespace FellrnrTrainingAnalysis.Model
 
 
         private const string PathToCsv = "Config.ActivityDatumMetadata.csv";
-        private const string WritePathToCsv = "Config.ActivityDatumMetadata_updated.csv";
+        //private const string WritePathToCsv = "Config.ActivityDatumMetadata_updated.csv";
+        private const string WritePathToCsv = PathToCsv;
 
         private static Dictionary<string, ActivityDatumMetadata>? _map = null;
         private static int _maxReportColumn = int.MinValue;
@@ -136,6 +143,21 @@ namespace FellrnrTrainingAnalysis.Model
             WriteToCsv();
         }
 
+        public static SortedList<int, ActivityDatumMetadata> GetDefinitionsByTreePosition() 
+        {
+            SortedList<int, ActivityDatumMetadata> retval = new SortedList<int, ActivityDatumMetadata>();
+            if (_map != null)
+            {
+                foreach (KeyValuePair<string, ActivityDatumMetadata> kvp in _map)
+                {
+                    if (kvp.Value.PositionInTree != null)
+                    {
+                        retval.Add(kvp.Value.PositionInTree.Value, kvp.Value);
+                    }
+                }
+            }
+            return retval; 
+        }
 
         public static int LastPositionInReport()
         {

@@ -27,7 +27,7 @@ namespace FellrnrTrainingAnalysis.Action
             public float TSB { get; set; }
         }
 
-        public abstract StressData Calculate(StressData? previous, Model.Day day);
+        public abstract StressData Calculate(StressData? previous, Model.CalendarNode day);
 
     }
 
@@ -49,7 +49,7 @@ namespace FellrnrTrainingAnalysis.Action
         float lambdaATL;
         float lambdaCTL;
 
-        public override StressData Calculate(StressData? previous, Model.Day day)
+        public override StressData Calculate(StressData? previous, Model.CalendarNode day)
         {
             if(previous == null)
                 previous = new StressData(0, 0, 0);

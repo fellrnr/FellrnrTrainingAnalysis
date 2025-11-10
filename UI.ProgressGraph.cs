@@ -1,10 +1,12 @@
 ﻿using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
+using pi.science.smoothing;
 using ScottPlot;
 using ScottPlot.Plottable;
 using ScottPlot.Renderable;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Xml.Linq;
 using static FellrnrTrainingAnalysis.Model.TimeSeriesBase;
 
 namespace FellrnrTrainingAnalysis.UI
@@ -15,6 +17,9 @@ namespace FellrnrTrainingAnalysis.UI
         public ProgressGraph()
         {
             InitializeComponent();
+            string[] presetName = Presets.Keys.ToArray();
+            string[] result = (new[] { "" }).Concat(presetName).ToArray();
+            presetComboBox.Items.AddRange(result);
         }
 
         private Database? _database;
@@ -29,7 +34,11 @@ namespace FellrnrTrainingAnalysis.UI
         private const string ACTIVITY_DOT = "Activity.";
         private const string DAY_DOT = "Day.";
         private const string TS_DOT = "TS.";
-        private const string BAR = "Bar";
+        private const string BARDAY = "Bar Day";
+        private const string BARWEEK = "Bar Week";
+        private const string BARMONTH = "Bar Month";
+        private const string BARQUART = "Bar Quart";
+        private const string BARYEAR = "Bar Year";
         private const string LINE = "Line";
         private const string SCATTER = "Scatter";
 
@@ -123,7 +132,7 @@ namespace FellrnrTrainingAnalysis.UI
 
 
             List<Activity> activities = _filterActivities.GetActivities(_database);
-            ReadOnlyDictionary<DateTime, Model.Day> days = _database.CurrentAthlete.Days;
+            ReadOnlyDictionary<DateTime, Model.CalendarNode> days = _database.CurrentAthlete.Days;
 
             foreach (KeyValuePair<string, GraphLineSelection> kvp in Selections)
             {
@@ -138,9 +147,9 @@ namespace FellrnrTrainingAnalysis.UI
                 //foreach (KeyValuePair<DateTime, Activity> kvp in Database.CurrentAthlete.ActivitiesByDateTime)
                 if (filterRow.FieldType == GraphLineSelection.FieldTypeEnum.Day)
                 {
-                    foreach (KeyValuePair<DateTime, Model.Day> kvp2 in days)
+                    foreach (KeyValuePair<DateTime, Model.CalendarNode> kvp2 in days)
                     {
-                        Model.Day day = kvp2.Value;
+                        Model.CalendarNode day = kvp2.Value;
                         DateTime dt = kvp2.Key;
                         if (dt >= dateTimePickerStart.Value && dt <= dateTimePickerEnd.Value)
                         {
@@ -182,7 +191,9 @@ namespace FellrnrTrainingAnalysis.UI
                     yArray = TimeSeriesUtils.WindowSmoothed(yArray, (int)filterRow.Smoothing);
 
                 IPlottable plottable;
-                if (filterRow.GraphStyle == BAR)
+                //BARDAY, BARWEEK, BARMONTH, BARQUART, BARYEAR
+
+                if (filterRow.GraphStyle == BARMONTH)
                 {
                     BarPlot barPlot = formsPlotProgress.Plot.AddBar(yArray, xArray);
                     barPlot.Color = myPalette.GetColor(axisIndex);
@@ -203,6 +214,7 @@ namespace FellrnrTrainingAnalysis.UI
                     scatterGraph.MarkerSize = 15;
                     scatterGraph.LineWidth = 2;
                     scatterGraph.Smooth = true;
+                    scatterGraph.SmoothTension = 0.2;
                     //scatterGraph.Color = myPalette.GetColor(axisIndex);
                     scatterGraph.Label = filterRow.Name;
                     plottable = scatterGraph;
@@ -263,7 +275,7 @@ namespace FellrnrTrainingAnalysis.UI
             {
                 if (activity.TimeSeries.ContainsKey(name))
                 {
-                    StaticsValue offset = TimeSeriesBase.StatisticsValueFromName(filterRow.Operation);
+					TimeValueList.StaticsValue offset = TimeValueList.StatisticsValueFromName(filterRow.Operation);
                     TimeSeriesBase dataStream = activity.TimeSeries[name];
                     float value = dataStream.Percentile(offset);
                     return value;
@@ -272,7 +284,7 @@ namespace FellrnrTrainingAnalysis.UI
             return null;
         }
 
-        private float? GetValue(GraphLineSelection filterRow, Model.Day day)
+        private float? GetValue(GraphLineSelection filterRow, Model.CalendarNode day)
         {
             string name = filterRow.Name;
             if (day.HasNamedDatum(name))
@@ -370,13 +382,13 @@ namespace FellrnrTrainingAnalysis.UI
                 {
                     if (FieldType == FieldTypeEnum.TimeSeries)
                     {
-                        OperationBox = new ComboBox { Text = TimeSeriesBase.StaticsValueNames.Last(), Anchor = AnchorStyles.Left, AutoSize = true };
-                        OperationBox.Items.AddRange(TimeSeriesBase.StaticsValueNames);
+                        OperationBox = new ComboBox { Text = TimeValueList.StaticsValueNames.Last(), Anchor = AnchorStyles.Left, AutoSize = true };
+                        OperationBox.Items.AddRange(TimeValueList.StaticsValueNames);
                         OperationBox.SelectedIndexChanged += ChangedHandler;
                         TableLayoutPanel.Controls.Add(OperationBox, 1, Row);
                     }
                     GraphStyleBox = new ComboBox { Text = LINE, Anchor = AnchorStyles.Left, AutoSize = true };
-                    GraphStyleBox.Items.AddRange(new string[] { LINE, BAR, SCATTER });
+                    GraphStyleBox.Items.AddRange(new string[] { LINE, BARDAY, BARWEEK, BARMONTH, BARQUART, BARYEAR, SCATTER });
                     GraphStyleBox.SelectedIndexChanged += ChangedHandler;
                     TableLayoutPanel.Controls.Add(GraphStyleBox, 2, Row);
 
@@ -440,13 +452,31 @@ namespace FellrnrTrainingAnalysis.UI
         private Dictionary<string, List<GraphLineSelection.GraphStore>> Presets = new Dictionary<string, List<GraphLineSelection.GraphStore>>()
         {
             {
-                "TSB", new List<GraphLineSelection.GraphStore> 
+                "TSB", new List<GraphLineSelection.GraphStore>
                 {
                     new GraphLineSelection.GraphStore("CTL", true, 0, 2, "", LINE),
                     new GraphLineSelection.GraphStore("ATL", true, 0, 2, "", LINE),
                     new GraphLineSelection.GraphStore("TSB", true, 0, 2, "", LINE),
                 }
-            }
+            },
+            {
+                "5-Zone-Time", new List<GraphLineSelection.GraphStore>
+                {
+                    new GraphLineSelection.GraphStore(name:"Σ 5-Zone-1 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 5-Zone-2 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 5-Zone-3 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 5-Zone-4 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 5-Zone-5 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                }
+            },
+            {
+                "3-Zone-Time", new List<GraphLineSelection.GraphStore>
+                {
+                    new GraphLineSelection.GraphStore(name:"Σ 3-Zone-1 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 3-Zone-2 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                    new GraphLineSelection.GraphStore(name:"Σ 3-Zone-3 30D", isChecked:true, smoothing:0, axis:2, operation:"", graphstyle:LINE),
+                }
+            },
         };
 
         private void presetComboBox_SelectedIndexChanged(object sender, EventArgs e)

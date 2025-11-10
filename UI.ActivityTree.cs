@@ -1,6 +1,7 @@
 ﻿using BrightIdeasSoftware;
 using FellrnrTrainingAnalysis.Model;
 using FellrnrTrainingAnalysis.Utils;
+using ScottPlot.SnapLogic;
 using System.Collections;
 using System.Data;
 
@@ -12,7 +13,8 @@ namespace FellrnrTrainingAnalysis.UI
         private const string ParentId = "par";
         private const string Id = "Id";
         private List<DataRow> lastRows = new List<DataRow>();
-
+        private ActivityData? ActivityData;
+        private Database? Database; //this is a placeholder, it will be set when we call ShowNow
         public ActivityTree()
         {
             InitializeComponent();
@@ -34,36 +36,90 @@ namespace FellrnrTrainingAnalysis.UI
         }
 
         private bool HasBeenShown = false;
-        public void ShowNow(Database database)
+        public void ShowNow(Database database, ActivityData ActivityData)
         {
-            Display(database);
+            Display(database, ActivityData);
         }
 
-        public void Display(Database database)
+        public void ResetColumnSize()
         {
+            calendarTreeListView.ExpandAll();
+            AutosizeColumns();
+            //reset the column sizes
+            foreach (OLVColumn c in calendarTreeListView.AllColumns)
+            {
+                if (c.Name != null)
+                {
+                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(c.Name);
+                    if (activityDatumMetadata != null)
+                        activityDatumMetadata.TreeColumnSize = c.Width; //save the current size for later
+                }
+            }
+        }
+
+        public void Display(Database database, ActivityData activityData)
+        {
+            ActivityData = activityData;
+            Database = database;
             DisplayOnce(database);
 
             IReadOnlyCollection<CalendarNode> values = database.CurrentAthlete.CalendarTree.Values;
             calendarTreeListView.Roots = values;
 
             ExpandLast(database);
-            //this helps a bit
-            //foreach (OLVColumn c in calendarTreeListView.AllColumns) { c.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent); }
-            AutosizeColumns();
+            //AutosizeColumns();
+
         }
 
         private void ExpandLast(Database database)
         {
-            if (database.CurrentAthlete.CalendarTree.Count == 0)
+            IReadOnlyCollection<CalendarNode> values = database.CurrentAthlete.CalendarTree.Values;
+            if (values.Count == 0)
                 return;
 
             //year
-            calendarTreeListView.Expand(database.CurrentAthlete.CalendarTree.Last());
+            CalendarNode calendarNode = values.Last();
+            calendarTreeListView.Expand(calendarNode);
 
+
+            //month
+            IEnumerable<Extensible> extensibles = calendarNode.Children.Values;
+            if (extensibles.Count() == 0)
+                return;
+            Extensible last = extensibles.Last();
+            calendarTreeListView.Expand(last);
+            //if we don't have a month, then we don't have any days, so we can skip this
+            if (last == null)
+                return;
+
+            CalendarNode month = (CalendarNode)last;
+            if (month == null)
+            {
+                Logging.Instance.Debug("No month for last calendar node, skipping expand");
+                return;
+            }
             //last 7 days
-            
-
-
+            DateTime now = DateTime.Now;
+            DateTime date = now.Date;
+            for (int i = 0; i < 7; i++)
+            {
+                //CalendarNode? day = database.CurrentAthlete.Days.GetValueOrDefault(date);
+                CalendarNode? day = (CalendarNode?)month.Children.GetValueOrDefault(date);
+                if (day != null)
+                {
+                    calendarTreeListView.Expand(day);
+                    foreach (Activity activity in day.Activities)
+                    {
+                        calendarTreeListView.Expand(activity);
+                    }
+                }
+                else
+                {
+                    //if we don't have a day, then we don't have any activities, so we can skip this
+                    Logging.Instance.Debug($"No day for {date}, skipping expand");
+                }
+                date = date.AddDays(-1);
+            }
         }
 
 
@@ -72,29 +128,40 @@ namespace FellrnrTrainingAnalysis.UI
             foreach (ColumnHeader col in calendarTreeListView.Columns)
             {
                 //auto resize column width
-
-                int colWidthBeforeAutoResize = col.Width;
-                col.AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
-                int colWidthAfterAutoResizeByHeader = col.Width;
-                col.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                int colWidthAfterAutoResizeByContent = col.Width;
-
-                if (colWidthAfterAutoResizeByHeader > colWidthAfterAutoResizeByContent)
-                    col.AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
-
-                //specific adjusts
-
-                //first column
-                if (col.Index == 0)
-                    //we have to manually take care of tree structure, checkbox and image
-                    col.Width += 16 + 16 + calendarTreeListView.SmallImageSize.Width;
-                //last column
-                else if (col.Index == calendarTreeListView.Columns.Count - 1)
-                    //avoid "fill free space" bug
-                    if (colWidthBeforeAutoResize > colWidthAfterAutoResizeByContent)
-                        col.Width = colWidthBeforeAutoResize;
+                if (col.Name != null && ActivityDatumMetadata.FindMetadata(col.Name) as ActivityDatumMetadata != null)
+                {
+                    ActivityDatumMetadata activityDatumMetadata = ActivityDatumMetadata.FindMetadata(col.Name)!;
+                    if (activityDatumMetadata.TableColumnLimit != null)
+                    {
+                        col.Width = activityDatumMetadata.TableColumnLimit.Value;
+                    }
                     else
-                        col.Width = colWidthAfterAutoResizeByContent;
+                    {
+
+                        int colWidthBeforeAutoResize = col.Width;
+                        col.AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
+                        int colWidthAfterAutoResizeByHeader = col.Width;
+                        col.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        int colWidthAfterAutoResizeByContent = col.Width;
+
+                        if (colWidthAfterAutoResizeByHeader > colWidthAfterAutoResizeByContent)
+                            col.AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
+
+                        //specific adjusts
+
+                        //first column
+                        if (col.Index == 0)
+                            //we have to manually take care of tree structure, checkbox and image
+                            col.Width += 16 + 16 + calendarTreeListView.SmallImageSize.Width;
+                        //last column
+                        else if (col.Index == calendarTreeListView.Columns.Count - 1)
+                            //avoid "fill free space" bug
+                            if (colWidthBeforeAutoResize > colWidthAfterAutoResizeByContent)
+                                col.Width = colWidthBeforeAutoResize;
+                            else
+                                col.Width = colWidthAfterAutoResizeByContent;
+                    }
+                }
             }
         }
 
@@ -107,14 +174,16 @@ namespace FellrnrTrainingAnalysis.UI
             TreeListView calendarTreeListView_debug = calendarTreeListView; //make this a local to simplify debugging
 
 
-            calendarTreeListView.CanExpandGetter = delegate (object x) {
+            calendarTreeListView.CanExpandGetter = delegate (object x)
+            {
                 //debug("can expand? " + x.ToString());
                 if (x is not CalendarNode)
                     return false;
                 return ((CalendarNode)x).Children.Count() > 0;
             };
 
-            calendarTreeListView.ChildrenGetter = delegate (object x) {
+            calendarTreeListView.ChildrenGetter = delegate (object x)
+            {
                 //debug("get kids " + x.ToString());
                 if (x is not CalendarNode)
                     return new ArrayList(); //shouldn't happen due to check above
@@ -126,123 +195,119 @@ namespace FellrnrTrainingAnalysis.UI
             dateColumn.Text = "Date";
             dateColumn.AspectGetter = delegate (object x) { return ((Extensible)x).Id().ToString(); };
             dateColumn.IsEditable = false;
-            dateColumn.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+            //this doesn't work:
+            //dateColumn.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+            dateColumn.Width = 200; //wild guess
             calendarTreeListView.AllColumns.Add(dateColumn);
 
 
             lastRows.Clear();
 
-            if (database.CurrentAthlete != null &&
-                database.CurrentAthlete.CalendarTree != null &&
-                database.CurrentAthlete.CalendarTree.Count > 0 &&
-                database.CurrentAthlete.CalendarTree.First().Value.DataNames != null)
+
+            Logging.Instance.TraceEntry("ActivityTree.Display-datatable");
+            SortedList<int, ActivityDatumMetadata> metadata = ActivityDatumMetadata.GetDefinitionsByTreePosition();
+            //gather the list of column names from the root calendar nodes
+            foreach (KeyValuePair<int, ActivityDatumMetadata> kvp in metadata)
             {
-                Logging.Instance.TraceEntry("ActivityTree.Display-datatable");
-                //gather the list of column names from the root calendar nodes
-                List<string> masterDataNames = new List<string>();
-                foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
+
+                ActivityDatumMetadata activityDatumMetadata = kvp.Value;
+                if (activityDatumMetadata != null && activityDatumMetadata.PositionInTree != null && !activityDatumMetadata.Invisible.GetValueOrDefault(false))
                 {
-                    CalendarNode calendarNode = kvp.Value;
-                    IReadOnlyCollection<string> dataNames = calendarNode.DataNames;
-                    foreach (string s in dataNames)
+                    OLVColumn aNewColumn = new OLVColumn();
+                    aNewColumn.Name = activityDatumMetadata.Name;
+                    aNewColumn.Text = activityDatumMetadata.Title;
+                    aNewColumn.AspectGetter = delegate (object x) { return DatumFormatter.FormatForGrid(((Extensible)x).GetNamedDatum(activityDatumMetadata.Name), activityDatumMetadata); };
+                    // ((Extensible)x).GetNamedDatumForDisplay(s); };
+                    aNewColumn.IsEditable = false;
+                    //aNewColumn.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    //aNewColumn.MinimumWidth = 100;
+                    // ... configure it and finally ...
+                    calendarTreeListView.AllColumns.Add(aNewColumn);
+                    if (activityDatumMetadata.TreeColumnSize != null)
                     {
-                        if (!masterDataNames.Contains(s))
-                            masterDataNames.Add(s);
+                        aNewColumn.Width = activityDatumMetadata.TreeColumnSize.Value;
                     }
-                }
-
-                //SortedDictionary<int, DataColumn> keyValuePairs = new SortedDictionary<int, DataColumn>();
-                foreach (string s in masterDataNames)
-                {
-                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(s);
-                    if (activityDatumMetadata != null && activityDatumMetadata.PositionInTree != null && !activityDatumMetadata.Invisible.GetValueOrDefault(false))
+                    else
                     {
-                        OLVColumn aNewColumn = new OLVColumn();
-                        aNewColumn.Text = activityDatumMetadata.Title;
-                        aNewColumn.AspectGetter = delegate (object x) { return DatumFormatter.FormatForGrid(((Extensible)x).GetNamedDatum(s), activityDatumMetadata); }; 
-                        // ((Extensible)x).GetNamedDatumForDisplay(s); };
-                        aNewColumn.IsEditable = false;
-                        //aNewColumn.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                        //aNewColumn.MinimumWidth = 100;
-                        // ... configure it and finally ...
-                        calendarTreeListView.AllColumns.Add(aNewColumn);
-
-                        //TODO: ignore position for now
-                        //int positionInTree = (int)activityDatumMetadata.PositionInTree;
-                        //keyValuePairs.Add(positionInTree, dataColumn);
-                        //myTable.Columns[column.Name].SetOrdinal(positionInTree);
+                        //if we don't have a size, then we will auto size it later
+                        aNewColumn.AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
                     }
+
+                    //TODO: ignore position for now
+                    //int positionInTree = (int)activityDatumMetadata.PositionInTree;
+                    //keyValuePairs.Add(positionInTree, dataColumn);
+                    //myTable.Columns[column.Name].SetOrdinal(positionInTree);
                 }
+            }
 
-                calendarTreeListView.RebuildColumns();
-                //calendarTreeListView.Expand(values.Last());
+            calendarTreeListView.RebuildColumns();
+            //calendarTreeListView.Expand(values.Last());
 
-                /*
-                Logging.Instance.TraceLeave();
-                Logging.Instance.TraceEntry("ActivityTree.Display-tree");
-                foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
+            /*
+            Logging.Instance.TraceLeave();
+            Logging.Instance.TraceEntry("ActivityTree.Display-tree");
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp in database.CurrentAthlete.CalendarTree)
+            {
+                CalendarNode calendarNode = kvp.Value;
+
+                bool lastChild = (database.CurrentAthlete.CalendarTree.Last().Value == calendarNode);
+
+                Add(myTable, calendarNode, new Utils.DateTimeTree(), masterDataNames, lastChild);
+            }
+
+
+
+            Logging.Instance.TraceLeave();
+            Logging.Instance.TraceEntry("ActivityTree.Display-view");
+            calendarTreeListView.SuspendLayout();
+
+
+            if (calendarTreeListView.Columns.Count != myTable.Columns.Count)
+            {
+                //calendarTreeListView.Clear(); //tree list view doesn't come back from a clear
+                calendarTreeListView.Reset();  //we have to do a reset if things change, like number of columns
+            }
+
+
+            calendarTreeListView.DataSource = myTable;
+            foreach (OLVColumn column in calendarTreeListView.AllColumns)
+            {
+                if (column.Name != null && column.Name != DateTreeColumn)
                 {
-                    CalendarNode calendarNode = kvp.Value;
-
-                    bool lastChild = (database.CurrentAthlete.CalendarTree.Last().Value == calendarNode);
-
-                    Add(myTable, calendarNode, new Utils.DateTimeTree(), masterDataNames, lastChild);
-                }
-
-
-
-                Logging.Instance.TraceLeave();
-                Logging.Instance.TraceEntry("ActivityTree.Display-view");
-                calendarTreeListView.SuspendLayout();
-
-
-                if (calendarTreeListView.Columns.Count != myTable.Columns.Count)
-                {
-                    //calendarTreeListView.Clear(); //tree list view doesn't come back from a clear
-                    calendarTreeListView.Reset();  //we have to do a reset if things change, like number of columns
-                }
-
-
-                calendarTreeListView.DataSource = myTable;
-                foreach (OLVColumn column in calendarTreeListView.AllColumns)
-                {
-                    if (column.Name != null && column.Name != DateTreeColumn)
+                    ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(column.Name);
+                    if (activityDatumMetadata != null)
                     {
-                        ActivityDatumMetadata? activityDatumMetadata = ActivityDatumMetadata.FindMetadata(column.Name);
-                        if (activityDatumMetadata != null)
+                        if (activityDatumMetadata.PositionInTree == null || activityDatumMetadata.Invisible.GetValueOrDefault(false))
                         {
-                            if (activityDatumMetadata.PositionInTree == null || activityDatumMetadata.Invisible.GetValueOrDefault(false))
-                            {
-                                column.IsVisible = false;
-                            }
-                            else
-                            {
-                                if (activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None && 
-                                    activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
-                                    column.TextAlign = HorizontalAlignment.Right;
-                                column.IsVisible = true;
-                                int positionInTree = (int)activityDatumMetadata.PositionInTree;
-                                //myTable.Columns[column.Name].SetOrdinal(positionInTree);
-                                if(activityDatumMetadata.ColumnSize != null)
-                                    column.MaximumWidth = activityDatumMetadata.ColumnSize.Value;
-                            }
+                            column.IsVisible = false;
+                        }
+                        else
+                        {
+                            if (activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.None && 
+                                activityDatumMetadata.DisplayUnits != ActivityDatumMetadata.DisplayUnitsType.String)
+                                column.TextAlign = HorizontalAlignment.Right;
+                            column.IsVisible = true;
+                            int positionInTree = (int)activityDatumMetadata.PositionInTree;
+                            //myTable.Columns[column.Name].SetOrdinal(positionInTree);
+                            if(activityDatumMetadata.ColumnSize != null)
+                                column.MaximumWidth = activityDatumMetadata.ColumnSize.Value;
                         }
                     }
                 }
-                calendarTreeListView.RebuildColumns();
-                foreach (DataRow dataRow in lastRows)
-                {
-                    DataRowView drv = myTable.DefaultView[myTable.Rows.IndexOf(dataRow)];
-                    calendarTreeListView.Expand(drv);
-                }
-
-                calendarTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-                //calendarTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-
-                calendarTreeListView.ResumeLayout();
-                Logging.Instance.TraceLeave();
-                */
             }
+            calendarTreeListView.RebuildColumns();
+            foreach (DataRow dataRow in lastRows)
+            {
+                DataRowView drv = myTable.DefaultView[myTable.Rows.IndexOf(dataRow)];
+                calendarTreeListView.Expand(drv);
+            }
+
+            calendarTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+            //calendarTreeListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+
+            calendarTreeListView.ResumeLayout();
+            Logging.Instance.TraceLeave();
+            */
             Logging.Instance.TraceLeave();
 
         }
@@ -306,6 +371,64 @@ namespace FellrnrTrainingAnalysis.UI
             column.ColumnName = name;
 
             return column;
+        }
+
+        private void calendarTreeListView_FormatRow(object sender, FormatRowEventArgs e)
+        {
+            Extensible? eModel = e.Model as Extensible;
+            if (eModel == null) return;
+            if (eModel is CalendarNode)
+            {
+                CalendarNode cn = (CalendarNode)e.Model;
+
+                if (cn.Id().Type == Utils.DateTimeTree.DateTreeType.Root)
+                {
+                    e.Item.BackColor = Color.LightGray; //root is light gray
+                }
+                else if (cn.Id().Type == Utils.DateTimeTree.DateTreeType.Year)
+                {
+                    e.Item.BackColor = Color.LightBlue; //year is light blue
+                }
+                else if (cn.Id().Type == Utils.DateTimeTree.DateTreeType.Month)
+                {
+                    e.Item.BackColor = Color.LightGreen; //month is light green
+                }
+                else if (cn.Id().Type == Utils.DateTimeTree.DateTreeType.Day)
+                {
+                    e.Item.BackColor = Color.LightYellow; //day is light yellow
+                }
+            }
+            else
+            {
+                e.Item.BackColor = Color.White; //activity is white
+            }
+        }
+
+        private void calendarTreeListView_SelectionChanged(object sender, EventArgs e)
+        {
+            OLVListItem item = calendarTreeListView.SelectedItem;
+            if (item == null || item.RowObject == null)
+            {
+                return; //nothing selected
+            }
+            Extensible? extensible = item.RowObject as Extensible;
+            if (extensible == null)
+            {
+                Logging.Instance.Debug("UI.ActivityTree.calendarTreeListView_SelectionChanged, extensible is null");
+                return; //not an extensible
+            }
+            if (extensible is Activity activity)
+            {
+                if(ActivityData != null && Database != null)
+                {
+                    ActivityData.DisplayActivity(Database.CurrentAthlete, activity);
+                }
+                else
+                {
+                    Logging.Instance.Debug("UI.ActivityTree.calendarTreeListView_SelectionChanged, ActivityData is null");
+                }
+
+            }
         }
     }
 }

@@ -289,8 +289,8 @@ namespace FellrnrTrainingAnalysis
                             DateTime date = record.Date;
                             float weight = record.Recorded;
 
-                            Model.Day day = Database.CurrentAthlete.GetOrAddDay(date);
-                            day.AddOrReplaceDatum(new TypedDatum<float>(Model.Day.TagWeight, true, weight));
+                            Model.CalendarNode day = Database.CurrentAthlete.GetOrAddDay(date);
+                            day.AddOrReplaceDatum(new TypedDatum<float>(Model.CalendarNode.TagWeight, true, weight));
                         }
                     }
                 }
@@ -719,6 +719,7 @@ namespace FellrnrTrainingAnalysis
 
             Logging.Instance.TraceEntry("loadStravaCsvBackgroundWorker_DoWork");
 
+            timing.Start();
 
             Action.StravaCsvImporter stravaCsvImporter = new Action.StravaCsvImporter();
             int count = stravaCsvImporter.LoadFromStravaArchive(filePath, Database, worker);

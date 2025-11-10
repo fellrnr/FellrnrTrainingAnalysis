@@ -22,10 +22,10 @@ namespace FellrnrTrainingAnalysis.UI
         ContextMenuStrip strip = new ContextMenuStrip();
         List<ToolStripItem> rightClickMenuSubMenus = new List<ToolStripItem>();
 
+
         private void CreateRightClickMenus()
         {
             AddContextMenu("Open In Strava...", new EventHandler(toolStripItem1_Click_openStrava));
-            AddContextMenu("Open ALL In Strava...", new EventHandler(toolStripItem1_Click_openAllStrava));
             AddContextMenu("Open File (system viewer)...", new EventHandler(toolStripItem1_Click_openFile));
             AddContextMenu("Copy File path", new EventHandler(toolStripItem1_Click_copyFitFile));
             AddContextMenu("Open In Garmin...", new EventHandler(toolStripItem1_Click_openGarmin));
@@ -40,9 +40,7 @@ namespace FellrnrTrainingAnalysis.UI
             AddContextMenu("Update Description", new EventHandler(toolStripItem1_Click_updateDescription));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Refresh From Strava", new EventHandler(toolStripItem1_Click_refresh));
-            AddContextMenu("Refresh ALL From Strava", new EventHandler(toolStripItem1_Click_refreshAll));
             AddContextMenu("Reread FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadDataFile));
-            AddContextMenu("Reread ALL FIT/GPX file", new EventHandler(toolStripItem1_Click_rereadAllDataFiles));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Show Relationship Combinations...", new EventHandler(toolStripItem1_Click_showRelationships));
             AddContextMenu("Explore Relationships...", new EventHandler(toolStripItem1_Click_exploreRelationships));
@@ -51,25 +49,22 @@ namespace FellrnrTrainingAnalysis.UI
             AddContextMenu("Tag ALL In Strava As...", new EventHandler(toolStripItem1_Click_tagAllStravaAsInput));
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddFixSubMenus("Fix This Activity", toolStripItem1_Click_tagStrava);
-            AddFixSubMenus("Fix ALL Activities", toolStripItem1_Click_tagAllStrava);
             AddContextMenu("Distance from GPS", toolStripItem1_Click_distanceGPS);
             AddContextMenu("Lookup altitude from location", toolStripItem1_Click_lookupLocation);
-            AddContextMenu("Lookup ALL altitude from location", toolStripItem1_Click_lookupAllLocation);
             rightClickMenuSubMenus.Add(new ToolStripSeparator());
             AddContextMenu("Write table to CSV...", new EventHandler(toolStripItem1_Click_writeCsv));
             AddContextMenu("Debug Activity...", new EventHandler(toolStripItem1_Click_debugActivity));
             AddContextMenu("Delete Activity...", new EventHandler(toolStripItem1_Click_deleteActivity));
         }
 
-        private void AddContextMenu(string text, EventHandler eventHandler, TagActivities? tagActivities = null)
+        private void AddContextMenu(string text, EventHandler eventHandler) //, TagActivities? tagActivities = null)
         {
             ToolStripMenuItem rightClickMenuItem = new ToolStripMenuItem();
             rightClickMenuItem.Text = text;
             rightClickMenuItem.Click += eventHandler;
-            rightClickMenuItem.Tag = tagActivities;
+            //rightClickMenuItem.Tag = tagActivities;
             rightClickMenuSubMenus.Add(rightClickMenuItem);
         }
-
 
 
         //start char is ⌗ U+2317
@@ -171,6 +166,27 @@ namespace FellrnrTrainingAnalysis.UI
             return activity;
         }
 
+        private List<Activity> GetActivities()
+        {
+            List<Activity> activities = new List<Activity>();
+            DataGridViewSelectedRowCollection rows = activityDataGridView.SelectedRows;
+
+            foreach(DataGridViewRow row in rows)
+            {
+                Model.Activity? activity = GetActivityForRow(row);
+                if (activity != null)
+                {
+                    activities.Add(activity);
+                }
+                else
+                {
+                    MessageBox.Show("No activity found for selected row");
+                }
+            }
+            return activities;
+        }
+
+
         // Change the cell's color.
         private void toolStripItem1_Click_highlight(object? sender, EventArgs args)
         {
@@ -246,12 +262,14 @@ namespace FellrnrTrainingAnalysis.UI
 
         private void toolStripItem1_Click_recalculate(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
-            activity.Recalculate(true);
-
+            foreach (Activity activity in activities)
+            {
+                Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
+                activity.Recalculate(true);
+            }
             Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
             UpdateViews?.Invoke();
 
@@ -260,14 +278,16 @@ namespace FellrnrTrainingAnalysis.UI
         }
         private void toolStripItem1_Click_reprocessTags(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            activity.RemoveNamedDatum(Activity.TagProcessedTags);
+            foreach (Activity activity in activities)
+            {
+                activity.RemoveNamedDatum(Activity.TagProcessedTags);
 
-            Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
-            activity.Recalculate(true);
-
+                Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
+                activity.Recalculate(true);
+            }
             Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
             UpdateViews?.Invoke();
 
@@ -279,11 +299,14 @@ namespace FellrnrTrainingAnalysis.UI
             if (mouseLocation == null || Database == null || Database.Hills == null)
                 return;
 
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            activity.RecalculateHills(Database.Hills, true, true);
+            foreach (Activity activity in activities)
+            {
 
+                activity.RecalculateHills(Database.Hills, true, true);
+            }
             //don't muddy things with a recalculation
             //UpdateViews?.Invoke();
 
@@ -291,36 +314,18 @@ namespace FellrnrTrainingAnalysis.UI
         }
         private void toolStripItem1_Click_refresh(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null || Database == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0 || Database == null) return;
 
-            StravaApi.Instance.RefreshActivity(Database, activity);
-
-            Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
-            activity.Recalculate(true);
-
-            Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
-            UpdateViews?.Invoke();
-
-            Logging.Instance.Log($"toolStripItem1_Click_recalculate done");
-            MessageBox.Show("Done");
-        }
-
-        private void toolStripItem1_Click_refreshAll(object? sender, EventArgs args)
-        {
-
-            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            foreach (Activity activity in activities)
             {
-                Model.Activity? activity = GetActivityForRow(row);
-                if (activity == null)
-                    return;
 
-                StravaApi.Instance.RefreshActivity(Database!, activity);
+                StravaApi.Instance.RefreshActivity(Database, activity);
 
                 Logging.Instance.Log($"toolStripItem1_Click_recalculate activity {activity}");
                 activity.Recalculate(true);
-            }
 
+            }
             Logging.Instance.Log($"toolStripItem1_Click_recalculate update views");
             UpdateViews?.Invoke();
 
@@ -328,34 +333,17 @@ namespace FellrnrTrainingAnalysis.UI
             MessageBox.Show("Done");
         }
 
-        private void toolStripItem1_Click_rereadAllDataFiles(object? sender, EventArgs args)
-        {
-            foreach (DataGridViewRow row in activityDataGridView.Rows)
-            {
-                Model.Activity? activity = GetActivityForRow(row);
-                if (activity == null)
-                    return;
-
-                RereadDataFile(activity);
-
-                Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles activity {activity}");
-                activity.Recalculate(true);
-            }
-
-            Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles update views");
-            UpdateViews?.Invoke();
-
-            Logging.Instance.Log($"toolStripItem1_Click_rereadAllDataFiles done");
-            MessageBox.Show("Done");
-
-        }
 
         private void toolStripItem1_Click_rereadDataFile(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            RereadDataFile(activity);
+            foreach (Activity activity in activities)
+            {
+
+                RereadDataFile(activity);
+            }
             UpdateViews?.Invoke();
             MessageBox.Show("Completed GPX/FIT Reread");
 
@@ -404,92 +392,100 @@ namespace FellrnrTrainingAnalysis.UI
             //https://connect.garmin.com/modern/activities?activityType=running&startDate=2023-07-20&endDate=2023-07-20
             //https://connect.garmin.com/modern/activities?startDate=2023-07-20&endDate=2023-07-20
 
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            DateTime? start = activity.StartDateNoTimeLocal;
-
-            if (start == null)
+            foreach (Activity activity in activities)
             {
-                MessageBox.Show("No activity found");
-                return;
-            }
 
-            string date = string.Format("{0:D4}-{1:D2}-{2:d2}", start.Value.Year, start.Value.Month, start.Value.Day);
-            string target = $"https://connect.garmin.com/modern/activities?startDate={date}&endDate={date}";
-            Misc.RunCommand(target);
-        }
+                DateTime? start = activity.StartDateNoTimeLocal;
 
-        private void toolStripItem1_Click_openFile(object? sender, EventArgs args)
-        {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
-
-            string? filepath = activity.FileFullPath;
-            if (filepath == null)
-            {
-                MessageBox.Show("No file on activity");
-                return;
-            }
-            if (filepath.ToLower().EndsWith(".fit.gz"))
-            {
-                filepath = filepath.Remove(filepath.Length - 3);
-            }
-            if (!filepath.ToLower().EndsWith(".fit"))
-            {
-                if (MessageBox.Show($"File is not fit, {filepath}", "Really?", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                if (start == null)
                 {
+                    MessageBox.Show("No activity found");
                     return;
                 }
+
+                string date = string.Format("{0:D4}-{1:D2}-{2:d2}", start.Value.Year, start.Value.Month, start.Value.Day);
+                string target = $"https://connect.garmin.com/modern/activities?startDate={date}&endDate={date}";
+                Misc.RunCommand(target);
+            }
+        }
+        private void toolStripItem1_Click_openFile(object? sender, EventArgs args)
+        {
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
+
+            foreach (Activity activity in activities)
+            {
+                string? filepath = activity.FileFullPath;
+                if (filepath == null)
+                {
+                    MessageBox.Show("No file on activity");
+                    return;
+                }
+                if (filepath.ToLower().EndsWith(".fit.gz"))
+                {
+                    filepath = filepath.Remove(filepath.Length - 3);
+                }
+                if (!filepath.ToLower().EndsWith(".fit"))
+                {
+                    if (MessageBox.Show($"File is not fit, {filepath}", "Really?", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                    {
+                        return;
+                    }
+                }
+                Misc.RunCommand(filepath);
             }
 
-            Misc.RunCommand(filepath);
 
         }
 
         private void toolStripItem1_Click_copyFitFile(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            string? filepath = activity.FileFullPath;
-            if (filepath == null)
-            {
-                MessageBox.Show("No file on activity");
-                return;
-            }
-            if (filepath.ToLower().EndsWith(".fit.gz"))
-            {
-                filepath = filepath.Remove(filepath.Length - 3);
-            }
-            filepath = filepath.Replace('/', '\\');
+            StringBuilder stringBuilder = new StringBuilder();
 
-            Clipboard.SetText(filepath);
+            foreach (Activity activity in activities)
+            {
+                string? filepath = activity.FileFullPath;
+                if (filepath == null)
+                {
+                    MessageBox.Show("No file on activity");
+                    return;
+                }
+                if (filepath.ToLower().EndsWith(".fit.gz"))
+                {
+                    filepath = filepath.Remove(filepath.Length - 3);
+                }
+                if (!filepath.ToLower().EndsWith(".fit"))
+                {
+                    if (MessageBox.Show($"File is not fit, {filepath}", "Really?", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                    {
+                        return;
+                    }
+                }
+                filepath = filepath.Replace('/', '\\'); //replace forward slash with backslash for windows commands
+                stringBuilder.Append($"\"{filepath}\" ");
+            }
+
+            Clipboard.SetText(stringBuilder.ToString());
         }
+
 
         private void toolStripItem1_Click_openStrava(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
-            StravaApi.OpenAsStravaWebPage(activity);
-
-        }
-
-
-        private void toolStripItem1_Click_openAllStrava(object? sender, EventArgs args)
-        {
-            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            foreach (Activity activity in activities)
             {
-                Model.Activity? activity = GetActivityForRow(row);
-                if (activity == null)
-                    return;
-
-                string key = activity.PrimaryKey();
-                string target = "https://www.strava.com/activities/" + key;
-                Misc.RunCommand(target);
+                StravaApi.OpenAsStravaWebPage(activity);
             }
         }
+
 
         private class TagActivities
         {
@@ -565,36 +561,41 @@ namespace FellrnrTrainingAnalysis.UI
         }
         private void toolStripItem1_Click_debugActivity(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
             StringBuilder sb = new StringBuilder();
-
-            sb.AppendLine("Datums");
-            foreach (Datum d in activity.DataValues)
+            foreach (Activity activity in activities)
             {
-                sb.AppendLine(d.ToString());
-            }
 
-            sb.AppendLine("TimeSeries");
-            foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
-            {
-                sb.AppendLine(kvp.Value.ToString());
-            }
+                sb.AppendLine("Datums");
+                foreach (Datum d in activity.DataValues)
+                {
+                    sb.AppendLine(d.ToString());
+                }
 
+                sb.AppendLine("TimeSeries");
+                foreach (KeyValuePair<string, TimeSeriesBase> kvp in activity.TimeSeries)
+                {
+                    sb.AppendLine(kvp.Value.ToString());
+                }
+            }
             LargeTextDialogForm largeTextDialogForm = new LargeTextDialogForm(sb.ToString());
             largeTextDialogForm.ShowDialog();
         }
         private void toolStripItem1_Click_deleteActivity(object? sender, EventArgs args)
         {
-            Model.Activity? activity = GetActivity();
-            if (Database == null || activity == null) return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0 || Database == null) return;
 
-            if (MessageBox.Show($"Really delete {activity}? (This doesn not remove it from Strava)", "Delete Activity", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
-                return;
+            foreach (Activity activity in activities)
+            {
 
-            Database.CurrentAthlete.DeleteActivityBeforeRecalcualte(activity);
+                if (MessageBox.Show($"Really delete {activity}? (This doesn not remove it from Strava)", "Delete Activity", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
+                    return;
 
+                Database.CurrentAthlete.DeleteActivityBeforeRecalcualte(activity);
+            }
             MessageBox.Show("Deleted activity. Perform forced recalculation or restart now");
         }
 
@@ -734,11 +735,11 @@ namespace FellrnrTrainingAnalysis.UI
                 return;
             string TAG = $" {input}";
             int success = 0, error = 0, already = 0, count = 0;
-            foreach (DataGridViewRow row in activityDataGridView.Rows)
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
+
+            foreach (Activity activity in activities)
             {
-                Model.Activity? activity = GetActivityForRow(row);
-                if (activity == null)
-                    return;
 
                 string? name = activity.GetNamedStringDatum("Name");
                 if (name != null && !name.Contains(TAG))
@@ -764,37 +765,19 @@ namespace FellrnrTrainingAnalysis.UI
         }
 
 
-        private async void toolStripItem1_Click_lookupAllLocation(object? sender, EventArgs args)
+        private async void toolStripItem1_Click_lookupLocation(object? sender, EventArgs args)
         {
-            foreach (DataGridViewRow row in activityDataGridView.Rows)
-            {
-                Model.Activity? activity = GetActivityForRow(row);
-                if (activity == null)
-                    return;
+            List<Model.Activity> activities = GetActivities();
+            if (activities.Count == 0) return;
 
+            foreach (Activity activity in activities)
+            {
                 await LookupElevation(activity, false);
             }
             UpdateViews?.Invoke();
             MessageBox.Show("Done");
         }
-        private async void toolStripItem1_Click_lookupLocation(object? sender, EventArgs args)
-        {
-            if (mouseLocation == null || sender == null)
-                return;
 
-            DataGridViewRow row = activityDataGridView.Rows[mouseLocation.RowIndex];
-            Model.Activity? activity = GetActivityForRow(row);
-            if (activity == null)
-            {
-                MessageBox.Show("No activity found");
-                return;
-            }
-
-            await LookupElevation(activity, true);
-            UpdateViews?.Invoke();
-            MessageBox.Show("Done");
-
-        }
 
         private async Task LookupElevation(Activity activity, bool dialogs)
         {
@@ -813,10 +796,10 @@ namespace FellrnrTrainingAnalysis.UI
                         TimeSeriesBase original = activity.TimeSeries[Activity.TagAltitude];
                         stats =
                             $"Original/New: " +
-                            $"min {original.Percentile(TimeSeriesBase.StaticsValue.Min):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Min):#,0.0}, " +
-                            $"mean {original.Percentile(TimeSeriesBase.StaticsValue.Mean):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Mean):#,0.0}, " +
-                            $"max {original.Percentile(TimeSeriesBase.StaticsValue.Max):#,0.0}/{result.Percentile(TimeSeriesBase.StaticsValue.Max):#,0.0}, " +
-                            $"sd {original.Percentile(TimeSeriesBase.StaticsValue.StandardDeviation)}/{result.Percentile(TimeSeriesBase.StaticsValue.StandardDeviation)}";
+                            $"min {original.Percentile(TimeValueList.StaticsValue.Min):#,0.0}/{result.Percentile(TimeValueList.StaticsValue.Min):#,0.0}, " +
+                            $"mean {original.Percentile(TimeValueList.StaticsValue.Mean):#,0.0}/{result.Percentile(TimeValueList.StaticsValue.Mean):#,0.0}, " +
+                            $"max {original.Percentile(TimeValueList.StaticsValue.Max):#,0.0}/{result.Percentile(TimeValueList.StaticsValue.Max):#,0.0}, " +
+                            $"sd {original.Percentile(TimeValueList.StaticsValue.StandardDeviation)}/{result.Percentile(TimeValueList.StaticsValue.StandardDeviation)}";
                     }
                     else
                     {

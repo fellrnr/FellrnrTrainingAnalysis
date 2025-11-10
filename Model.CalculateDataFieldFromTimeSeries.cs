@@ -127,37 +127,19 @@ namespace FellrnrTrainingAnalysis.Model
 
     public class CalculateDataFieldFromTimeSeriesSimple : CalculateDataFieldFromTimeSeriesBase
     {
-        public CalculateDataFieldFromTimeSeriesSimple(string activityFieldname, Mode extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) :
+        public CalculateDataFieldFromTimeSeriesSimple(string activityFieldname, TimeValueList.StaticsValue extractionMode, string sourceStreamName, List<string>? sportsToInclude = null) :
             base(activityFieldname, sourceStreamName, sportsToInclude)
         {
             ExtractionMode = extractionMode;
         }
-        public enum Mode { LastValue, Average, Min, Max }
-        Mode ExtractionMode { get; set; }
+        //public enum Mode { LastValue, Average, Min, Max, Percent90 }
+        TimeValueList.StaticsValue ExtractionMode { get; set; }
 
         protected override float[]? ExtractValue(TimeValueList data, Activity activity, bool forceJustMe)
         {
             float? value = null;
-            if (ExtractionMode == Mode.LastValue)
-            {
-                value = data.Values.Last();
-            }
-            else if (ExtractionMode == Mode.Average)
-            {
-                value = data.Values.Average(); //TODO: Add average ignoring zeros
-            }
-            else if (ExtractionMode == Mode.Max)
-            {
-                value = data.Values.Max();
-            }
-            else if (ExtractionMode == Mode.Min)
-            {
-                value = data.Values.Min();
-            }
-            if (value == null)
-                return null;
-            else
-                return new float[] { value.Value };
+            value = data.Percentile(ExtractionMode);
+            return new float[] { value.Value };
         }
     }
 
@@ -262,7 +244,7 @@ namespace FellrnrTrainingAnalysis.Model
     {
         //zero end means to the end
         public CalculateDataFieldFromTimeSeriesWindow(string activityFieldname,
-                                                      Mode extractionMode,
+                                                      TimeValueList.StaticsValue extractionMode,
                                                       string sourceStreamName,
                                                       List<string>? sportsToInclude,
                                                       int start,
@@ -274,8 +256,8 @@ namespace FellrnrTrainingAnalysis.Model
             Start = start;
             End = end;
         }
-        public enum Mode { LastValue, Average, Min, Max, SumAbsDeltas }
-        Mode ExtractionMode { get; set; }
+        //public enum Mode { LastValue, Average, Min, Max, SumAbsDeltas }
+        TimeValueList.StaticsValue ExtractionMode { get; set; }
 
         int Start { get; set; }
         int End { get; set; }
@@ -286,36 +268,8 @@ namespace FellrnrTrainingAnalysis.Model
             TimeValueList? dataSubset = TimeValueList.ExtractWindow(data, Start, End);
             if (dataSubset == null) { return null; } //Note, was return 0;
 
-            if (ExtractionMode == Mode.LastValue)
-            {
-                value = dataSubset.Values.Last();
-            }
-            else if (ExtractionMode == Mode.Average)
-            {
-                value = dataSubset.Values.Average(); //TODO: Add average ignoring zeros
-            }
-            else if (ExtractionMode == Mode.Max)
-            {
-                value = dataSubset.Values.Max();
-            }
-            else if (ExtractionMode == Mode.Min)
-            {
-                value = dataSubset.Values.Min();
-            }
-            else if (ExtractionMode == Mode.SumAbsDeltas)
-            {
-                float? prev = null;
-                foreach (var entry in dataSubset.Values)
-                {
-                    if (value == null) value = 0;
+            value = dataSubset.Percentile(ExtractionMode);
 
-                    if(prev != null)
-                    {
-                        value += Math.Abs(entry - prev.Value);
-                    }
-                    prev = entry;
-                }
-            }
             if (value == null)
                 return null;
             else
@@ -329,18 +283,18 @@ namespace FellrnrTrainingAnalysis.Model
         private static string[] GenerateNames(string activityNameBase, int count)
         {
             List<string> names = new List<string>();
-            for(int i = 0; i < count; i++)
+            for(int i = 0; i <= count; i++)
             {
-                names.Add($"{activityNameBase}{i+1}");
+                names.Add($"{activityNameBase}{i}");
             }
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i <= count; i++)
             {
-                names.Add($"{activityNameBase}{i+1}%");
+                names.Add($"{activityNameBase}{i}%");
             }
             return names.ToArray();
         }
         public CalculateDataFieldFromTimeSeriesZones(string activityNameBase, int[] zones, string sourceStreamName, List<string>? sportsToInclude = null) :
-            base(GenerateNames(activityNameBase, zones.Length-1), sourceStreamName, sportsToInclude)
+            base(GenerateNames(activityNameBase, zones.Length), sourceStreamName, sportsToInclude)
         {
             Zones = zones;
         }
@@ -351,26 +305,38 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesZones Forced ExtractValue {ActivityFieldnames[0]}");
 
-
-            float[] accumulator = new float[Zones.Length-1]; //init to zeros in c#
+            //change to count time in zone 0 and above top zone
+            float[] accumulator = new float[Zones.Length+1]; //init to zeros in c#
 
             for (int i = 0; i < data.Length; i++)
             {
+                float v = data.Values[i];
+                if (v < Zones.First())
+                    accumulator[0]++;
+
                 for (int j = 0; j < Zones.Length-1; j++)
                 {
-                    float v = data.Values[i];
                     if (v >= Zones[j] && v < Zones[j + 1])
                     {
-                        accumulator[j]++;
+                        accumulator[j+1]++;
                     }
                 }
+                if (v >= Zones.Last())
+                    accumulator[accumulator.Length-1]++;
             }
 
-            float[] percent = new float[Zones.Length-1]; 
-            for(int i = 0; i < Zones.Length - 1; i++)
+            float[] percent = new float[Zones.Length+1];
+            float total = 0;
+            for(int i = 0; i < accumulator.Length; i++)
             {
                 percent[i] = (float) accumulator[i] / (float)data.Length * 100.0f;
+                total += percent[i];
             }
+            if (total < 99.5 || total > 100.5)
+            {
+                Logging.Instance.Error($"Total percent is not 100: {total}");
+            }
+
 
             return accumulator.Concat(percent).ToArray();
         }
@@ -390,9 +356,9 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
 
-            Day day = activity.Day;
+            CalendarNode day = activity.Day;
 
-            float? cpn = day.GetNamedFloatDatum(Day.TagCriticalPower);
+            float? cpn = day.GetNamedFloatDatum(CalendarNode.TagCriticalPower);
             if (cpn == null)
                 return null;
             double cp = cpn.Value * CpScalingFactor;
@@ -427,9 +393,9 @@ namespace FellrnrTrainingAnalysis.Model
             if (forceJustMe)
                 Logging.Instance.Debug($"CalculateDataFieldFromTimeSeriesAUC Forced ExtractValue {ActivityFieldnames[0]}");
 
-            Day day = activity.Day;
+            CalendarNode day = activity.Day;
 
-            float? cpn = day.GetNamedFloatDatum(Day.TagCriticalPower);
+            float? cpn = day.GetNamedFloatDatum(CalendarNode.TagCriticalPower);
             if (cpn == null || cpn == 0)
                 return null;
             double cp = cpn.Value * CpScalingFactor;

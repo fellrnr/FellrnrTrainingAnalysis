@@ -14,6 +14,7 @@ namespace FellrnrTrainingAnalysis.Model
     [MemoryPackUnion(6, typeof(TimeSeriesIncline))]
     [MemoryPackUnion(7, typeof(TimeSeriesCalculateDistance))]
     [MemoryPackUnion(8, typeof(PowerDistributionCurve))]
+    [MemoryPackUnion(9, typeof(TimeSeriesCadencePower))]
 
     public abstract partial class TimeSeriesEphemeral : TimeSeriesBase
     {

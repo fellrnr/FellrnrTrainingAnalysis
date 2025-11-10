@@ -24,7 +24,7 @@ namespace FellrnrTrainingAnalysis
         FilterActivities ToggleFilterActivities = new FilterActivities(); //the default filter
         FilterBadData? CurrentFilterBadData = null;
         FilterActivities CurrentFilterActivities = new FilterActivities(); //the default filter
-        ActivityFilterDialog? activityFilterDialog;
+        UI.ActivityFilterDialog? activityFilterDialog;
 
         private UI.ProgressDialog ProgressDialog = new UI.ProgressDialog();
 
@@ -71,6 +71,7 @@ namespace FellrnrTrainingAnalysis
         {
             Logging.Instance.Log("Entering FellrnrTrainingAnalysisForm_Load");
             Logging.Instance.ResetAndStartTimer("FellrnrTrainingAnalysisForm_Load");
+            
             SetMenuAvailability();
 
             UpdateViews();
@@ -115,7 +116,7 @@ namespace FellrnrTrainingAnalysis
             UpdateGoals();
 
             activityReport1.UpdateReport(Database, CurrentFilterActivities);
-            activityTree1.Display(Database);
+            activityTree1.Display(Database, activityData1);
 
             progressGraph1.Display(Database, CurrentFilterActivities);
 
@@ -217,7 +218,7 @@ namespace FellrnrTrainingAnalysis
         }
 
 
-        public void TimeSeriesEditEventHandler(TimeSeriesDefinitionEditor sender) //a callback from clients
+        public void TimeSeriesEditEventHandler(UI.TimeSeriesDefinitionEditor sender) //a callback from clients
         {
             List<Model.TimeSeriesDefinition>? definitions = sender.Definitions;
             TimeSeriesDefinition.SetDefinitions(definitions);
@@ -233,11 +234,16 @@ namespace FellrnrTrainingAnalysis
         {
             if (tabControl1.SelectedTab == activityTreeTabPage)
             {
-                activityTree1.ShowNow(Database);
+                activityTree1.ShowNow(Database, activityData1);
 
             }
         }
 
+        private void resizeTreeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            activityTree1.ResetColumnSize();
+            ActivityDatumMetadata.WriteToCsv(); //save the changes to the metadata
+        }
     }
 
 }

@@ -103,10 +103,10 @@ namespace FellrnrTrainingAnalysis.UI
                     if (activityDatumMetadata.Invisible.HasValue && activityDatumMetadata.Invisible.Value) //most readable way of checking nullable bool? 
                         dataGridViewColumn.Visible = false;
 
-                    if (activityDatumMetadata.ColumnSize != null)
+                    if (activityDatumMetadata.TableColumnLimit != null)
                     {
                         dataGridViewColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                        dataGridViewColumn.Width = (int)activityDatumMetadata.ColumnSize;
+                        dataGridViewColumn.Width = (int)activityDatumMetadata.TableColumnLimit;
                     }
                     else
                     {
@@ -235,6 +235,7 @@ namespace FellrnrTrainingAnalysis.UI
         private string? selectedPrimaryKey = null;
         private void SelectPreviouslySelectedRow()
         {
+            activityDataGridView.ClearSelection();
             if (selectedPrimaryKey == null)
             {
                 activityDataGridView.Rows[activityDataGridView.Rows.Count - 1].Selected = true;
@@ -265,7 +266,7 @@ namespace FellrnrTrainingAnalysis.UI
             DataGridViewSelectedRowCollection dataGridViewSelectedRowCollection = activityDataGridView.SelectedRows;
             if (dataGridViewSelectedRowCollection.Count > 0)
             {
-                DataGridViewRow row = dataGridViewSelectedRowCollection[0];
+                DataGridViewRow row = dataGridViewSelectedRowCollection[dataGridViewSelectedRowCollection.Count - 1];
                 activity = GetActivityForRow(row);
                 if (activity != null)
                     selectedPrimaryKey = activity.PrimaryKey();
@@ -273,6 +274,7 @@ namespace FellrnrTrainingAnalysis.UI
             activityData1.DisplayActivity(Database!.CurrentAthlete, activity); //if we've got here, we have to have a database with an athlete
             activityMap1.DisplayActivity(activity, Database!.Hills);
             powerDistributionCurveGraph1.DisplayActivity(activity);
+            lapDetails1.DisplayActivity(Database!.CurrentAthlete, activity);
 
             Logging.Instance.TraceLeave();
         }
@@ -289,7 +291,7 @@ namespace FellrnrTrainingAnalysis.UI
             Model.Activity? activity = null;
             if (dataGridViewSelectedRowCollection.Count > 0)
             {
-                DataGridViewRow row = dataGridViewSelectedRowCollection[0];
+                DataGridViewRow row = dataGridViewSelectedRowCollection[dataGridViewSelectedRowCollection.Count-1];
                 activity = GetActivityForRow(row);
             }
 

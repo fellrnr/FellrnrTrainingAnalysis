@@ -213,9 +213,11 @@ namespace FellrnrTrainingAnalysis.Model
             return $"CalculateFieldPolarizationIndex: [Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
         }
 
+        private const string Zone0 = "Σ 3-Zone-0 30D";
         private const string Zone1 = "Σ 3-Zone-1 30D";
         private const string Zone2 = "Σ 3-Zone-2 30D";
         private const string Zone3 = "Σ 3-Zone-3 30D";
+        private const string Zone4 = "Σ 3-Zone-4 30D";
 
 
         //https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2019.00707/full
@@ -230,30 +232,38 @@ namespace FellrnrTrainingAnalysis.Model
             if (!extensible.HasNamedDatum(Zone3))
                 return null;
 
+            float? z0n = extensible.GetNamedFloatDatum(Zone0);
             float? z1n = extensible.GetNamedFloatDatum(Zone1);
             float? z2n = extensible.GetNamedFloatDatum(Zone2);
             float? z3n = extensible.GetNamedFloatDatum(Zone3);
+            float? z4n = extensible.GetNamedFloatDatum(Zone4);
             float? polarization = null;
-            if (z1n != null && z2n != null && z3n != null)
+            if (z0n != null && z1n != null && z2n != null && z3n != null && z4n != null)
             {
+                float z0 = z0n.Value;
                 float z1 = z1n.Value;
                 float z2 = z2n.Value;
                 float z3 = z3n.Value;
-                if(z3 > z1)
+                float z4 = z4n.Value;
+                float total = z0 + z1 + z2 + z3 + z4;
+                float z1p = z1 / total;
+                float z2p = z2 / total;
+                float z3p = z3 / total;
+                if (z3p > z1p)
                 {
                     polarization = null;// invalid
                 }
-                else if(z3 == 0)
+                else if(z3p == 0)
                 {
                     polarization = 0;
                 }
-                else if (z2n == 0)
+                else if (z2p == 0)
                 {
-                    polarization = (float)Math.Log10(z1 / 0.01 * (z3 - 0.01) * 100.0);
+                    polarization = (float)Math.Log10(z1p / 0.01 * (z3p - 0.01) * 100.0);
                 }
                 else
                 {
-                    polarization = (float)Math.Log10(z1 / z2 * z3 * 100.0);
+                    polarization = (float)Math.Log10(z1p / z2p * z3p * 100.0);
                 }
             }
 
@@ -293,12 +303,12 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
 
             Activity activity = (Activity)extensible;
-            Day day = activity.Day;
+            CalendarNode day = activity.Day;
 
-            if (!day.HasNamedDatum(Day.TagCriticalPower))
+            if (!day.HasNamedDatum(CalendarNode.TagCriticalPower))
                 return null;
 
-            float? cp = day.GetNamedFloatDatum(Day.TagCriticalPower) * CpScalingFactor;
+            float? cp = day.GetNamedFloatDatum(CalendarNode.TagCriticalPower) * CpScalingFactor;
             float? ap = extensible.GetNamedFloatDatum(Activity.TagAveragePower);
             float? sec = extensible.GetNamedFloatDatum(Activity.TagElapsedTime);
             float? trimp = null;
@@ -343,12 +353,12 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
 
             Activity activity = (Activity)extensible;
-            Day day = activity.Day;
+            CalendarNode day = activity.Day;
 
-            if (!day.HasNamedDatum(Day.TagCriticalPower))
+            if (!day.HasNamedDatum(CalendarNode.TagCriticalPower))
                 return null;
 
-            float? cp = day.GetNamedFloatDatum(Day.TagCriticalPower) * CpScalingFactor;
+            float? cp = day.GetNamedFloatDatum(CalendarNode.TagCriticalPower) * CpScalingFactor;
             float? ap = extensible.GetNamedFloatDatum(Activity.TagAveragePower);
             float? intensity = null;
             if (cp != null && ap != null)
@@ -361,5 +371,63 @@ namespace FellrnrTrainingAnalysis.Model
         }
 
     }
+
+    public class CalculateFieldArrhythmia : CalculateFieldSimple
+    {
+        public CalculateFieldArrhythmia(string activityFieldname, List<string>? sportsToInclude = null) :
+            base(activityFieldname, OverrideMode.Always, sportsToInclude)
+        {
+        }
+
+        public override string ToString()
+        {
+            return $"CalculateFieldArrhythmia [Type {this.GetType().Name} ActivityFieldname {ActivityFieldname}";
+        }
+
+        protected override float? ExtractValue(Extensible extensible, bool forceJustMe)
+        {
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldIF Forced ExtractValue {ActivityFieldname}");
+            if (!extensible.HasNamedDatum(Activity.TagAveragePower))
+                return null;
+            if (!extensible.HasNamedDatum(Activity.TagElapsedTime))
+                return null;
+
+            if (extensible is not Activity)
+                return null;
+
+            Activity activity = (Activity)extensible;
+
+            if (activity.RRIntervals == null || activity.RRIntervals.Length == 0)
+                return null;
+
+            int count = 0;
+            int sum = 0;
+            const int windowSize = 30;
+            for (int i=0; i < activity.RRIntervals.Length; i++)
+            {
+                short rr = activity.RRIntervals[i];
+                sum += rr;
+                //wait until we have enough samples
+                if (i > windowSize)
+                {
+                    short rrOld = activity.RRIntervals[i - windowSize];
+                    sum -= rrOld;
+                    float avg = sum / windowSize;
+                    //anything 40% away from the average is an arrhythmia
+                    if (Math.Abs(rr - avg) > 0.4 * avg)
+                        count++;
+
+                }
+
+            }
+
+            if (forceJustMe)
+                Logging.Instance.Debug($"CalculateFieldIF Forced ExtractValue retval {count}");
+            return count;
+        }
+
+    }
+
 
 }

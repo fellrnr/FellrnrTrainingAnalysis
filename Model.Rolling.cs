@@ -27,9 +27,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         public override void Recalculate(Database database, bool force)
         {
-            foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
             {
-                Day day = kvp2.Value;
+                CalendarNode day = kvp2.Value;
                 if (force)
                     day.RemoveNamedDatum(FieldNameToAdd);
 
@@ -37,7 +37,7 @@ namespace FellrnrTrainingAnalysis.Model
             }
         }
 
-        public abstract void Recalculate(Day day);
+        public abstract void Recalculate(CalendarNode day);
 
     }
 
@@ -60,7 +60,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         private ModeEnum Mode { get; set; }
 
-        public override void Recalculate(Day day)
+        public override void Recalculate(CalendarNode day)
         {
             float dailyAccumulator = 0;
             int count = 0;
@@ -144,7 +144,7 @@ namespace FellrnrTrainingAnalysis.Model
         private string FirstField { get; set; }
         private float Divisor { get; set; }
 
-        public override void Recalculate(Day day)
+        public override void Recalculate(CalendarNode day)
         {
             float? value1 = day.GetNamedFloatDatum(FirstField);
 
@@ -171,7 +171,7 @@ namespace FellrnrTrainingAnalysis.Model
         private string FirstField { get; set; }
         private string SecondField { get; set; }
 
-        public override void Recalculate(Day day)
+        public override void Recalculate(CalendarNode day)
         {
 
             float? value1 = day.GetNamedFloatDatum(FirstField);
@@ -196,7 +196,7 @@ namespace FellrnrTrainingAnalysis.Model
         private string FirstField { get; set; }
         private string SecondField { get; set; }
 
-        public override void Recalculate(Day day)
+        public override void Recalculate(CalendarNode day)
         {
 
             float? value1 = day.GetNamedFloatDatum(FirstField);
@@ -222,7 +222,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         private float Value { get; set; }
 
-        public override void Recalculate(Day day)
+        public override void Recalculate(CalendarNode day)
         {
             day.AddOrReplaceDatum(new TypedDatum<float>(FieldNameToAdd, false, Value));
         }
@@ -246,9 +246,9 @@ namespace FellrnrTrainingAnalysis.Model
             float max = float.MinValue;
 
 
-            foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
             {
-                Day day = kvp2.Value;
+                CalendarNode day = kvp2.Value;
 
 
                 float? value1 = day.GetNamedFloatDatum(FirstField);
@@ -262,9 +262,9 @@ namespace FellrnrTrainingAnalysis.Model
             //second pass, apply max
             if (max != float.MinValue && max != 0)
             {
-                foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+                foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
                 {
-                    Day day = kvp2.Value;
+                    CalendarNode day = kvp2.Value;
 
                     float? value1 = day.GetNamedFloatDatum(FirstField);
 
@@ -304,9 +304,9 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+                foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
                 {
-                    Day day = kvp2.Value;
+                    CalendarNode day = kvp2.Value;
                     Recalculate(database, day, force);
                 }
             }
@@ -314,7 +314,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        private void Recalculate(Database database, Day day, bool force)
+        private void Recalculate(Database database, CalendarNode day, bool force)
         {
             if (!force && day.HasNamedDatum(FieldNameToAdd))
                 return;
@@ -360,9 +360,9 @@ namespace FellrnrTrainingAnalysis.Model
             }
             else
             {
-                foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+                foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
                 {
-                    Day day = kvp2.Value;
+                    CalendarNode day = kvp2.Value;
                     Recalculate(database, day, force);
                 }
             }
@@ -370,7 +370,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         }
 
-        private void Recalculate(Database database, Day day, bool force)
+        private void Recalculate(Database database, CalendarNode day, bool force)
         {
             if (!force && day.HasNamedDatum(FieldNameToAdd))
                 return;
@@ -415,9 +415,9 @@ namespace FellrnrTrainingAnalysis.Model
             StressBalanceModeller.StressData? stress = null;
 
             //this cannot be done in parallel - each day feeds the next
-            foreach (KeyValuePair<DateTime, Day> kvp2 in database.CurrentAthlete.Days)
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in database.CurrentAthlete.Days)
             {
-                Day day = kvp2.Value;
+                CalendarNode day = kvp2.Value;
 
                 //debug hack (simpler than conditional breakpoint)
                 //if (day.Date.Year == 2025 && day.Date.Month == 04 && day.Date.Day == 29)
@@ -508,7 +508,7 @@ namespace FellrnrTrainingAnalysis.Model
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (LS-3P-D)", new PdmFitLeastSquares(new PdmModel3Param(modelDecayForLeastSquares: true)), duration: 90),
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-3P)", new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
                 //new RollingDistributionCurve(Activity.ActivityTypeRun, "90 Day CP (E-2P)", new PdmFitEnvelope(new PdmModel2Param()), duration: 90),
-                new RollingDistributionCurve(Activity.ActivityTypeRun, Day.TagCriticalPower, new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
+                new RollingDistributionCurve(Activity.ActivityTypeRun, CalendarNode.TagCriticalPower, new PdmFitEnvelope(new PdmModel3Param()), duration: 90),
             };
 
         }

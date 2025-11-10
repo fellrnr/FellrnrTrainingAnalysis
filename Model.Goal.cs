@@ -22,7 +22,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public abstract string FormatResult(KeyValuePair<Model.Period, float> kvp);
 
-        public abstract Dictionary<Model.Period, float>? GetGoalsForDay(Database database, Day target);
+        public abstract Dictionary<Model.Period, float>? GetGoalsForDay(Database database, CalendarNode target);
 
     }
 
@@ -82,7 +82,7 @@ namespace FellrnrTrainingAnalysis.Model
             return string.Format("{0} {1}", ActivityFieldname, p.ShortName);
         }
 
-        public override Dictionary<Model.Period, float>? GetGoalsForDay(Database database, Day target)
+        public override Dictionary<Model.Period, float>? GetGoalsForDay(Database database, CalendarNode target)
         {
             Logging.Instance.ContinueAccumulator("GetGoalUpdate");
             DateTime targetDate = target.Date;

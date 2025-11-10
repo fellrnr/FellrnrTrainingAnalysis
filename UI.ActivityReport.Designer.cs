@@ -46,6 +46,8 @@
             activityMap1 = new ActivityMap();
             tabPagePowerDistributionCurve = new TabPage();
             powerDistributionCurveGraph1 = new PowerDistributionCurveGraph();
+            tabPageLaps = new TabPage();
+            lapDetails1 = new LapDetails();
             ((System.ComponentModel.ISupportInitialize)splitContainerReportToTabs).BeginInit();
             splitContainerReportToTabs.Panel1.SuspendLayout();
             splitContainerReportToTabs.Panel2.SuspendLayout();
@@ -61,6 +63,7 @@
             tabPageActivityTable.SuspendLayout();
             tabPageActivityMap.SuspendLayout();
             tabPagePowerDistributionCurve.SuspendLayout();
+            tabPageLaps.SuspendLayout();
             SuspendLayout();
             // 
             // splitContainerReportToTabs
@@ -147,7 +150,7 @@
             activityDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle1.BackColor = SystemColors.Control;
-            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F);
             dataGridViewCellStyle1.ForeColor = SystemColors.WindowText;
             dataGridViewCellStyle1.SelectionBackColor = SystemColors.Highlight;
             dataGridViewCellStyle1.SelectionForeColor = SystemColors.HighlightText;
@@ -156,18 +159,16 @@
             activityDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle2.BackColor = SystemColors.Window;
-            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
             dataGridViewCellStyle2.ForeColor = SystemColors.ControlText;
             dataGridViewCellStyle2.SelectionBackColor = SystemColors.Highlight;
             dataGridViewCellStyle2.SelectionForeColor = SystemColors.HighlightText;
             dataGridViewCellStyle2.WrapMode = DataGridViewTriState.True;
             activityDataGridView.DefaultCellStyle = dataGridViewCellStyle2;
             activityDataGridView.Location = new Point(3, 3);
-            activityDataGridView.MultiSelect = false;
             activityDataGridView.Name = "activityDataGridView";
             activityDataGridView.ReadOnly = true;
             activityDataGridView.RowHeadersWidth = 62;
-            activityDataGridView.RowTemplate.Height = 33;
             activityDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             activityDataGridView.Size = new Size(1883, 553);
             activityDataGridView.TabIndex = 2;
@@ -182,6 +183,7 @@
             tabControl2.Controls.Add(tabPageActivityTable);
             tabControl2.Controls.Add(tabPageActivityMap);
             tabControl2.Controls.Add(tabPagePowerDistributionCurve);
+            tabControl2.Controls.Add(tabPageLaps);
             tabControl2.Location = new Point(0, 0);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
@@ -250,7 +252,7 @@
             tabPagePowerDistributionCurve.Controls.Add(powerDistributionCurveGraph1);
             tabPagePowerDistributionCurve.Location = new Point(4, 34);
             tabPagePowerDistributionCurve.Name = "tabPagePowerDistributionCurve";
-            tabPagePowerDistributionCurve.Size = new Size(1878, 645);
+            tabPagePowerDistributionCurve.Size = new Size(192, 62);
             tabPagePowerDistributionCurve.TabIndex = 3;
             tabPagePowerDistributionCurve.Text = "Power Distribution Curve";
             tabPagePowerDistributionCurve.UseVisualStyleBackColor = true;
@@ -260,8 +262,26 @@
             powerDistributionCurveGraph1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             powerDistributionCurveGraph1.Location = new Point(3, 3);
             powerDistributionCurveGraph1.Name = "powerDistributionCurveGraph1";
-            powerDistributionCurveGraph1.Size = new Size(1872, 639);
+            powerDistributionCurveGraph1.Size = new Size(186, 56);
             powerDistributionCurveGraph1.TabIndex = 0;
+            // 
+            // tabPageLaps
+            // 
+            tabPageLaps.Controls.Add(lapDetails1);
+            tabPageLaps.Location = new Point(4, 34);
+            tabPageLaps.Name = "tabPageLaps";
+            tabPageLaps.Size = new Size(192, 62);
+            tabPageLaps.TabIndex = 4;
+            tabPageLaps.Text = "Lap Details";
+            tabPageLaps.UseVisualStyleBackColor = true;
+            // 
+            // lapDetails1
+            // 
+            lapDetails1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lapDetails1.Location = new Point(10, 10);
+            lapDetails1.Name = "lapDetails1";
+            lapDetails1.Size = new Size(182, 52);
+            lapDetails1.TabIndex = 0;
             // 
             // ActivityReport
             // 
@@ -286,6 +306,7 @@
             tabPageActivityTable.ResumeLayout(false);
             tabPageActivityMap.ResumeLayout(false);
             tabPagePowerDistributionCurve.ResumeLayout(false);
+            tabPageLaps.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -307,5 +328,7 @@
         private TabPage tabPagePowerDistributionCurve;
         private ActivityTimeGraph activityTimeGraph1;
         private PowerDistributionCurveGraph powerDistributionCurveGraph1;
+        private TabPage tabPageLaps;
+        private LapDetails lapDetails1;
     }
 }

@@ -45,6 +45,8 @@
             calendarTreeListView.TabIndex = 0;
             calendarTreeListView.View = View.Details;
             calendarTreeListView.VirtualMode = true;
+            calendarTreeListView.FormatRow += calendarTreeListView_FormatRow;
+            calendarTreeListView.SelectionChanged += calendarTreeListView_SelectionChanged;
             // 
             // ActivityTree
             // 

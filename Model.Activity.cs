@@ -120,7 +120,9 @@ namespace FellrnrTrainingAnalysis.Model
 
         [MemoryPackIgnore]
 
-        public Model.Day Day { get { return parent_!.Days[this.StartDateNoTimeLocal!.Value]; } }
+        public Model.CalendarNode Day { get { return parent_!.Days[this.StartDateNoTimeLocal!.Value]; } }
+
+
 
 
         public void PostDeserialize(Athlete parent)
@@ -397,6 +399,7 @@ namespace FellrnrTrainingAnalysis.Model
             //    Logging.Instance.Debug($"Hill matching took {Logging.Instance.GetAndResetTime("hills")}, {nochecked} checked, {nomatched} matched");
         }
 
+
         private const string TagStravaActivityID = "Strava ID";
         public const string TagPrimarykey = TagStravaActivityID;
         private const string TagStartDateAndTimeLocal = "Start DateTime Local"; //be explicit about the time part, as sometimes we only want the date component
@@ -420,6 +423,7 @@ namespace FellrnrTrainingAnalysis.Model
         public const string TagPower = "Power";
         public const string TagAveragePower = "Avg Power";
         public const string TagHrPwr = "HrPwr";
+        public const string TagSpmPwr = "SpmPwr";
         public const string TagMovingTime = "Moving Time";
         public const string TagTreadmillAngle = "Treadmill Angle";
         public const string TagProcessedTags = "Processed Tags";
@@ -430,6 +434,7 @@ namespace FellrnrTrainingAnalysis.Model
         public static List<string> ActivityTypeAll = new List<string> { }; //empty list is all
         public static List<string> ActivityTypeRide = new List<string> { "Ride" };
         public static List<string> ActivityTypeWalk = new List<string> { "Walk", "Hike" };
+        public static List<string> ActivityTypeAerobic = new List<string> { "Run", "Virtual Run", "Ride" };
         /*
         public const string ActivityNameTag = "Activity Name";
         public const string ActivityDescriptionTag = "Activity Description";
@@ -524,6 +529,10 @@ namespace FellrnrTrainingAnalysis.Model
         [MemoryPackOrder(6)]
         public List<Hill>? Climbed { get; set; } = null; //an empty list means we've checked and there's no matches
 
+        //simple list of laps for now
+        [MemoryPackInclude]
+        [MemoryPackOrder(7)]
+        public List<Lap> Laps { get; set; } = new List<Lap>();
 
         public override bool CheckSportType(List<string>? sportsToInclude)
         {
@@ -567,6 +576,8 @@ namespace FellrnrTrainingAnalysis.Model
                 return null;
 
 
+            description += AddDatum(this, "TRIMP: ", "TRIMP");
+            description += AddDatum(Day, "CTL: ", "CTL");
             description += AddDatum(this, "5-Zone-1: ", "5-Zone-1");
             description += AddDatum(this, " ", "5-Zone-1%", false);
             description += AddDatum(this, "5-Zone-2: ", "5-Zone-2");
@@ -597,6 +608,13 @@ namespace FellrnrTrainingAnalysis.Model
             description += $"{Environment.NewLine}{magic}"; ;
             return description;
         }
+
+        //HRV/RR data
+        [MemoryPackInclude]
+        [MemoryPackOrder(8)]
+        public short[]? RRIntervals { get; set; } = null; //in milliseconds
+
+
 
     }
 }

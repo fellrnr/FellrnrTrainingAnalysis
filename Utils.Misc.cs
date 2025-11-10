@@ -184,8 +184,8 @@ namespace FellrnrTrainingAnalysis.Utils
                     points = Utils.Misc.SampleLocations(aligned.Time, aligned.Lats, aligned.Lons, INTERVAL);
 
                     GMapRouteColored routeColored = new GMapRouteColored(points, "Route", aligned.Secondary, alpha, width,
-                        dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2High),
-                        dataStream.Percentile(TimeSeriesBase.StaticsValue.SD2Low));
+                        dataStream.Percentile(TimeValueList.StaticsValue.SD2High),
+                        dataStream.Percentile(TimeValueList.StaticsValue.SD2Low));
 
                     return routeColored;
                 }
@@ -396,7 +396,7 @@ namespace FellrnrTrainingAnalysis.Utils
         private static void CheckForNaN(Database database, StringBuilder sb)
         {
             Athlete athlete = database.CurrentAthlete;
-            foreach (KeyValuePair<DateTime, Model.Day> kvp in athlete.Days)
+            foreach (KeyValuePair<DateTime, Model.CalendarNode> kvp in athlete.Days)
             {
                 CheckData(sb, kvp.Value);
             }
@@ -463,6 +463,8 @@ namespace FellrnrTrainingAnalysis.Utils
         }
         private static void CheckCalendar(CalendarNode node, Dictionary<Activity, CalendarNode> integrityCheckCalendar, StringBuilder sb)
         {
+            sb.AppendLine($"Checking {node} with {node.Children.Count} children");
+
             foreach (KeyValuePair<DateTime, Extensible> kvp in node.Children)
             {
                 if (kvp.Value is CalendarNode)

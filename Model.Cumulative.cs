@@ -23,7 +23,7 @@ namespace FellrnrTrainingAnalysis.Model
 
         public List<Model.Period> Periods { get; }
 
-        public abstract Dictionary<Model.Period, float>? GetCumulativeUpdate(Database database, Day target);
+        public abstract Dictionary<Model.Period, float>? GetCumulativeUpdate(Database database, CalendarNode target);
 
     }
 
@@ -57,9 +57,9 @@ namespace FellrnrTrainingAnalysis.Model
             }
 
 
-            foreach (KeyValuePair<DateTime, Day> kvp2 in athlete.Days)
+            foreach (KeyValuePair<DateTime, CalendarNode> kvp2 in athlete.Days)
             {
-                Day day = kvp2.Value;
+                CalendarNode day = kvp2.Value;
 
                 float dailyAccumulator = 0;
                 foreach (Activity activity in day.Activities)
@@ -114,7 +114,7 @@ namespace FellrnrTrainingAnalysis.Model
             return string.Format("{0} {1}", ActivityFieldname, p.ShortName);
         }
 
-        public override Dictionary<Model.Period, float>? GetCumulativeUpdate(Database database, Day target)
+        public override Dictionary<Model.Period, float>? GetCumulativeUpdate(Database database, CalendarNode target)
         {
             Logging.Instance.ContinueAccumulator("GetCumulativeUpdate");
             DateTime targetDate = target.Date;
@@ -188,9 +188,9 @@ namespace FellrnrTrainingAnalysis.Model
                 retval.Add(new VolumeCumulative(null, $"5-Zone-{i+1}", $"Σ 5-Zone-{i + 1}", Model.Period.ShortStorePeriods));
             }
 
-            for (int i = 0; i < Utils.Options.Instance.StartingHR3Zones.Length - 1; i++)
+            for (int i = 0; i < Utils.Options.Instance.StartingHR3Zones.Length +1; i++) //add a below and above value
             {
-                retval.Add(new VolumeCumulative(null, $"3-Zone-{i + 1}", $"Σ 3-Zone-{i + 1}", Model.Period.ShortStorePeriods));
+                retval.Add(new VolumeCumulative(null, $"3-Zone-{i}", $"Σ 3-Zone-{i}", Model.Period.ShortStorePeriods));
             }
 
             retval.Add(new VolumeCumulative(null, $"5-Zone-5a", $"Σ 5-Zone-5a", Model.Period.ShortStorePeriods));

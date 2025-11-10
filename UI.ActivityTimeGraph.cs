@@ -58,7 +58,7 @@ namespace FellrnrTrainingAnalysis.UI
                 objectListViewTimeSeries.ShowGroups = false;
                 objectListViewTimeSeries.CellEditActivation = ObjectListView.CellEditActivateMode.SingleClick;
                 //Generator.GenerateColumns(objectListView1, definitions);
-                Generator.GenerateColumns(this.objectListViewTimeSeries, typeof(TimeSeriesDefinition), true);
+                Generator.GenerateColumns(this.objectListViewTimeSeries, typeof(TimeSeriesDefinition), false);
                 objectListViewTimeSeries.SetObjects(Definitions);
                 objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
                 objectListViewTimeSeries.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
@@ -105,6 +105,8 @@ namespace FellrnrTrainingAnalysis.UI
                 CurrentlyDisplayedActivity = activity;
                 CurrentlyDisplayedSeries.Clear();
 
+
+                //a negative axis id means do a scatter graph using that time series as the x axis
                 XAxisTimeSeries = null;
                 XAxisTimeValueList = null;
                 XAxisDataStreamDefinition = null;
@@ -165,18 +167,43 @@ namespace FellrnrTrainingAnalysis.UI
 
             if (XAxisTimeValueList == null || XAxisDataStreamDefinition == null)
             {
+                if (dataStreamDefinition.LineStyle == "HrZones")
+                {
+                    int limit = Math.Min(xArray.Length, yArray.Length);
+                    for (int i = 0; i < limit; i++)
+                    {
+                        double hr = yArray[i];
+                        Color color = Color.White;
+                        if(hr < Options.Instance.StartingHR5Zones[0])
+                            color = Color.Black;
+                        else if (hr < Options.Instance.StartingHR5Zones[1])
+                            color = Color.DarkGray;
+                        else if (hr < Options.Instance.StartingHR5Zones[2])
+                            color = Color.Blue;
+                        else if (hr < Options.Instance.StartingHR5Zones[3])
+                            color = Color.Green;
+                        else if (hr < Options.Instance.StartingHR5Zones[4])
+                            color = Color.Orange;
+                        else 
+                            color = Color.Red;
 
-                var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArray, color: dataStreamDefinition.GetColor());
-                SetLineStyle(dataStreamDefinition, scatterGraph);
-
-                if (XAxisTimeValueList == null)
-                    formsPlot1.Plot.XAxis.TickLabelFormat(customTickFormatterForTime);
+                        MarkerPlot markerPlot = formsPlot1.Plot.AddPoint(xArray[i], yArray[i], color);
+                    }
+                }
                 else
-                    formsPlot1.Plot.XAxis.TickLabelFormat(null);
+                {
+                    var scatterGraph = formsPlot1.Plot.AddScatter(xArray, yArray, color: dataStreamDefinition.GetColor());
+                    SetLineStyle(dataStreamDefinition, scatterGraph);
 
-                int axisId = SetYAxis(timeSeriesBase, dataStreamDefinition, yArray, scatterGraph);
+                    if (XAxisTimeValueList == null)
+                        formsPlot1.Plot.XAxis.TickLabelFormat(customTickFormatterForTime);
+                    else
+                        formsPlot1.Plot.XAxis.TickLabelFormat(null);
 
-                SetHighlights(timeSeriesBase, yArray, axisId);
+                    int axisId = SetYAxis(timeSeriesBase, dataStreamDefinition, yArray, scatterGraph);
+
+                    SetHighlights(timeSeriesBase, yArray, axisId);
+                }
             }
             else
             {
